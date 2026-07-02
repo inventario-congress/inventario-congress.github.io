@@ -40,6 +40,23 @@ jobs:
       - name: Build app
         run: npm run build
 
+      - name: Validate production HTML entry
+        run: |
+          if grep -q '/src/main.tsx' dist/index.html; then
+            echo "dist/index.html references /src/main.tsx (dev entry), not production assets."
+            exit 1
+          fi
+
+          if ! grep -q '/assets/.*\.js' dist/index.html; then
+            echo "dist/index.html is missing hashed JS asset references."
+            exit 1
+          fi
+
+          if ! grep -q '/assets/.*\.css' dist/index.html; then
+            echo "dist/index.html is missing hashed CSS asset references."
+            exit 1
+          fi
+
       - name: Upload Pages artifact
         uses: actions/upload-pages-artifact@v5
         with:
