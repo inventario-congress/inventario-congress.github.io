@@ -1,5 +1,5 @@
 import { useEffect, useMemo, useState } from 'react'
-import { supabase } from '../supabaseClient'
+import { supabase, supabaseConfigError } from '../supabaseClient'
 
 type DbRow = Record<string, unknown>
 
@@ -14,11 +14,18 @@ export default function AuthPanel() {
 
   const [dbLoading, setDbLoading] = useState(false)
   const [dbRows, setDbRows] = useState<DbRow[]>([])
+  const missingConfig = supabaseConfigError
 
   // Hardcoded table name per task; change to your table.
   const tableName = useMemo(() => 'your_table_name', [])
 
   useEffect(() => {
+    if (!supabase) {
+      setError(missingConfig)
+      setSessionEmail(null)
+      return
+    }
+
     let active = true
 
     ;(async () => {
@@ -51,6 +58,11 @@ export default function AuthPanel() {
   }, [])
 
   async function signInWithPassword() {
+    if (!supabase) {
+      setError(missingConfig)
+      return
+    }
+
     setError(null)
     setAuthLoading(true)
     try {
@@ -65,6 +77,11 @@ export default function AuthPanel() {
   }
 
   async function signUp() {
+    if (!supabase) {
+      setError(missingConfig)
+      return
+    }
+
     setError(null)
     setAuthLoading(true)
     try {
@@ -79,6 +96,11 @@ export default function AuthPanel() {
   }
 
   async function signOut() {
+    if (!supabase) {
+      setError(missingConfig)
+      return
+    }
+
     setError(null)
     setAuthLoading(true)
     try {
@@ -94,6 +116,11 @@ export default function AuthPanel() {
   }
 
   async function fetchDb() {
+    if (!supabase) {
+      setError(missingConfig)
+      return
+    }
+
     setError(null)
     setDbLoading(true)
     try {
@@ -114,6 +141,25 @@ export default function AuthPanel() {
   return (
     <div style={{ maxWidth: 640, margin: '0 auto', padding: 16 }}>
       <h2 style={{ marginTop: 24 }}>Authentication (Supabase)</h2>
+
+      {missingConfig ? (
+        <div
+          style={{
+            marginTop: 12,
+            padding: 12,
+            borderRadius: 6,
+            border: '1px solid var(--border)',
+            textAlign: 'left',
+          }}
+        >
+          <strong>Setup required.</strong>
+          <div style={{ marginTop: 8 }}>
+            Add <code>VITE_SUPABASE_URL</code> and{' '}
+            <code>VITE_SUPABASE_PUBLISHABLE_KEY</code> to a <code>.env.local</code>{' '}
+            file in the project root.
+          </div>
+        </div>
+      ) : null}
 
       <div style={{ margin: '12px 0' }}>
         <div>
