@@ -38,3 +38,16 @@ VITE_SUPABASE_PUBLISHABLE_KEY
 ```
 
 - These are public client-side values, but using repository secrets keeps them out of the public repo settings view. Do not use a service-role key in this workflow.
+
+GitHub Pages deploy:
+
+- The workflow at `.github/workflows/deploy-pages.yml` builds the app on pushes to `main` and deploys the `dist` output to GitHub Pages.
+- It uses the same repository secrets for the Vite build:
+
+```text
+VITE_SUPABASE_URL
+VITE_SUPABASE_PUBLISHABLE_KEY
+```
+
+- In GitHub, set Pages to use `GitHub Actions` as the source.
+- With the repository named `inventario-congress.github.io` under the `inventario-congress` account, the site will be served at `https://inventario-congress.github.io/` and the current Vite base path is correct.
