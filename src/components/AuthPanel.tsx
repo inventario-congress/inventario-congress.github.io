@@ -2,6 +2,7 @@ import { useEffect, useMemo, useState } from 'react'
 import { supabase, supabaseConfigError } from '../supabaseClient'
 
 type DbRow = Record<string, unknown>
+type ConnectionState = 'checking' | 'connected' | 'failed'
 
 export default function AuthPanel() {
   const [email, setEmail] = useState('')
@@ -9,6 +10,8 @@ export default function AuthPanel() {
 
   const [authLoading, setAuthLoading] = useState(false)
   const [error, setError] = useState<string | null>(null)
+  const [status, setStatus] = useState<string | null>(null)
+  const [connectionState, setConnectionState] = useState<ConnectionState>('checking')
 
   const [sessionEmail, setSessionEmail] = useState<string | null>(null)
 
@@ -23,6 +26,7 @@ export default function AuthPanel() {
     if (!supabase) {
       setError(missingConfig)
       setSessionEmail(null)
+      setConnectionState('failed')
       return
     }
 
@@ -39,10 +43,12 @@ export default function AuthPanel() {
       if (error) {
         setError(error.message)
         setSessionEmail(null)
+        setConnectionState('failed')
         return
       }
 
       setSessionEmail(session?.user?.email ?? null)
+      setConnectionState('connected')
     })()
 
     const {
@@ -63,11 +69,13 @@ export default function AuthPanel() {
       return
     }
 
+    setStatus(null)
     setError(null)
     setAuthLoading(true)
     try {
       const { error } = await supabase.auth.signInWithPassword({ email, password })
       if (error) throw error
+      setStatus('Logged in successfully.')
     } catch (e) {
       const msg = e instanceof Error ? e.message : 'Login failed'
       setError(msg)
@@ -82,11 +90,18 @@ export default function AuthPanel() {
       return
     }
 
+    setStatus(null)
     setError(null)
     setAuthLoading(true)
     try {
-      const { error } = await supabase.auth.signUp({ email, password })
+      const { data, error } = await supabase.auth.signUp({ email, password })
       if (error) throw error
+
+      if (data.session) {
+        setStatus('Sign up completed and session created.')
+      } else {
+        setStatus('Sign up started. Check your email to confirm your account.')
+      }
     } catch (e) {
       const msg = e instanceof Error ? e.message : 'Sign up failed'
       setError(msg)
@@ -101,12 +116,14 @@ export default function AuthPanel() {
       return
     }
 
+    setStatus(null)
     setError(null)
     setAuthLoading(true)
     try {
       const { error } = await supabase.auth.signOut()
       if (error) throw error
       setDbRows([])
+      setStatus('Signed out.')
     } catch (e) {
       const msg = e instanceof Error ? e.message : 'Sign out failed'
       setError(msg)
@@ -121,6 +138,7 @@ export default function AuthPanel() {
       return
     }
 
+    setStatus(null)
     setError(null)
     setDbLoading(true)
     try {
@@ -129,6 +147,7 @@ export default function AuthPanel() {
       const { data, error } = await supabase.from(tableName).select('*').limit(20)
       if (error) throw error
       setDbRows((data ?? []) as DbRow[])
+      setStatus('Database query completed successfully.')
     } catch (e) {
       const msg = e instanceof Error ? e.message : 'Failed to fetch database'
       setError(msg)
@@ -141,6 +160,15 @@ export default function AuthPanel() {
   return (
     <div style={{ maxWidth: 640, margin: '0 auto', padding: 16 }}>
       <h2 style={{ marginTop: 24 }}>Authentication (Supabase)</h2>
+
+      <div style={{ marginTop: 12, textAlign: 'left' }}>
+        <strong>Supabase connection:</strong>{' '}
+        {connectionState === 'checking'
+          ? 'Checking...'
+          : connectionState === 'connected'
+            ? 'Connected'
+            : 'Not connected'}
+      </div>
 
       {missingConfig ? (
         <div
@@ -214,6 +242,12 @@ export default function AuthPanel() {
       {error ? (
         <div style={{ marginTop: 12, color: 'crimson' }}>
           <strong>Error:</strong> {error}
+        </div>
+      ) : null}
+
+      {status ? (
+        <div style={{ marginTop: 12, color: 'green' }}>
+          <strong>Status:</strong> {status}
         </div>
       ) : null}
 

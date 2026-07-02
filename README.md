@@ -34,6 +34,29 @@ Run the app locally:
 npm run dev
 ```
 
+Local Supabase connectivity check:
+
+```bash
+set -a
+source .env.local
+set +a
+curl --silent --show-error --output /dev/null --write-out '%{http_code}\n' "$VITE_SUPABASE_URL/auth/v1/settings"
+```
+
+Expected result: `200`.
+
+Signup allowlist backend rule:
+
+- Run [supabase/sql/001_auth_user_allowlist.sql](supabase/sql/001_auth_user_allowlist.sql) in the Supabase SQL Editor.
+- This creates `auth.user_allowlist` and a trigger on `auth.users`.
+- During signup, Supabase will reject emails not present in `auth.user_allowlist`.
+
+Example allowlist insert:
+
+```sql
+insert into auth.user_allowlist (email) values ('person@example.com');
+```
+
 GitHub Action keepalive:
 
 - The workflow at `.github/workflows/supabase-keepalive.yml` runs every 3 days and can also be triggered manually.
