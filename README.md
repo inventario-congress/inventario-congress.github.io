@@ -1,5 +1,13 @@
 # webapp
 
+Node.js requirement:
+
+```bash
+node -v
+```
+
+Use Node.js 24.x for local development and CI.
+
 Local setup:
 
 ```bash
