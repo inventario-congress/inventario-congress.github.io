@@ -243,6 +243,8 @@ export default function AuthPanel({ messages }: AuthPanelProps) {
           value={email}
           onChange={(e) => setEmail(e.target.value)}
           type="email"
+          required
+          autoComplete="email"
           placeholder={messages.auth.fields.email}
           style={{ padding: 10, borderRadius: 6, border: '1px solid var(--border)' }}
         />
