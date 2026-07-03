@@ -174,35 +174,6 @@ export default function AuthPanel({ messages }: AuthPanelProps) {
     <div style={{ maxWidth: 640, margin: '0 auto', padding: 16 }}>
       <h2 style={{ marginTop: 24 }}>{messages.auth.title}</h2>
 
-      <div style={{ marginTop: 12, textAlign: 'left' }}>
-        <strong>{messages.auth.connection.label}</strong>{' '}
-        {connectionState === 'checking'
-          ? messages.auth.connection.checking
-          : connectionState === 'connected'
-            ? messages.auth.connection.connected
-            : messages.auth.connection.failed}
-      </div>
-
-      {missingConfig ? (
-        <div
-          style={{
-            marginTop: 12,
-            padding: 12,
-            borderRadius: 6,
-            border: '1px solid var(--border)',
-            textAlign: 'left',
-          }}
-        >
-          <strong>{messages.auth.setupRequired.title}</strong>
-          <div style={{ marginTop: 8 }}>
-            {messages.auth.setupRequired.messageStart} <code>VITE_SUPABASE_URL</code>{' '}
-            {messages.auth.setupRequired.messageMiddle}{' '}
-            <code>VITE_SUPABASE_PUBLISHABLE_KEY</code> {messages.auth.setupRequired.messageEnd}{' '}
-            <code>.env.local</code> {messages.auth.setupRequired.messageSuffix}
-          </div>
-        </div>
-      ) : null}
-
       <div style={{ margin: '12px 0' }}>
         <div>
           <strong>{messages.auth.session.label}</strong>{' '}
@@ -370,43 +341,6 @@ export default function AuthPanel({ messages }: AuthPanelProps) {
         </div>
       ) : null}
 
-      <hr style={{ margin: '24px 0', borderColor: 'var(--border)' }} />
-
-      <div>
-        <h3 style={{ margin: '0 0 8px' }}>{messages.auth.database.title}</h3>
-        <div style={{ marginBottom: 10 }}>
-          {messages.auth.database.tableLabel} <code>{tableName}</code>{' '}
-          {messages.auth.database.editHintStart} <code>AuthPanel.tsx</code>{' '}
-          {messages.auth.database.editHintEnd}
-        </div>
-
-        <button
-          type="button"
-          onClick={fetchDb}
-          disabled={missingConfig || dbLoading || !sessionEmail}
-          style={{ padding: '10px 14px', borderRadius: 6, cursor: 'pointer' }}
-        >
-          {dbLoading ? messages.auth.database.loading : messages.auth.database.fetchRows}
-        </button>
-
-        <div style={{ marginTop: 14, textAlign: 'left' }}>
-          {dbRows.length ? (
-            <pre
-              style={{
-                overflowX: 'auto',
-                padding: 12,
-                borderRadius: 6,
-                border: '1px solid var(--border)',
-                background: 'var(--code-bg)',
-              }}
-            >
-              {JSON.stringify(dbRows, null, 2)}
-            </pre>
-          ) : (
-            <div style={{ color: 'var(--text)' }}>{messages.auth.database.empty}</div>
-          )}
-        </div>
-      </div>
     </div>
   )
 }

@@ -15,19 +15,6 @@ const en = {
   },
   auth: {
     title: 'Authentication',
-    connection: {
-      label: 'Supabase connection:',
-      checking: 'Checking...',
-      connected: 'Connected',
-      failed: 'Not connected',
-    },
-    setupRequired: {
-      title: 'Setup required.',
-      messageStart: 'Add',
-      messageMiddle: 'and',
-      messageEnd: 'to a',
-      messageSuffix: 'file in the project root.',
-    },
     session: {
       label: 'Signed in as:',
       signedOut: 'Not signed in',
@@ -63,15 +50,6 @@ const en = {
       signUpFailed: 'Sign up failed',
       signOutFailed: 'Sign out failed',
       fetchDbFailed: 'Failed to fetch database',
-    },
-    database: {
-      title: 'Database viewer (logged-in)',
-      tableLabel: 'Table:',
-      editHintStart: '(edit in',
-      editHintEnd: ')',
-      fetchRows: 'Fetch first 20 rows',
-      loading: 'Loading...',
-      empty: 'No data loaded yet.',
     },
   },
 } as const

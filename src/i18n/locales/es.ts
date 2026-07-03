@@ -15,19 +15,6 @@ const es = {
   },
   auth: {
     title: 'Autenticación',
-    connection: {
-      label: 'Conexión a Supabase:',
-      checking: 'Comprobando...',
-      connected: 'Conectado',
-      failed: 'Sin conexión',
-    },
-    setupRequired: {
-      title: 'Configuración requerida.',
-      messageStart: 'Añade',
-      messageMiddle: 'y',
-      messageEnd: 'a un archivo',
-      messageSuffix: 'en la raíz del proyecto.',
-    },
     session: {
       label: 'Sesión iniciada como:',
       signedOut: 'Sin iniciar sesión',
@@ -63,15 +50,6 @@ const es = {
       signUpFailed: 'No se pudo completar el registro',
       signOutFailed: 'No se pudo cerrar la sesión',
       fetchDbFailed: 'No se pudo consultar la base de datos',
-    },
-    database: {
-      title: 'Visor de base de datos (con sesión iniciada)',
-      tableLabel: 'Tabla:',
-      editHintStart: '(editar en',
-      editHintEnd: ')',
-      fetchRows: 'Cargar las primeras 20 filas',
-      loading: 'Cargando...',
-      empty: 'Todavía no se han cargado datos.',
     },
   },
 } as const
