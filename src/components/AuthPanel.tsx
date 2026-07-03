@@ -272,7 +272,14 @@ export default function AuthPanel({ messages }: AuthPanelProps) {
           <button
             type="button"
             onClick={signUp}
-            disabled={missingConfig || authLoading || !name || !lastName || !email || !password}
+            disabled={
+              missingConfig ||
+              authLoading ||
+              !name.trim() ||
+              !lastName.trim() ||
+              !email ||
+              !password
+            }
             style={{ padding: '10px 14px', borderRadius: 6, cursor: 'pointer' }}
           >
             {messages.auth.actions.signUp}
