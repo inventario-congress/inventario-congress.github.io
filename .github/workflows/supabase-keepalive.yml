@@ -24,31 +24,22 @@ jobs:
             exit 1
           fi
 
-      - name: Ping Supabase auth and REST endpoints
+      - name: Ping Supabase keepalive RPC endpoint
         run: |
-          auth_status=$(curl --silent --show-error --output /dev/null --write-out '%{http_code}' \
-            "$SUPABASE_URL/auth/v1/settings")
-
-          rest_status=$(curl --silent --show-error --output /dev/null --write-out '%{http_code}' \
+          keepalive_status=$(curl --silent --show-error --output /dev/null --write-out '%{http_code}' \
             --header "apikey: $SUPABASE_ANON_KEY" \
             --header "Authorization: Bearer $SUPABASE_ANON_KEY" \
-            "$SUPABASE_URL/rest/v1/")
+            --header "Content-Type: application/json" \
+            --request POST \
+            --data '{}' \
+            "$SUPABASE_URL/rest/v1/rpc/keepalive_ping")
 
-          echo "Auth endpoint returned: $auth_status"
-          echo "REST endpoint returned: $rest_status"
+          echo "Keepalive RPC endpoint returned: $keepalive_status"
 
-          case "$auth_status" in
-            2*|3*) ;;
+          case "$keepalive_status" in
+            200) ;;
             *)
-              echo "Unexpected auth status: $auth_status"
-              exit 1
-              ;;
-          esac
-
-          case "$rest_status" in
-            2*|3*|4*) ;;
-            *)
-              echo "Unexpected REST status: $rest_status"
+              echo "Unexpected keepalive status: $keepalive_status"
               exit 1
               ;;
           esac
