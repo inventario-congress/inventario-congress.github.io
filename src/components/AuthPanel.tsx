@@ -235,14 +235,22 @@ export default function AuthPanel({ messages }: AuthPanelProps) {
           placeholder={messages.auth.fields.lastName}
           style={{ padding: 10, borderRadius: 6, border: '1px solid var(--border)' }}
         />
+        <label htmlFor="signup-email" style={{ textAlign: 'left' }}>
+          {messages.auth.fields.email}
+        </label>
         <input
+          id="signup-email"
           value={email}
           onChange={(e) => setEmail(e.target.value)}
           type="email"
           placeholder={messages.auth.fields.email}
           style={{ padding: 10, borderRadius: 6, border: '1px solid var(--border)' }}
         />
+        <label htmlFor="signup-password" style={{ textAlign: 'left' }}>
+          {messages.auth.fields.password}
+        </label>
         <input
+          id="signup-password"
           value={password}
           onChange={(e) => setPassword(e.target.value)}
           type="password"
