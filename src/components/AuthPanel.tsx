@@ -2,8 +2,6 @@ import { useEffect, useMemo, useState } from 'react'
 import type { Messages } from '../i18n'
 import { isSupabaseConfigured, supabase } from '../supabaseClient'
 
-type DbRow = Record<string, unknown>
-type ConnectionState = 'checking' | 'connected' | 'failed'
 type AuthMode = 'signIn' | 'signUp'
 
 type AuthPanelProps = {
@@ -20,14 +18,9 @@ export default function AuthPanel({ messages }: AuthPanelProps) {
   const [authLoading, setAuthLoading] = useState(false)
   const [error, setError] = useState<string | null>(null)
   const [status, setStatus] = useState<string | null>(null)
-  const [connectionState, setConnectionState] = useState<ConnectionState>(
-    supabase ? 'checking' : 'failed',
-  )
 
   const [sessionEmail, setSessionEmail] = useState<string | null>(null)
 
-  const [dbLoading, setDbLoading] = useState(false)
-  const [dbRows, setDbRows] = useState<DbRow[]>([])
   const missingConfig = !isSupabaseConfigured
 
   // Hardcoded table name per task; change to your table.
@@ -51,12 +44,10 @@ export default function AuthPanel({ messages }: AuthPanelProps) {
       if (error) {
         setError(error.message)
         setSessionEmail(null)
-        setConnectionState('failed')
         return
       }
 
       setSessionEmail(session?.user?.email ?? null)
-      setConnectionState('connected')
     })()
 
     const {
@@ -136,37 +127,12 @@ export default function AuthPanel({ messages }: AuthPanelProps) {
     try {
       const { error } = await supabase.auth.signOut()
       if (error) throw error
-      setDbRows([])
       setStatus(messages.auth.feedback.signedOut)
     } catch (e) {
       const msg = e instanceof Error ? e.message : messages.auth.feedback.signOutFailed
       setError(msg)
     } finally {
       setAuthLoading(false)
-    }
-  }
-
-  async function fetchDb() {
-    if (!supabase) {
-      return
-    }
-
-    setStatus(null)
-    setError(null)
-    setDbLoading(true)
-    try {
-      // Example: public select.
-      // Ensure your Supabase table exists and RLS policies allow the logged-in user.
-      const { data, error } = await supabase.from(tableName).select('*').limit(20)
-      if (error) throw error
-      setDbRows((data ?? []) as DbRow[])
-      setStatus(messages.auth.feedback.dbLoaded)
-    } catch (e) {
-      const msg = e instanceof Error ? e.message : messages.auth.feedback.fetchDbFailed
-      setError(msg)
-      setDbRows([])
-    } finally {
-      setDbLoading(false)
     }
   }
 
