@@ -9,6 +9,10 @@ const es = {
       es: 'Español',
     },
   },
+  themeSwitcher: {
+    toLight: 'Cambiar a tema claro',
+    toDark: 'Cambiar a tema oscuro',
+  },
   auth: {
     title: 'Autenticación',
     connection: {
