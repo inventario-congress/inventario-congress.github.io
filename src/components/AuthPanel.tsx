@@ -220,7 +220,6 @@ export default function AuthPanel({ messages }: AuthPanelProps) {
           required
           autoComplete="given-name"
           placeholder={messages.auth.fields.name}
-          aria-label={messages.auth.fields.name}
           style={{ padding: 10, borderRadius: 6, border: '1px solid var(--border)' }}
         />
         <label htmlFor="signup-last-name" style={{ textAlign: 'left' }}>
@@ -234,7 +233,6 @@ export default function AuthPanel({ messages }: AuthPanelProps) {
           required
           autoComplete="family-name"
           placeholder={messages.auth.fields.lastName}
-          aria-label={messages.auth.fields.lastName}
           style={{ padding: 10, borderRadius: 6, border: '1px solid var(--border)' }}
         />
         <input
