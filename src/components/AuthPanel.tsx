@@ -213,6 +213,8 @@ export default function AuthPanel({ messages }: AuthPanelProps) {
           value={name}
           onChange={(e) => setName(e.target.value)}
           type="text"
+          required
+          autoComplete="given-name"
           placeholder={messages.auth.fields.name}
           aria-label={messages.auth.fields.name}
           style={{ padding: 10, borderRadius: 6, border: '1px solid var(--border)' }}
@@ -221,6 +223,8 @@ export default function AuthPanel({ messages }: AuthPanelProps) {
           value={lastName}
           onChange={(e) => setLastName(e.target.value)}
           type="text"
+          required
+          autoComplete="family-name"
           placeholder={messages.auth.fields.lastName}
           aria-label={messages.auth.fields.lastName}
           style={{ padding: 10, borderRadius: 6, border: '1px solid var(--border)' }}
