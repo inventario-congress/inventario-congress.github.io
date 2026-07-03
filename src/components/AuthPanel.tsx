@@ -10,6 +10,8 @@ type AuthPanelProps = {
 }
 
 export default function AuthPanel({ messages }: AuthPanelProps) {
+  const [name, setName] = useState('')
+  const [lastName, setLastName] = useState('')
   const [email, setEmail] = useState('')
   const [password, setPassword] = useState('')
 
@@ -96,7 +98,16 @@ export default function AuthPanel({ messages }: AuthPanelProps) {
     setError(null)
     setAuthLoading(true)
     try {
-      const { data, error } = await supabase.auth.signUp({ email, password })
+      const { data, error } = await supabase.auth.signUp({
+        email,
+        password,
+        options: {
+          data: {
+            name,
+            last_name: lastName,
+          },
+        },
+      })
       if (error) throw error
 
       if (data.session) {
@@ -199,6 +210,20 @@ export default function AuthPanel({ messages }: AuthPanelProps) {
 
       <div style={{ display: 'grid', gap: 10, marginTop: 12 }}>
         <input
+          value={name}
+          onChange={(e) => setName(e.target.value)}
+          type="text"
+          placeholder={messages.auth.fields.name}
+          style={{ padding: 10, borderRadius: 6, border: '1px solid var(--border)' }}
+        />
+        <input
+          value={lastName}
+          onChange={(e) => setLastName(e.target.value)}
+          type="text"
+          placeholder={messages.auth.fields.lastName}
+          style={{ padding: 10, borderRadius: 6, border: '1px solid var(--border)' }}
+        />
+        <input
           value={email}
           onChange={(e) => setEmail(e.target.value)}
           type="email"
@@ -225,7 +250,7 @@ export default function AuthPanel({ messages }: AuthPanelProps) {
           <button
             type="button"
             onClick={signUp}
-            disabled={missingConfig || authLoading || !email || !password}
+            disabled={missingConfig || authLoading || !name || !lastName || !email || !password}
             style={{ padding: '10px 14px', borderRadius: 6, cursor: 'pointer' }}
           >
             {messages.auth.actions.signUp}
