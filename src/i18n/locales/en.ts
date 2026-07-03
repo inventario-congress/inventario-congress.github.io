@@ -33,6 +33,8 @@ const en = {
       signedOut: 'Not signed in',
     },
     fields: {
+      name: 'Name',
+      lastName: 'Last name',
       email: 'Email',
       password: 'Password',
     },

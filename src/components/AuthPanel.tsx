@@ -10,6 +10,8 @@ type AuthPanelProps = {
 }
 
 export default function AuthPanel({ messages }: AuthPanelProps) {
+  const [name, setName] = useState('')
+  const [lastName, setLastName] = useState('')
   const [email, setEmail] = useState('')
   const [password, setPassword] = useState('')
 
@@ -96,7 +98,16 @@ export default function AuthPanel({ messages }: AuthPanelProps) {
     setError(null)
     setAuthLoading(true)
     try {
-      const { data, error } = await supabase.auth.signUp({ email, password })
+      const { data, error } = await supabase.auth.signUp({
+        email,
+        password,
+        options: {
+          data: {
+            name: name.trim(),
+            last_name: lastName.trim(),
+          },
+        },
+      })
       if (error) throw error
 
       if (data.session) {
@@ -198,17 +209,54 @@ export default function AuthPanel({ messages }: AuthPanelProps) {
       </div>
 
       <div style={{ display: 'grid', gap: 10, marginTop: 12 }}>
+        <label htmlFor="signup-name" style={{ textAlign: 'left' }}>
+          {messages.auth.fields.name}
+        </label>
         <input
+          id="signup-name"
+          value={name}
+          onChange={(e) => setName(e.target.value)}
+          type="text"
+          required
+          autoComplete="given-name"
+          placeholder={messages.auth.fields.name}
+          style={{ padding: 10, borderRadius: 6, border: '1px solid var(--border)' }}
+        />
+        <label htmlFor="signup-last-name" style={{ textAlign: 'left' }}>
+          {messages.auth.fields.lastName}
+        </label>
+        <input
+          id="signup-last-name"
+          value={lastName}
+          onChange={(e) => setLastName(e.target.value)}
+          type="text"
+          required
+          autoComplete="family-name"
+          placeholder={messages.auth.fields.lastName}
+          style={{ padding: 10, borderRadius: 6, border: '1px solid var(--border)' }}
+        />
+        <label htmlFor="signup-email" style={{ textAlign: 'left' }}>
+          {messages.auth.fields.email}
+        </label>
+        <input
+          id="signup-email"
           value={email}
           onChange={(e) => setEmail(e.target.value)}
           type="email"
+          required
+          autoComplete="email"
           placeholder={messages.auth.fields.email}
           style={{ padding: 10, borderRadius: 6, border: '1px solid var(--border)' }}
         />
+        <label htmlFor="signup-password" style={{ textAlign: 'left' }}>
+          {messages.auth.fields.password}
+        </label>
         <input
+          id="signup-password"
           value={password}
           onChange={(e) => setPassword(e.target.value)}
           type="password"
+          required
           placeholder={messages.auth.fields.password}
           style={{ padding: 10, borderRadius: 6, border: '1px solid var(--border)' }}
         />
@@ -225,7 +273,14 @@ export default function AuthPanel({ messages }: AuthPanelProps) {
           <button
             type="button"
             onClick={signUp}
-            disabled={missingConfig || authLoading || !email || !password}
+            disabled={
+              missingConfig ||
+              authLoading ||
+              !name.trim() ||
+              !lastName.trim() ||
+              !email ||
+              !password
+            }
             style={{ padding: '10px 14px', borderRadius: 6, cursor: 'pointer' }}
           >
             {messages.auth.actions.signUp}

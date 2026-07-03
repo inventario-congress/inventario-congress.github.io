@@ -33,6 +33,8 @@ const es = {
       signedOut: 'Sin iniciar sesión',
     },
     fields: {
+      name: 'Nombre',
+      lastName: 'Apellido',
       email: 'Correo electrónico',
       password: 'Contraseña',
     },
