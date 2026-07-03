@@ -1,6 +1,6 @@
 import { useEffect, useMemo, useState } from 'react'
 import type { Messages } from '../i18n'
-import { supabase, supabaseConfigError } from '../supabaseClient'
+import { isSupabaseConfigured, supabase } from '../supabaseClient'
 
 type DbRow = Record<string, unknown>
 type ConnectionState = 'checking' | 'connected' | 'failed'
@@ -24,7 +24,7 @@ export default function AuthPanel({ messages }: AuthPanelProps) {
 
   const [dbLoading, setDbLoading] = useState(false)
   const [dbRows, setDbRows] = useState<DbRow[]>([])
-  const missingConfig = Boolean(supabaseConfigError)
+  const missingConfig = !isSupabaseConfigured
 
   // Hardcoded table name per task; change to your table.
   const tableName = useMemo(() => 'your_table_name', [])
