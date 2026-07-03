@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useState } from 'react'
+import { useEffect, useState } from 'react'
 import type { Messages } from '../i18n'
 import { isSupabaseConfigured, supabase } from '../supabaseClient'
 
