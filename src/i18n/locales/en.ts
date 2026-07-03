@@ -10,7 +10,7 @@ const en = {
     },
   },
   auth: {
-    title: 'Authentication (Supabase)',
+    title: 'Authentication',
     connection: {
       label: 'Supabase connection:',
       checking: 'Checking...',

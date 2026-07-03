@@ -10,7 +10,7 @@ const es = {
     },
   },
   auth: {
-    title: 'Autenticación (Supabase)',
+    title: 'Autenticación',
     connection: {
       label: 'Conexión a Supabase:',
       checking: 'Comprobando...',
