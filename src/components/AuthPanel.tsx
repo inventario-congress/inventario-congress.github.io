@@ -4,6 +4,7 @@ import { isSupabaseConfigured, supabase } from '../supabaseClient'
 
 type DbRow = Record<string, unknown>
 type ConnectionState = 'checking' | 'connected' | 'failed'
+type AuthMode = 'signIn' | 'signUp'
 
 type AuthPanelProps = {
   messages: Messages
@@ -14,6 +15,7 @@ export default function AuthPanel({ messages }: AuthPanelProps) {
   const [lastName, setLastName] = useState('')
   const [email, setEmail] = useState('')
   const [password, setPassword] = useState('')
+  const [authMode, setAuthMode] = useState<AuthMode>('signIn')
 
   const [authLoading, setAuthLoading] = useState(false)
   const [error, setError] = useState<string | null>(null)
@@ -209,37 +211,46 @@ export default function AuthPanel({ messages }: AuthPanelProps) {
       </div>
 
       <div style={{ display: 'grid', gap: 10, marginTop: 12 }}>
-        <label htmlFor="signup-name" style={{ textAlign: 'left' }}>
-          {messages.auth.fields.name}
-        </label>
-        <input
-          id="signup-name"
-          value={name}
-          onChange={(e) => setName(e.target.value)}
-          type="text"
-          required
-          autoComplete="given-name"
-          placeholder={messages.auth.fields.name}
-          style={{ padding: 10, borderRadius: 6, border: '1px solid var(--border)' }}
-        />
-        <label htmlFor="signup-last-name" style={{ textAlign: 'left' }}>
-          {messages.auth.fields.lastName}
-        </label>
-        <input
-          id="signup-last-name"
-          value={lastName}
-          onChange={(e) => setLastName(e.target.value)}
-          type="text"
-          required
-          autoComplete="family-name"
-          placeholder={messages.auth.fields.lastName}
-          style={{ padding: 10, borderRadius: 6, border: '1px solid var(--border)' }}
-        />
-        <label htmlFor="signup-email" style={{ textAlign: 'left' }}>
+        <h3 style={{ margin: '0 0 4px', textAlign: 'left' }}>
+          {authMode === 'signIn' ? messages.auth.panels.signInTitle : messages.auth.panels.signUpTitle}
+        </h3>
+
+        {authMode === 'signUp' ? (
+          <>
+            <label htmlFor="signup-name" style={{ textAlign: 'left' }}>
+              {messages.auth.fields.name}
+            </label>
+            <input
+              id="signup-name"
+              value={name}
+              onChange={(e) => setName(e.target.value)}
+              type="text"
+              required
+              autoComplete="given-name"
+              placeholder={messages.auth.fields.name}
+              style={{ padding: 10, borderRadius: 6, border: '1px solid var(--border)' }}
+            />
+            <label htmlFor="signup-last-name" style={{ textAlign: 'left' }}>
+              {messages.auth.fields.lastName}
+            </label>
+            <input
+              id="signup-last-name"
+              value={lastName}
+              onChange={(e) => setLastName(e.target.value)}
+              type="text"
+              required
+              autoComplete="family-name"
+              placeholder={messages.auth.fields.lastName}
+              style={{ padding: 10, borderRadius: 6, border: '1px solid var(--border)' }}
+            />
+          </>
+        ) : null}
+
+        <label htmlFor="auth-email" style={{ textAlign: 'left' }}>
           {messages.auth.fields.email}
         </label>
         <input
-          id="signup-email"
+          id="auth-email"
           value={email}
           onChange={(e) => setEmail(e.target.value)}
           type="email"
@@ -248,11 +259,11 @@ export default function AuthPanel({ messages }: AuthPanelProps) {
           placeholder={messages.auth.fields.email}
           style={{ padding: 10, borderRadius: 6, border: '1px solid var(--border)' }}
         />
-        <label htmlFor="signup-password" style={{ textAlign: 'left' }}>
+        <label htmlFor="auth-password" style={{ textAlign: 'left' }}>
           {messages.auth.fields.password}
         </label>
         <input
-          id="signup-password"
+          id="auth-password"
           value={password}
           onChange={(e) => setPassword(e.target.value)}
           type="password"
@@ -262,29 +273,32 @@ export default function AuthPanel({ messages }: AuthPanelProps) {
         />
 
         <div style={{ display: 'flex', gap: 10, flexWrap: 'wrap' }}>
-          <button
-            type="button"
-            onClick={signInWithPassword}
-            disabled={missingConfig || authLoading || !email || !password}
-            style={{ padding: '10px 14px', borderRadius: 6, cursor: 'pointer' }}
-          >
-            {messages.auth.actions.signIn}
-          </button>
-          <button
-            type="button"
-            onClick={signUp}
-            disabled={
-              missingConfig ||
-              authLoading ||
-              !name.trim() ||
-              !lastName.trim() ||
-              !email ||
-              !password
-            }
-            style={{ padding: '10px 14px', borderRadius: 6, cursor: 'pointer' }}
-          >
-            {messages.auth.actions.signUp}
-          </button>
+          {authMode === 'signIn' ? (
+            <button
+              type="button"
+              onClick={signInWithPassword}
+              disabled={missingConfig || authLoading || !email || !password}
+              style={{ padding: '10px 14px', borderRadius: 6, cursor: 'pointer' }}
+            >
+              {messages.auth.actions.signIn}
+            </button>
+          ) : (
+            <button
+              type="button"
+              onClick={signUp}
+              disabled={
+                missingConfig ||
+                authLoading ||
+                !name.trim() ||
+                !lastName.trim() ||
+                !email ||
+                !password
+              }
+              style={{ padding: '10px 14px', borderRadius: 6, cursor: 'pointer' }}
+            >
+              {messages.auth.actions.signUp}
+            </button>
+          )}
           <button
             type="button"
             onClick={signOut}
@@ -293,6 +307,54 @@ export default function AuthPanel({ messages }: AuthPanelProps) {
           >
             {messages.auth.actions.signOut}
           </button>
+        </div>
+
+        <div style={{ textAlign: 'left' }}>
+          {authMode === 'signIn' ? (
+            <>
+              {messages.auth.panels.toSignUpPrefix}{' '}
+              <button
+                type="button"
+                onClick={() => {
+                  setStatus(null)
+                  setError(null)
+                  setAuthMode('signUp')
+                }}
+                style={{
+                  border: 'none',
+                  background: 'none',
+                  padding: 0,
+                  textDecoration: 'underline',
+                  color: 'var(--text)',
+                  cursor: 'pointer',
+                }}
+              >
+                {messages.auth.panels.toSignUpLink}
+              </button>
+            </>
+          ) : (
+            <>
+              {messages.auth.panels.toSignInPrefix}{' '}
+              <button
+                type="button"
+                onClick={() => {
+                  setStatus(null)
+                  setError(null)
+                  setAuthMode('signIn')
+                }}
+                style={{
+                  border: 'none',
+                  background: 'none',
+                  padding: 0,
+                  textDecoration: 'underline',
+                  color: 'var(--text)',
+                  cursor: 'pointer',
+                }}
+              >
+                {messages.auth.panels.toSignInLink}
+              </button>
+            </>
+          )}
         </div>
       </div>
 

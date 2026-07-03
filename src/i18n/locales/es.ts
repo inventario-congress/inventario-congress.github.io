@@ -38,6 +38,14 @@ const es = {
       email: 'Correo electrónico',
       password: 'Contraseña',
     },
+    panels: {
+      signInTitle: 'Iniciar sesión',
+      signUpTitle: 'Crear cuenta',
+      toSignUpPrefix: '¿No tienes cuenta?',
+      toSignUpLink: 'Registrar un nuevo usuario',
+      toSignInPrefix: '¿Ya tienes cuenta?',
+      toSignInLink: 'Volver a iniciar sesión',
+    },
     actions: {
       signIn: 'Iniciar sesión',
       signUp: 'Registrarse',

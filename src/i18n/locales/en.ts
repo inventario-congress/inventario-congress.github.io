@@ -38,6 +38,14 @@ const en = {
       email: 'Email',
       password: 'Password',
     },
+    panels: {
+      signInTitle: 'Sign in',
+      signUpTitle: 'Create account',
+      toSignUpPrefix: "Don't have an account?",
+      toSignUpLink: 'Register a new user',
+      toSignInPrefix: 'Already have an account?',
+      toSignInLink: 'Back to sign in',
+    },
     actions: {
       signIn: 'Log in',
       signUp: 'Sign up',
