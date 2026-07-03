@@ -1,32 +1,36 @@
 import { useEffect, useMemo, useState } from 'react'
-import { supabase, supabaseConfigError } from '../supabaseClient'
+import type { Messages } from '../i18n'
+import { isSupabaseConfigured, supabase } from '../supabaseClient'
 
 type DbRow = Record<string, unknown>
 type ConnectionState = 'checking' | 'connected' | 'failed'
 
-export default function AuthPanel() {
+type AuthPanelProps = {
+  messages: Messages
+}
+
+export default function AuthPanel({ messages }: AuthPanelProps) {
   const [email, setEmail] = useState('')
   const [password, setPassword] = useState('')
 
   const [authLoading, setAuthLoading] = useState(false)
   const [error, setError] = useState<string | null>(null)
   const [status, setStatus] = useState<string | null>(null)
-  const [connectionState, setConnectionState] = useState<ConnectionState>('checking')
+  const [connectionState, setConnectionState] = useState<ConnectionState>(
+    supabase ? 'checking' : 'failed',
+  )
 
   const [sessionEmail, setSessionEmail] = useState<string | null>(null)
 
   const [dbLoading, setDbLoading] = useState(false)
   const [dbRows, setDbRows] = useState<DbRow[]>([])
-  const missingConfig = supabaseConfigError
+  const missingConfig = !isSupabaseConfigured
 
   // Hardcoded table name per task; change to your table.
   const tableName = useMemo(() => 'your_table_name', [])
 
   useEffect(() => {
     if (!supabase) {
-      setError(missingConfig)
-      setSessionEmail(null)
-      setConnectionState('failed')
       return
     }
 
@@ -65,7 +69,6 @@ export default function AuthPanel() {
 
   async function signInWithPassword() {
     if (!supabase) {
-      setError(missingConfig)
       return
     }
 
@@ -75,9 +78,9 @@ export default function AuthPanel() {
     try {
       const { error } = await supabase.auth.signInWithPassword({ email, password })
       if (error) throw error
-      setStatus('Logged in successfully.')
+      setStatus(messages.auth.feedback.loggedIn)
     } catch (e) {
-      const msg = e instanceof Error ? e.message : 'Login failed'
+      const msg = e instanceof Error ? e.message : messages.auth.feedback.loginFailed
       setError(msg)
     } finally {
       setAuthLoading(false)
@@ -86,7 +89,6 @@ export default function AuthPanel() {
 
   async function signUp() {
     if (!supabase) {
-      setError(missingConfig)
       return
     }
 
@@ -98,12 +100,12 @@ export default function AuthPanel() {
       if (error) throw error
 
       if (data.session) {
-        setStatus('Sign up completed and session created.')
+        setStatus(messages.auth.feedback.signUpWithSession)
       } else {
-        setStatus('Sign up started. Check your email to confirm your account.')
+        setStatus(messages.auth.feedback.signUpCheckEmail)
       }
     } catch (e) {
-      const msg = e instanceof Error ? e.message : 'Sign up failed'
+      const msg = e instanceof Error ? e.message : messages.auth.feedback.signUpFailed
       setError(msg)
     } finally {
       setAuthLoading(false)
@@ -112,7 +114,6 @@ export default function AuthPanel() {
 
   async function signOut() {
     if (!supabase) {
-      setError(missingConfig)
       return
     }
 
@@ -123,9 +124,9 @@ export default function AuthPanel() {
       const { error } = await supabase.auth.signOut()
       if (error) throw error
       setDbRows([])
-      setStatus('Signed out.')
+      setStatus(messages.auth.feedback.signedOut)
     } catch (e) {
-      const msg = e instanceof Error ? e.message : 'Sign out failed'
+      const msg = e instanceof Error ? e.message : messages.auth.feedback.signOutFailed
       setError(msg)
     } finally {
       setAuthLoading(false)
@@ -134,7 +135,6 @@ export default function AuthPanel() {
 
   async function fetchDb() {
     if (!supabase) {
-      setError(missingConfig)
       return
     }
 
@@ -147,9 +147,9 @@ export default function AuthPanel() {
       const { data, error } = await supabase.from(tableName).select('*').limit(20)
       if (error) throw error
       setDbRows((data ?? []) as DbRow[])
-      setStatus('Database query completed successfully.')
+      setStatus(messages.auth.feedback.dbLoaded)
     } catch (e) {
-      const msg = e instanceof Error ? e.message : 'Failed to fetch database'
+      const msg = e instanceof Error ? e.message : messages.auth.feedback.fetchDbFailed
       setError(msg)
       setDbRows([])
     } finally {
@@ -159,15 +159,15 @@ export default function AuthPanel() {
 
   return (
     <div style={{ maxWidth: 640, margin: '0 auto', padding: 16 }}>
-      <h2 style={{ marginTop: 24 }}>Authentication (Supabase)</h2>
+      <h2 style={{ marginTop: 24 }}>{messages.auth.title}</h2>
 
       <div style={{ marginTop: 12, textAlign: 'left' }}>
-        <strong>Supabase connection:</strong>{' '}
+        <strong>{messages.auth.connection.label}</strong>{' '}
         {connectionState === 'checking'
-          ? 'Checking...'
+          ? messages.auth.connection.checking
           : connectionState === 'connected'
-            ? 'Connected'
-            : 'Not connected'}
+            ? messages.auth.connection.connected
+            : messages.auth.connection.failed}
       </div>
 
       {missingConfig ? (
@@ -180,18 +180,20 @@ export default function AuthPanel() {
             textAlign: 'left',
           }}
         >
-          <strong>Setup required.</strong>
+          <strong>{messages.auth.setupRequired.title}</strong>
           <div style={{ marginTop: 8 }}>
-            Add <code>VITE_SUPABASE_URL</code> and{' '}
-            <code>VITE_SUPABASE_PUBLISHABLE_KEY</code> to a <code>.env.local</code>{' '}
-            file in the project root.
+            {messages.auth.setupRequired.messageStart} <code>VITE_SUPABASE_URL</code>{' '}
+            {messages.auth.setupRequired.messageMiddle}{' '}
+            <code>VITE_SUPABASE_PUBLISHABLE_KEY</code> {messages.auth.setupRequired.messageEnd}{' '}
+            <code>.env.local</code> {messages.auth.setupRequired.messageSuffix}
           </div>
         </div>
       ) : null}
 
       <div style={{ margin: '12px 0' }}>
         <div>
-          <strong>Signed in as:</strong> {sessionEmail ?? 'Not signed in'}
+          <strong>{messages.auth.session.label}</strong>{' '}
+          {sessionEmail ?? messages.auth.session.signedOut}
         </div>
       </div>
 
@@ -200,14 +202,14 @@ export default function AuthPanel() {
           value={email}
           onChange={(e) => setEmail(e.target.value)}
           type="email"
-          placeholder="Email"
+          placeholder={messages.auth.fields.email}
           style={{ padding: 10, borderRadius: 6, border: '1px solid var(--border)' }}
         />
         <input
           value={password}
           onChange={(e) => setPassword(e.target.value)}
           type="password"
-          placeholder="Password"
+          placeholder={messages.auth.fields.password}
           style={{ padding: 10, borderRadius: 6, border: '1px solid var(--border)' }}
         />
 
@@ -215,57 +217,59 @@ export default function AuthPanel() {
           <button
             type="button"
             onClick={signInWithPassword}
-            disabled={authLoading || !email || !password}
+            disabled={missingConfig || authLoading || !email || !password}
             style={{ padding: '10px 14px', borderRadius: 6, cursor: 'pointer' }}
           >
-            Log in
+            {messages.auth.actions.signIn}
           </button>
           <button
             type="button"
             onClick={signUp}
-            disabled={authLoading || !email || !password}
+            disabled={missingConfig || authLoading || !email || !password}
             style={{ padding: '10px 14px', borderRadius: 6, cursor: 'pointer' }}
           >
-            Sign up
+            {messages.auth.actions.signUp}
           </button>
           <button
             type="button"
             onClick={signOut}
-            disabled={authLoading || !sessionEmail}
+            disabled={missingConfig || authLoading || !sessionEmail}
             style={{ padding: '10px 14px', borderRadius: 6, cursor: 'pointer' }}
           >
-            Sign out
+            {messages.auth.actions.signOut}
           </button>
         </div>
       </div>
 
       {error ? (
         <div style={{ marginTop: 12, color: 'crimson' }}>
-          <strong>Error:</strong> {error}
+          <strong>{messages.auth.feedback.error}</strong> {error}
         </div>
       ) : null}
 
       {status ? (
         <div style={{ marginTop: 12, color: 'green' }}>
-          <strong>Status:</strong> {status}
+          <strong>{messages.auth.feedback.status}</strong> {status}
         </div>
       ) : null}
 
       <hr style={{ margin: '24px 0', borderColor: 'var(--border)' }} />
 
       <div>
-        <h3 style={{ margin: '0 0 8px' }}>Database viewer (logged-in)</h3>
+        <h3 style={{ margin: '0 0 8px' }}>{messages.auth.database.title}</h3>
         <div style={{ marginBottom: 10 }}>
-          Table: <code>{tableName}</code> (edit in <code>AuthPanel.tsx</code>)
+          {messages.auth.database.tableLabel} <code>{tableName}</code>{' '}
+          {messages.auth.database.editHintStart} <code>AuthPanel.tsx</code>{' '}
+          {messages.auth.database.editHintEnd}
         </div>
 
         <button
           type="button"
           onClick={fetchDb}
-          disabled={dbLoading || !sessionEmail}
+          disabled={missingConfig || dbLoading || !sessionEmail}
           style={{ padding: '10px 14px', borderRadius: 6, cursor: 'pointer' }}
         >
-          {dbLoading ? 'Loading...' : 'Fetch first 20 rows'}
+          {dbLoading ? messages.auth.database.loading : messages.auth.database.fetchRows}
         </button>
 
         <div style={{ marginTop: 14, textAlign: 'left' }}>
@@ -282,11 +286,10 @@ export default function AuthPanel() {
               {JSON.stringify(dbRows, null, 2)}
             </pre>
           ) : (
-            <div style={{ color: 'var(--text)' }}>No data loaded yet.</div>
+            <div style={{ color: 'var(--text)' }}>{messages.auth.database.empty}</div>
           )}
         </div>
       </div>
     </div>
   )
 }
-
