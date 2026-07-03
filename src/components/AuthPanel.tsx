@@ -103,8 +103,8 @@ export default function AuthPanel({ messages }: AuthPanelProps) {
         password,
         options: {
           data: {
-            name,
-            last_name: lastName,
+            name: name.trim(),
+            last_name: lastName.trim(),
           },
         },
       })
