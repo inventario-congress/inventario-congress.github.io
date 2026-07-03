@@ -256,6 +256,7 @@ export default function AuthPanel({ messages }: AuthPanelProps) {
           value={password}
           onChange={(e) => setPassword(e.target.value)}
           type="password"
+          required
           placeholder={messages.auth.fields.password}
           style={{ padding: 10, borderRadius: 6, border: '1px solid var(--border)' }}
         />
