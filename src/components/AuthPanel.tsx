@@ -260,6 +260,8 @@ export default function AuthPanel({ messages }: AuthPanelProps) {
               disabled={
                 missingConfig ||
                 authLoading ||
+                // If already authenticated, prevent sign-up mode entirely.
+                Boolean(sessionEmail) ||
                 !name.trim() ||
                 !lastName.trim() ||
                 !email ||
@@ -270,61 +272,71 @@ export default function AuthPanel({ messages }: AuthPanelProps) {
               {messages.auth.actions.signUp}
             </button>
           )}
-          <button
-            type="button"
-            onClick={signOut}
-            disabled={missingConfig || authLoading || !sessionEmail}
-            style={{ padding: '10px 14px', borderRadius: 6, cursor: 'pointer' }}
-          >
-            {messages.auth.actions.signOut}
-          </button>
+
+          {/* Only show sign-out when not in signUp mode and when authenticated */}
+          {authMode === 'signIn' ? (
+            <button
+              type="button"
+              onClick={signOut}
+              disabled={missingConfig || authLoading || !sessionEmail}
+              style={{ padding: '10px 14px', borderRadius: 6, cursor: 'pointer' }}
+            >
+              {messages.auth.actions.signOut}
+            </button>
+          ) : null}
         </div>
 
         <div style={{ textAlign: 'left' }}>
           {authMode === 'signIn' ? (
-            <>
-              {messages.auth.panels.toSignUpPrefix}{' '}
-              <button
-                type="button"
-                onClick={() => {
-                  setStatus(null)
-                  setError(null)
-                  setAuthMode('signUp')
-                }}
-                style={{
-                  border: 'none',
-                  background: 'none',
-                  padding: 0,
-                  textDecoration: 'underline',
-                  color: 'var(--text)',
-                  cursor: 'pointer',
-                }}
-              >
-                {messages.auth.panels.toSignUpLink}
-              </button>
-            </>
+            // Hide the sign-up link entirely if user is authenticated.
+            sessionEmail ? null : (
+              <>
+                {messages.auth.panels.toSignUpPrefix}{' '}
+                <button
+                  type="button"
+                  onClick={() => {
+                    setStatus(null)
+                    setError(null)
+                    setAuthMode('signUp')
+                  }}
+                  style={{
+                    border: 'none',
+                    background: 'none',
+                    padding: 0,
+                    textDecoration: 'underline',
+                    color: 'var(--text)',
+                    cursor: 'pointer',
+                  }}
+                >
+                  {messages.auth.panels.toSignUpLink}
+                </button>
+              </>
+            )
           ) : (
-            <>
-              {messages.auth.panels.toSignInPrefix}{' '}
-              <button
-                type="button"
-                onClick={() => {
-                  setStatus(null)
-                  setError(null)
-                  setAuthMode('signIn')
-                }}
-                style={{
-                  border: 'none',
-                  background: 'none',
-                  padding: 0,
-                  textDecoration: 'underline',
-                  color: 'var(--text)',
-                  cursor: 'pointer',
-                }}
-              >
-                {messages.auth.panels.toSignInLink}
-              </button>
-            </>
+            // In sign-up mode, switching back to sign-in makes sense only when not authenticated.
+            sessionEmail ? null : (
+              <>
+                {messages.auth.panels.toSignInPrefix}{' '}
+                <button
+                  type="button"
+                  onClick={() => {
+                    setStatus(null)
+                    setError(null)
+                    setAuthMode('signIn')
+                  }}
+                  style={{
+                    border: 'none',
+                    background: 'none',
+                    padding: 0,
+                    textDecoration: 'underline',
+                    color: 'var(--text)',
+                    cursor: 'pointer',
+                  }}
+                >
+                  {messages.auth.panels.toSignInLink}
+                </button>
+              </>
+            )
           )}
         </div>
       </div>
