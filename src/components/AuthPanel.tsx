@@ -23,9 +23,6 @@ export default function AuthPanel({ messages }: AuthPanelProps) {
 
   const missingConfig = !isSupabaseConfigured
 
-  // Hardcoded table name per task; change to your table.
-  const tableName = useMemo(() => 'your_table_name', [])
-
   useEffect(() => {
     if (!supabase) {
       return
