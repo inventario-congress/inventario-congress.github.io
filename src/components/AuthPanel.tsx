@@ -209,7 +209,11 @@ export default function AuthPanel({ messages }: AuthPanelProps) {
       </div>
 
       <div style={{ display: 'grid', gap: 10, marginTop: 12 }}>
+        <label htmlFor="signup-name" style={{ textAlign: 'left' }}>
+          {messages.auth.fields.name}
+        </label>
         <input
+          id="signup-name"
           value={name}
           onChange={(e) => setName(e.target.value)}
           type="text"
@@ -219,7 +223,11 @@ export default function AuthPanel({ messages }: AuthPanelProps) {
           aria-label={messages.auth.fields.name}
           style={{ padding: 10, borderRadius: 6, border: '1px solid var(--border)' }}
         />
+        <label htmlFor="signup-last-name" style={{ textAlign: 'left' }}>
+          {messages.auth.fields.lastName}
+        </label>
         <input
+          id="signup-last-name"
           value={lastName}
           onChange={(e) => setLastName(e.target.value)}
           type="text"
