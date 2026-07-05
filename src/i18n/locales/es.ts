@@ -56,6 +56,42 @@ const es = {
       fetchDbFailed: 'No se pudo consultar la base de datos',
     },
   },
+  items: {
+    title: 'Ítems',
+    fields: {
+      modelName: 'Nombre del ítem',
+      identifier: 'Identificador del ítem',
+    },
+    actions: {
+      create: 'Crear ítem',
+      update: 'Actualizar ítem',
+      cancelEdit: 'Cancelar edición',
+      edit: 'Editar',
+      delete: 'Eliminar',
+      refresh: 'Actualizar',
+      signOut: 'Cerrar sesión',
+    },
+    table: {
+      title: 'Ítems registrados',
+      modelName: 'Nombre del modelo',
+      identifier: 'Identificador del ítem',
+      actions: 'Acciones',
+      empty: 'Todavía no hay ítems.',
+    },
+    feedback: {
+      loaded: 'Ítems cargados.',
+      loadFailed: 'No se pudieron cargar los ítems',
+      created: 'Ítem creado.',
+      createFailed: 'No se pudo crear el ítem',
+      updated: 'Ítem actualizado.',
+      updateFailed: 'No se pudo actualizar el ítem',
+      deleted: 'Ítem eliminado.',
+      deleteFailed: 'No se pudo eliminar el ítem',
+      signedOut: 'Sesión cerrada.',
+      signOutFailed: 'No se pudo cerrar la sesión',
+      authRequired: 'Se requiere autenticación',
+    },
+  },
 } as const
 
 export default es

@@ -56,6 +56,42 @@ const en = {
       fetchDbFailed: 'Failed to fetch database',
     },
   },
+  items: {
+    title: 'Items',
+    fields: {
+      modelName: 'Item name',
+      identifier: 'Item identifier',
+    },
+    actions: {
+      create: 'Create item',
+      update: 'Update item',
+      cancelEdit: 'Cancel edit',
+      edit: 'Edit',
+      delete: 'Delete',
+      refresh: 'Refresh',
+      signOut: 'Sign out',
+    },
+    table: {
+      title: 'Registered items',
+      modelName: 'Model name',
+      identifier: 'Item identifier',
+      actions: 'Actions',
+      empty: 'No items yet.',
+    },
+    feedback: {
+      loaded: 'Items loaded.',
+      loadFailed: 'Failed to load items',
+      created: 'Item created.',
+      createFailed: 'Failed to create item',
+      updated: 'Item updated.',
+      updateFailed: 'Failed to update item',
+      deleted: 'Item deleted.',
+      deleteFailed: 'Failed to delete item',
+      signedOut: 'Signed out.',
+      signOutFailed: 'Failed to sign out',
+      authRequired: 'Authentication is required',
+    },
+  },
 } as const
 
 export default en
