@@ -38,6 +38,10 @@ const en = {
       signUp: 'Sign up',
       signOut: 'Sign out',
     },
+    accessibility: {
+      showPassword: 'Show password',
+      hidePassword: 'Hide password',
+    },
     feedback: {
       error: 'Error:',
       status: 'Status:',

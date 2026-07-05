@@ -13,6 +13,7 @@ export default function AuthPanel({ messages }: AuthPanelProps) {
   const [lastName, setLastName] = useState('')
   const [email, setEmail] = useState('')
   const [password, setPassword] = useState('')
+  const [passwordVisible, setPasswordVisible] = useState(false)
   const [authMode, setAuthMode] = useState<AuthMode>('signIn')
 
   const [authLoading, setAuthLoading] = useState(false)
@@ -191,20 +192,99 @@ export default function AuthPanel({ messages }: AuthPanelProps) {
           required
           autoComplete="email"
           placeholder={messages.auth.fields.email}
-          style={{ padding: 10, borderRadius: 6, border: '1px solid var(--border)' }}
+          style={{
+            width: '100%',
+            boxSizing: 'border-box',
+            padding: 10,
+            borderRadius: 6,
+            border: '1px solid var(--border)',
+          }}
         />
         <label htmlFor="auth-password" style={{ textAlign: 'left' }}>
           {messages.auth.fields.password}
         </label>
-        <input
-          id="auth-password"
-          value={password}
-          onChange={(e) => setPassword(e.target.value)}
-          type="password"
-          required
-          placeholder={messages.auth.fields.password}
-          style={{ padding: 10, borderRadius: 6, border: '1px solid var(--border)' }}
-        />
+        <div style={{ position: 'relative', width: '100%' }}>
+          <input
+            id="auth-password"
+            value={password}
+            onChange={(e) => setPassword(e.target.value)}
+            type={passwordVisible ? 'text' : 'password'}
+            required
+            placeholder={messages.auth.fields.password}
+            style={{
+              width: '100%',
+              boxSizing: 'border-box',
+              padding: '10px 44px 10px 10px',
+              borderRadius: 6,
+              border: '1px solid var(--border)',
+            }}
+          />
+          <button
+            type="button"
+            onClick={() => setPasswordVisible((current) => !current)}
+            aria-label={
+              passwordVisible
+                ? messages.auth.accessibility.hidePassword
+                : messages.auth.accessibility.showPassword
+            }
+            title={
+              passwordVisible
+                ? messages.auth.accessibility.hidePassword
+                : messages.auth.accessibility.showPassword
+            }
+            aria-pressed={passwordVisible}
+            style={{
+              position: 'absolute',
+              right: 10,
+              top: '50%',
+              transform: 'translateY(-50%)',
+              display: 'inline-flex',
+              alignItems: 'center',
+              justifyContent: 'center',
+              width: 28,
+              height: 28,
+              padding: 0,
+              border: 'none',
+              background: 'transparent',
+              color: 'var(--text)',
+              cursor: 'pointer',
+            }}
+          >
+            {passwordVisible ? (
+              <svg
+                viewBox="0 0 24 24"
+                aria-hidden="true"
+                width="18"
+                height="18"
+                fill="none"
+                stroke="currentColor"
+                strokeWidth="2"
+                strokeLinecap="round"
+                strokeLinejoin="round"
+              >
+                <path d="M2.5 2.5l19 19" />
+                <path d="M9.88 9.88A3 3 0 0 0 12 15a3 3 0 0 0 2.12-.88" />
+                <path d="M10.73 5.08A10.94 10.94 0 0 1 12 5c6.5 0 10 7 10 7a18.06 18.06 0 0 1-2.67 3.77" />
+                <path d="M6.23 6.23C3.7 7.96 2 12 2 12s3.5 7 10 7c1.4 0 2.72-.25 3.94-.72" />
+              </svg>
+            ) : (
+              <svg
+                viewBox="0 0 24 24"
+                aria-hidden="true"
+                width="18"
+                height="18"
+                fill="none"
+                stroke="currentColor"
+                strokeWidth="2"
+                strokeLinecap="round"
+                strokeLinejoin="round"
+              >
+                <path d="M2 12s3.5-7 10-7 10 7 10 7-3.5 7-10 7-10-7-10-7Z" />
+                <circle cx="12" cy="12" r="3" />
+              </svg>
+            )}
+          </button>
+        </div>
 
         <div style={{ display: 'flex', gap: 10, flexWrap: 'wrap' }}>
           {authMode === 'signIn' ? (

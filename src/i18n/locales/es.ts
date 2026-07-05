@@ -38,6 +38,10 @@ const es = {
       signUp: 'Registrarse',
       signOut: 'Cerrar sesión',
     },
+    accessibility: {
+      showPassword: 'Mostrar contraseña',
+      hidePassword: 'Ocultar contraseña',
+    },
     feedback: {
       error: 'Error:',
       status: 'Estado:',
