@@ -19,7 +19,6 @@ export default function ItemsPanel({ messages, canWrite }: ItemsPanelProps) {
   const [identifier, setIdentifier] = useState('')
   const [editingId, setEditingId] = useState<number | null>(null)
 
-  const [sessionEmail, setSessionEmail] = useState<string | null>(null)
   const [loading, setLoading] = useState(false)
   const [rows, setRows] = useState<ItemRow[]>([])
   const [error, setError] = useState<string | null>(null)
@@ -33,27 +32,17 @@ export default function ItemsPanel({ messages, canWrite }: ItemsPanelProps) {
     let active = true
 
     ;(async () => {
-      const {
-        data: { session },
-      } = await supabase.auth.getSession()
+      await supabase.auth.getSession()
 
       if (!active) {
         return
       }
 
-      setSessionEmail(session?.user?.email ?? null)
       await loadItems()
     })()
 
-    const {
-      data: { subscription },
-    } = supabase.auth.onAuthStateChange((_event, session) => {
-      setSessionEmail(session?.user?.email ?? null)
-    })
-
     return () => {
       active = false
-      subscription.unsubscribe()
     }
   }, [])
 
@@ -232,30 +221,9 @@ export default function ItemsPanel({ messages, canWrite }: ItemsPanelProps) {
     }
   }
 
-  async function signOut() {
-    if (!supabase) {
-      return
-    }
-
-    setError(null)
-    setStatus(null)
-
-    const { error } = await supabase.auth.signOut()
-    if (error) {
-      setError(error.message || messages.items.feedback.signOutFailed)
-      return
-    }
-
-    setStatus(messages.items.feedback.signedOut)
-  }
-
   return (
     <div style={{ maxWidth: 760, margin: '0 auto', padding: 16 }}>
       <h2 style={{ marginTop: 24 }}>{messages.items.title}</h2>
-
-      <div style={{ marginBottom: 12, textAlign: 'left' }}>
-        <strong>{messages.auth.session.label}</strong> {sessionEmail ?? messages.auth.session.signedOut}
-      </div>
 
       {canWrite ? (
         <div style={{ display: 'grid', gap: 10, marginTop: 12 }}>
@@ -326,15 +294,6 @@ export default function ItemsPanel({ messages, canWrite }: ItemsPanelProps) {
             >
               {messages.items.actions.refresh}
             </button>
-
-            <button
-              type="button"
-              onClick={signOut}
-              disabled={loading || !sessionEmail}
-              style={{ padding: '10px 14px', borderRadius: 6, cursor: 'pointer' }}
-            >
-              {messages.items.actions.signOut}
-            </button>
           </div>
         </div>
       ) : (
@@ -351,15 +310,6 @@ export default function ItemsPanel({ messages, canWrite }: ItemsPanelProps) {
             style={{ padding: '10px 14px', borderRadius: 6, cursor: 'pointer' }}
           >
             {messages.items.actions.refresh}
-          </button>
-
-          <button
-            type="button"
-            onClick={signOut}
-            disabled={loading || !sessionEmail}
-            style={{ padding: '10px 14px', borderRadius: 6, cursor: 'pointer' }}
-          >
-            {messages.items.actions.signOut}
           </button>
         </div>
       ) : null}

@@ -1,6 +1,10 @@
 import { useEffect, useMemo, useState } from 'react'
 import AuthPanel from './components/AuthPanel'
 import ItemsPanel from './components/ItemsPanel'
+import LocationsPanel from './components/LocationsPanel'
+import Menu, { type AppPanel } from './components/Menu'
+import MovementsPanel from './components/MovementsPanel'
+import ProfilePanel from './components/ProfilePanel'
 import { MoonIcon, SunIcon } from './components/icons'
 import { getPreferredLanguage, translations, type Language } from './i18n'
 import { supabase } from './supabaseClient'
@@ -45,6 +49,10 @@ function App() {
   const [theme, setTheme] = useState<Theme>(() => getPreferredTheme())
   const [isAuthenticated, setIsAuthenticated] = useState(false)
   const [isWriter, setIsWriter] = useState(false)
+  const [activePanel, setActivePanel] = useState<AppPanel>('movements')
+  const [sessionEmail, setSessionEmail] = useState<string | null>(null)
+  const [sessionName, setSessionName] = useState<string | null>(null)
+  const [sessionLastName, setSessionLastName] = useState<string | null>(null)
   const messages = useMemo(() => translations[language], [language])
 
   useEffect(() => {
@@ -60,10 +68,16 @@ function App() {
       if (!session?.user) {
         setIsAuthenticated(false)
         setIsWriter(false)
+        setSessionEmail(null)
+        setSessionName(null)
+        setSessionLastName(null)
         return
       }
 
       setIsAuthenticated(true)
+      setSessionEmail(session.user.email ?? null)
+      setSessionName((session.user.user_metadata?.name as string | undefined) ?? null)
+      setSessionLastName((session.user.user_metadata?.last_name as string | undefined) ?? null)
 
       const tokenRole = getRoleFromAccessToken(session.access_token)
       const metadataRole = (session.user.app_metadata?.user_role ?? session.user.user_metadata?.user_role) as
@@ -80,12 +94,20 @@ function App() {
 
       if (!active) return
       await loadWriterAccess(session)
+
+      if (session?.user) {
+        setActivePanel('movements')
+      }
     })()
 
     const {
       data: { subscription },
-    } = supabase.auth.onAuthStateChange((_event, session) => {
+    } = supabase.auth.onAuthStateChange((event, session) => {
       void loadWriterAccess(session)
+
+      if (event === 'SIGNED_IN') {
+        setActivePanel('movements')
+      }
     })
 
     return () => {
@@ -104,6 +126,37 @@ function App() {
     document.documentElement.setAttribute('data-theme', theme)
     window.localStorage.setItem('theme', theme)
   }, [theme])
+
+  async function handleSignOut() {
+    if (!supabase) {
+      return
+    }
+
+    await supabase.auth.signOut()
+  }
+
+  function renderPanel() {
+    if (activePanel === 'items') {
+      return <ItemsPanel messages={messages} canWrite={isWriter} />
+    }
+
+    if (activePanel === 'locations') {
+      return <LocationsPanel messages={messages} canWrite={isWriter} />
+    }
+
+    if (activePanel === 'profile') {
+      return (
+        <ProfilePanel
+          messages={messages}
+          email={sessionEmail}
+          name={sessionName}
+          lastName={sessionLastName}
+        />
+      )
+    }
+
+    return <MovementsPanel messages={messages} canWrite={isWriter} />
+  }
 
   return (
     <main>
@@ -143,7 +196,20 @@ function App() {
           </select>
         </label>
       </div>
-        {isAuthenticated ? <ItemsPanel messages={messages} canWrite={isWriter} /> : <AuthPanel messages={messages} />}
+
+      {isAuthenticated ? (
+        <div style={{ maxWidth: 1100, margin: '0 auto', padding: 16, display: 'grid', gap: 16 }}>
+          <Menu
+            messages={messages}
+            activePanel={activePanel}
+            onSelectPanel={setActivePanel}
+            onSignOut={handleSignOut}
+          />
+          {renderPanel()}
+        </div>
+      ) : (
+        <AuthPanel messages={messages} />
+      )}
     </main>
   )
 }
