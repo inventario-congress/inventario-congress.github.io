@@ -1,4 +1,4 @@
-import { useEffect, useState } from 'react'
+import { type FormEvent, useEffect, useState } from 'react'
 import type { Messages } from '../i18n'
 import { isSupabaseConfigured, supabase } from '../supabaseClient'
 
@@ -134,6 +134,17 @@ export default function AuthPanel({ messages }: AuthPanelProps) {
     }
   }
 
+  function handleAuthSubmit(event: FormEvent<HTMLFormElement>) {
+    event.preventDefault()
+
+    if (authMode === 'signIn') {
+      void signInWithPassword()
+      return
+    }
+
+    void signUp()
+  }
+
   return (
     <div style={{ maxWidth: 640, margin: '0 auto', padding: 16 }}>
       <h2 style={{ marginTop: 24 }}>{messages.auth.title}</h2>
@@ -145,7 +156,7 @@ export default function AuthPanel({ messages }: AuthPanelProps) {
         </div>
       </div>
 
-      <div style={{ display: 'grid', gap: 10, marginTop: 12 }}>
+      <form onSubmit={handleAuthSubmit} style={{ display: 'grid', gap: 10, marginTop: 12 }}>
         <h3 style={{ margin: '0 0 4px', textAlign: 'left' }}>
           {authMode === 'signIn' ? messages.auth.panels.signInTitle : messages.auth.panels.signUpTitle}
         </h3>
@@ -209,6 +220,7 @@ export default function AuthPanel({ messages }: AuthPanelProps) {
             value={password}
             onChange={(e) => setPassword(e.target.value)}
             type={passwordVisible ? 'text' : 'password'}
+            autoComplete={authMode === 'signIn' ? 'current-password' : 'new-password'}
             required
             placeholder={messages.auth.fields.password}
             style={{
@@ -289,8 +301,7 @@ export default function AuthPanel({ messages }: AuthPanelProps) {
         <div style={{ display: 'flex', gap: 10, flexWrap: 'wrap' }}>
           {authMode === 'signIn' ? (
             <button
-              type="button"
-              onClick={signInWithPassword}
+              type="submit"
               disabled={missingConfig || authLoading || !email || !password}
               style={{ padding: '10px 14px', borderRadius: 6, cursor: 'pointer' }}
             >
@@ -298,8 +309,7 @@ export default function AuthPanel({ messages }: AuthPanelProps) {
             </button>
           ) : (
             <button
-              type="button"
-              onClick={signUp}
+              type="submit"
               disabled={
                 missingConfig ||
                 authLoading ||
@@ -382,7 +392,7 @@ export default function AuthPanel({ messages }: AuthPanelProps) {
             )
           )}
         </div>
-      </div>
+      </form>
 
       {error ? (
         <div style={{ marginTop: 12, color: 'crimson' }}>
