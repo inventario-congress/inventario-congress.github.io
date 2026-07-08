@@ -47,12 +47,10 @@ export default function MovementsPanel({ messages, canWrite }: MovementsPanelPro
 
   const [movementItemId, setMovementItemId] = useState('')
   const [movementLocationId, setMovementLocationId] = useState('')
-  const [editingMovementId, setEditingMovementId] = useState<number | null>(null)
 
   const [attachmentParentId, setAttachmentParentId] = useState('')
   const [attachmentChildId, setAttachmentChildId] = useState('')
   const [attachmentMode, setAttachmentMode] = useState<'attach' | 'detach'>('attach')
-  const [editingAttachmentId, setEditingAttachmentId] = useState<number | null>(null)
 
   const [movementRows, setMovementRows] = useState<MovementRow[]>([])
   const [attachmentRows, setAttachmentRows] = useState<AttachmentRow[]>([])
@@ -265,74 +263,19 @@ export default function MovementsPanel({ messages, canWrite }: MovementsPanelPro
     setStatus(null)
 
     try {
-      if (editingMovementId === null) {
-        const { error: createError } = await supabase.from('movement').insert({
-          item: itemId,
-          location: locationId,
-          user: sessionUserId,
-        })
-        if (createError) throw createError
-        setStatus(messages.movements.feedback.created)
-      } else {
-        const { error: updateError } = await supabase
-          .from('movement')
-          .update({ item: itemId, location: locationId, user: sessionUserId })
-          .eq('id', editingMovementId)
-        if (updateError) throw updateError
-        setStatus(messages.movements.feedback.updated)
-      }
+      const { error: createError } = await supabase.from('movement').insert({
+        item: itemId,
+        location: locationId,
+        user: sessionUserId,
+      })
+      if (createError) throw createError
 
-      setEditingMovementId(null)
+      setStatus(messages.movements.feedback.created)
       setMovementItemId('')
       setMovementLocationId('')
       await loadEverything()
     } catch (e) {
-      const fallback = editingMovementId === null ? messages.movements.feedback.createFailed : messages.movements.feedback.updateFailed
-      setError(e instanceof Error ? e.message : fallback)
-    } finally {
-      setLoading(false)
-    }
-  }
-
-  function startEditMovement(row: MovementRow) {
-    if (!canWrite) {
-      return
-    }
-
-    setEditingMovementId(row.id)
-    setMovementItemId(String(row.itemId))
-    setMovementLocationId(String(row.locationId))
-    setError(null)
-    setStatus(null)
-  }
-
-  function cancelMovementEdit() {
-    setEditingMovementId(null)
-    setMovementItemId('')
-    setMovementLocationId('')
-  }
-
-  async function deleteMovement(id: number) {
-    if (!supabase || !canWrite) {
-      return
-    }
-
-    setLoading(true)
-    setError(null)
-    setStatus(null)
-
-    try {
-      const { error: deleteError } = await supabase.from('movement').delete().eq('id', id)
-      if (deleteError) throw deleteError
-
-      if (editingMovementId === id) {
-        cancelMovementEdit()
-      }
-
-      setStatus(messages.movements.feedback.deleted)
-      await loadEverything()
-    } catch (e) {
-      setError(e instanceof Error ? e.message : messages.movements.feedback.deleteFailed)
+      setError(e instanceof Error ? e.message : messages.movements.feedback.createFailed)
     } finally {
       setLoading(false)
     }
@@ -362,75 +305,16 @@ export default function MovementsPanel({ messages, canWrite }: MovementsPanelPro
         is_attached: attachmentMode === 'attach',
       }
 
-      if (editingAttachmentId === null) {
-        const { error: createError } = await supabase.from('attachment').insert(payload)
-        if (createError) throw createError
-        setStatus(messages.attachments.feedback.created)
-      } else {
-        const { error: updateError } = await supabase
-          .from('attachment')
-          .update(payload)
-          .eq('id', editingAttachmentId)
-        if (updateError) throw updateError
-        setStatus(messages.attachments.feedback.updated)
-      }
+      const { error: createError } = await supabase.from('attachment').insert(payload)
+      if (createError) throw createError
 
-      setEditingAttachmentId(null)
+      setStatus(messages.attachments.feedback.created)
       setAttachmentParentId('')
       setAttachmentChildId('')
       setAttachmentMode('attach')
       await loadEverything()
     } catch (e) {
-      const fallback = editingAttachmentId === null
-        ? messages.attachments.feedback.createFailed
-        : messages.attachments.feedback.updateFailed
-      setError(e instanceof Error ? e.message : fallback)
-    } finally {
-      setLoading(false)
-    }
-  }
-
-  function startEditAttachment(row: AttachmentRow) {
-    if (!canWrite) {
-      return
-    }
-
-    setEditingAttachmentId(row.id)
-    setAttachmentParentId(String(row.parentId))
-    setAttachmentChildId(String(row.childId))
-    setAttachmentMode(row.isAttached ? 'attach' : 'detach')
-    setError(null)
-    setStatus(null)
-  }
-
-  function cancelAttachmentEdit() {
-    setEditingAttachmentId(null)
-    setAttachmentParentId('')
-    setAttachmentChildId('')
-    setAttachmentMode('attach')
-  }
-
-  async function deleteAttachment(id: number) {
-    if (!supabase || !canWrite) {
-      return
-    }
-
-    setLoading(true)
-    setError(null)
-    setStatus(null)
-
-    try {
-      const { error: deleteError } = await supabase.from('attachment').delete().eq('id', id)
-      if (deleteError) throw deleteError
-
-      if (editingAttachmentId === id) {
-        cancelAttachmentEdit()
-      }
-
-      setStatus(messages.attachments.feedback.deleted)
-      await loadEverything()
-    } catch (e) {
-      setError(e instanceof Error ? e.message : messages.attachments.feedback.deleteFailed)
+      setError(e instanceof Error ? e.message : messages.attachments.feedback.createFailed)
     } finally {
       setLoading(false)
     }
@@ -480,12 +364,31 @@ export default function MovementsPanel({ messages, canWrite }: MovementsPanelPro
               style={{ padding: 10, borderRadius: 6, border: '1px solid var(--border)' }}
             >
               <option value="">{messages.movements.fields.selectLocation}</option>
-              {locationChoices.map((choice) => (
-                <option key={choice.id} value={choice.id}>
-                  {choice.name}
-                </option>
-              ))}
+              {(() => {
+                // If an item is selected, prevent moving it to the location where it currently is.
+                const selectedItemId = movementItemId ? Number.parseInt(movementItemId, 10) : null
+
+                // Find the most recent movement row for this item.
+                const currentLocationId = selectedItemId
+                  ? movementRows
+                      .filter((r) => r.itemId === selectedItemId)
+                      .sort((a, b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime())
+                      .at(0)?.locationId ?? null
+                  : null
+
+                return locationChoices
+                  .filter((choice) => {
+                    if (!currentLocationId) return true
+                    return choice.id !== currentLocationId
+                  })
+                  .map((choice) => (
+                    <option key={choice.id} value={choice.id}>
+                      {choice.name}
+                    </option>
+                  ))
+              })()}
             </select>
+
 
             <div style={{ display: 'flex', gap: 10, flexWrap: 'wrap' }}>
               <button
@@ -494,18 +397,8 @@ export default function MovementsPanel({ messages, canWrite }: MovementsPanelPro
                 disabled={loading || !movementItemId || !movementLocationId}
                 style={{ padding: '10px 14px', borderRadius: 6, cursor: 'pointer' }}
               >
-                {editingMovementId === null ? messages.movements.actions.create : messages.movements.actions.update}
+                {messages.movements.actions.create}
               </button>
-              {editingMovementId !== null ? (
-                <button
-                  type="button"
-                  onClick={cancelMovementEdit}
-                  disabled={loading}
-                  style={{ padding: '10px 14px', borderRadius: 6, cursor: 'pointer' }}
-                >
-                  {messages.movements.actions.cancelEdit}
-                </button>
-              ) : null}
             </div>
           </div>
         </section>
@@ -532,11 +425,6 @@ export default function MovementsPanel({ messages, canWrite }: MovementsPanelPro
                   <th style={{ textAlign: 'left', borderBottom: '1px solid var(--border)', padding: '8px 6px' }}>
                     {messages.movements.table.user}
                   </th>
-                  {canWrite ? (
-                    <th style={{ textAlign: 'left', borderBottom: '1px solid var(--border)', padding: '8px 6px' }}>
-                      {messages.movements.table.actions}
-                    </th>
-                  ) : null}
                 </tr>
               </thead>
               <tbody>
@@ -548,28 +436,6 @@ export default function MovementsPanel({ messages, canWrite }: MovementsPanelPro
                     <td style={{ borderBottom: '1px solid var(--border)', padding: '8px 6px' }}>{row.itemLabel}</td>
                     <td style={{ borderBottom: '1px solid var(--border)', padding: '8px 6px' }}>{row.locationName}</td>
                     <td style={{ borderBottom: '1px solid var(--border)', padding: '8px 6px' }}>{row.userName}</td>
-                    {canWrite ? (
-                      <td style={{ borderBottom: '1px solid var(--border)', padding: '8px 6px' }}>
-                        <div style={{ display: 'flex', gap: 8, flexWrap: 'wrap' }}>
-                          <button
-                            type="button"
-                            onClick={() => startEditMovement(row)}
-                            disabled={loading}
-                            style={{ padding: '6px 10px', borderRadius: 6, cursor: 'pointer' }}
-                          >
-                            {messages.movements.actions.edit}
-                          </button>
-                          <button
-                            type="button"
-                            onClick={() => deleteMovement(row.id)}
-                            disabled={loading}
-                            style={{ padding: '6px 10px', borderRadius: 6, cursor: 'pointer' }}
-                          >
-                            {messages.movements.actions.delete}
-                          </button>
-                        </div>
-                      </td>
-                    ) : null}
                   </tr>
                 ))}
               </tbody>
@@ -630,18 +496,8 @@ export default function MovementsPanel({ messages, canWrite }: MovementsPanelPro
                 disabled={loading || !attachmentParentId || !attachmentChildId}
                 style={{ padding: '10px 14px', borderRadius: 6, cursor: 'pointer' }}
               >
-                {editingAttachmentId === null ? messages.attachments.actions.create : messages.attachments.actions.update}
+                {messages.attachments.actions.create}
               </button>
-              {editingAttachmentId !== null ? (
-                <button
-                  type="button"
-                  onClick={cancelAttachmentEdit}
-                  disabled={loading}
-                  style={{ padding: '10px 14px', borderRadius: 6, cursor: 'pointer' }}
-                >
-                  {messages.attachments.actions.cancelEdit}
-                </button>
-              ) : null}
             </div>
           </div>
         </section>
@@ -671,11 +527,6 @@ export default function MovementsPanel({ messages, canWrite }: MovementsPanelPro
                   <th style={{ textAlign: 'left', borderBottom: '1px solid var(--border)', padding: '8px 6px' }}>
                     {messages.attachments.table.user}
                   </th>
-                  {canWrite ? (
-                    <th style={{ textAlign: 'left', borderBottom: '1px solid var(--border)', padding: '8px 6px' }}>
-                      {messages.attachments.table.actions}
-                    </th>
-                  ) : null}
                 </tr>
               </thead>
               <tbody>
@@ -690,28 +541,6 @@ export default function MovementsPanel({ messages, canWrite }: MovementsPanelPro
                       {row.isAttached ? messages.attachments.states.attach : messages.attachments.states.detach}
                     </td>
                     <td style={{ borderBottom: '1px solid var(--border)', padding: '8px 6px' }}>{row.userName}</td>
-                    {canWrite ? (
-                      <td style={{ borderBottom: '1px solid var(--border)', padding: '8px 6px' }}>
-                        <div style={{ display: 'flex', gap: 8, flexWrap: 'wrap' }}>
-                          <button
-                            type="button"
-                            onClick={() => startEditAttachment(row)}
-                            disabled={loading}
-                            style={{ padding: '6px 10px', borderRadius: 6, cursor: 'pointer' }}
-                          >
-                            {messages.attachments.actions.edit}
-                          </button>
-                          <button
-                            type="button"
-                            onClick={() => deleteAttachment(row.id)}
-                            disabled={loading}
-                            style={{ padding: '6px 10px', borderRadius: 6, cursor: 'pointer' }}
-                          >
-                            {messages.attachments.actions.delete}
-                          </button>
-                        </div>
-                      </td>
-                    ) : null}
                   </tr>
                 ))}
               </tbody>
