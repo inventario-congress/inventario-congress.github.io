@@ -9,6 +9,6 @@ export const supabase = isSupabaseConfigured
   ? createClient(supabaseUrl as string, supabaseAnonKey as string)
   : null
 
-if (typeof window !== 'undefined') {
-    ;(window as any).supabase = supabase
+if (import.meta.env.DEV && typeof window !== 'undefined') {
+  ;(window as any).supabase = supabase
 }
