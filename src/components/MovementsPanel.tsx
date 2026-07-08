@@ -210,43 +210,12 @@ export default function MovementsPanel({ messages, canWrite }: MovementsPanelPro
   async function loadUserLabelMap(userIds: string[]) {
     const labelMap = new Map<string, string>()
 
-    if (!supabase || userIds.length === 0) {
+    if (userIds.length === 0) {
       return labelMap
     }
 
     if (sessionUserId && sessionUserName) {
       labelMap.set(sessionUserId, sessionUserName)
-    }
-
-    const selectors = ['id, first_name, last_name', 'id, name, last_name']
-
-    for (const selector of selectors) {
-      const { data, error } = await supabase.from('profiles').select(selector).in('id', userIds)
-
-      if (error) {
-        continue
-      }
-
-      for (const row of ((data ?? []) as unknown as Array<Record<string, unknown>>)) {
-        const id = String(row.id ?? '')
-        if (!id) {
-          continue
-        }
-
-        const firstName = typeof row.first_name === 'string'
-          ? row.first_name
-          : typeof row.name === 'string'
-            ? row.name
-            : ''
-        const lastName = typeof row.last_name === 'string' ? row.last_name : ''
-        const fullName = [firstName.trim(), lastName.trim()].filter(Boolean).join(' ')
-
-        if (fullName) {
-          labelMap.set(id, fullName)
-        }
-      }
-
-      break
     }
 
     return labelMap
