@@ -218,6 +218,33 @@ export default function MovementsPanel({ messages, canWrite }: MovementsPanelPro
       labelMap.set(sessionUserId, sessionUserName)
     }
 
+    if (!supabase) {
+      return labelMap
+    }
+
+    const { data, error } = await supabase.rpc('get_user_display_names', {
+      user_ids: userIds,
+    })
+
+    if (error) {
+      return labelMap
+    }
+
+    for (const row of ((data ?? []) as unknown as Array<Record<string, unknown>>)) {
+      const id = typeof row.id === 'string' ? row.id : ''
+      if (!id) {
+        continue
+      }
+
+      const firstName = typeof row.name === 'string' ? row.name.trim() : ''
+      const lastName = typeof row.last_name === 'string' ? row.last_name.trim() : ''
+      const fullName = [firstName, lastName].filter(Boolean).join(' ')
+
+      if (fullName) {
+        labelMap.set(id, fullName)
+      }
+    }
+
     return labelMap
   }
 
