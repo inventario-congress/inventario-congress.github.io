@@ -58,6 +58,7 @@ const en = {
   },
   items: {
     title: 'Items',
+    readOnly: 'Read-only mode: you can view existing items but cannot create, edit, or delete.',
     fields: {
       modelName: 'Item name',
       identifier: 'Item identifier',

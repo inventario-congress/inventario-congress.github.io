@@ -11,9 +11,10 @@ type ItemRow = {
 
 type ItemsPanelProps = {
   messages: Messages
+  canWrite: boolean
 }
 
-export default function ItemsPanel({ messages }: ItemsPanelProps) {
+export default function ItemsPanel({ messages, canWrite }: ItemsPanelProps) {
   const [modelName, setModelName] = useState('')
   const [identifier, setIdentifier] = useState('')
   const [editingId, setEditingId] = useState<number | null>(null)
@@ -133,6 +134,10 @@ export default function ItemsPanel({ messages }: ItemsPanelProps) {
       return
     }
 
+    if (!canWrite) {
+      return
+    }
+
     const trimmedName = modelName.trim()
     const parsedIdentifier = Number.parseInt(identifier, 10)
 
@@ -201,6 +206,10 @@ export default function ItemsPanel({ messages }: ItemsPanelProps) {
       return
     }
 
+    if (!canWrite) {
+      return
+    }
+
     setError(null)
     setStatus(null)
     setLoading(true)
@@ -248,66 +257,93 @@ export default function ItemsPanel({ messages }: ItemsPanelProps) {
         <strong>{messages.auth.session.label}</strong> {sessionEmail ?? messages.auth.session.signedOut}
       </div>
 
-      <div style={{ display: 'grid', gap: 10, marginTop: 12 }}>
-        <label htmlFor="item-model-name" style={{ textAlign: 'left' }}>
-          {messages.items.fields.modelName}
-        </label>
-        <input
-          id="item-model-name"
-          value={modelName}
-          onChange={(event) => setModelName(event.target.value)}
-          type="text"
-          required
-          placeholder={messages.items.fields.modelName}
-          style={{
-            width: '100%',
-            boxSizing: 'border-box',
-            padding: 10,
-            borderRadius: 6,
-            border: '1px solid var(--border)',
-          }}
-        />
+      {canWrite ? (
+        <div style={{ display: 'grid', gap: 10, marginTop: 12 }}>
+          <label htmlFor="item-model-name" style={{ textAlign: 'left' }}>
+            {messages.items.fields.modelName}
+          </label>
+          <input
+            id="item-model-name"
+            value={modelName}
+            onChange={(event) => setModelName(event.target.value)}
+            type="text"
+            required
+            placeholder={messages.items.fields.modelName}
+            style={{
+              width: '100%',
+              boxSizing: 'border-box',
+              padding: 10,
+              borderRadius: 6,
+              border: '1px solid var(--border)',
+            }}
+          />
 
-        <label htmlFor="item-identifier" style={{ textAlign: 'left' }}>
-          {messages.items.fields.identifier}
-        </label>
-        <input
-          id="item-identifier"
-          value={identifier}
-          onChange={(event) => setIdentifier(event.target.value)}
-          type="number"
-          required
-          placeholder={messages.items.fields.identifier}
-          style={{
-            width: '100%',
-            boxSizing: 'border-box',
-            padding: 10,
-            borderRadius: 6,
-            border: '1px solid var(--border)',
-          }}
-        />
+          <label htmlFor="item-identifier" style={{ textAlign: 'left' }}>
+            {messages.items.fields.identifier}
+          </label>
+          <input
+            id="item-identifier"
+            value={identifier}
+            onChange={(event) => setIdentifier(event.target.value)}
+            type="number"
+            required
+            placeholder={messages.items.fields.identifier}
+            style={{
+              width: '100%',
+              boxSizing: 'border-box',
+              padding: 10,
+              borderRadius: 6,
+              border: '1px solid var(--border)',
+            }}
+          />
 
-        <div style={{ display: 'flex', gap: 10, flexWrap: 'wrap' }}>
-          <button
-            type="button"
-            onClick={handleSubmit}
-            disabled={loading || !modelName.trim() || !identifier.trim()}
-            style={{ padding: '10px 14px', borderRadius: 6, cursor: 'pointer' }}
-          >
-            {editingId === null ? messages.items.actions.create : messages.items.actions.update}
-          </button>
-
-          {editingId !== null ? (
+          <div style={{ display: 'flex', gap: 10, flexWrap: 'wrap' }}>
             <button
               type="button"
-              onClick={cancelEdit}
+              onClick={handleSubmit}
+              disabled={loading || !modelName.trim() || !identifier.trim()}
+              style={{ padding: '10px 14px', borderRadius: 6, cursor: 'pointer' }}
+            >
+              {editingId === null ? messages.items.actions.create : messages.items.actions.update}
+            </button>
+
+            {editingId !== null ? (
+              <button
+                type="button"
+                onClick={cancelEdit}
+                disabled={loading}
+                style={{ padding: '10px 14px', borderRadius: 6, cursor: 'pointer' }}
+              >
+                {messages.items.actions.cancelEdit}
+              </button>
+            ) : null}
+
+            <button
+              type="button"
+              onClick={loadItems}
               disabled={loading}
               style={{ padding: '10px 14px', borderRadius: 6, cursor: 'pointer' }}
             >
-              {messages.items.actions.cancelEdit}
+              {messages.items.actions.refresh}
             </button>
-          ) : null}
 
+            <button
+              type="button"
+              onClick={signOut}
+              disabled={loading || !sessionEmail}
+              style={{ padding: '10px 14px', borderRadius: 6, cursor: 'pointer' }}
+            >
+              {messages.items.actions.signOut}
+            </button>
+          </div>
+        </div>
+      ) : (
+        <div style={{ marginTop: 12, textAlign: 'left' }}>
+          {messages.items.readOnly}
+        </div>
+      )}
+      {!canWrite ? (
+        <div style={{ display: 'flex', gap: 10, flexWrap: 'wrap', marginTop: 10 }}>
           <button
             type="button"
             onClick={loadItems}
@@ -326,7 +362,7 @@ export default function ItemsPanel({ messages }: ItemsPanelProps) {
             {messages.items.actions.signOut}
           </button>
         </div>
-      </div>
+      ) : null}
 
       {error ? (
         <div style={{ marginTop: 12, color: 'crimson', textAlign: 'left' }}>
@@ -356,9 +392,11 @@ export default function ItemsPanel({ messages }: ItemsPanelProps) {
                   <th style={{ textAlign: 'left', borderBottom: '1px solid var(--border)', padding: '8px 6px' }}>
                     {messages.items.table.identifier}
                   </th>
-                  <th style={{ textAlign: 'left', borderBottom: '1px solid var(--border)', padding: '8px 6px' }}>
-                    {messages.items.table.actions}
-                  </th>
+                  {canWrite ? (
+                    <th style={{ textAlign: 'left', borderBottom: '1px solid var(--border)', padding: '8px 6px' }}>
+                      {messages.items.table.actions}
+                    </th>
+                  ) : null}
                 </tr>
               </thead>
               <tbody>
@@ -366,26 +404,28 @@ export default function ItemsPanel({ messages }: ItemsPanelProps) {
                   <tr key={row.id}>
                     <td style={{ borderBottom: '1px solid var(--border)', padding: '8px 6px' }}>{row.modelName}</td>
                     <td style={{ borderBottom: '1px solid var(--border)', padding: '8px 6px' }}>{row.identifier}</td>
-                    <td style={{ borderBottom: '1px solid var(--border)', padding: '8px 6px' }}>
-                      <div style={{ display: 'flex', gap: 8, flexWrap: 'wrap' }}>
-                        <button
-                          type="button"
-                          onClick={() => startEdit(row)}
-                          disabled={loading}
-                          style={{ padding: '6px 10px', borderRadius: 6, cursor: 'pointer' }}
-                        >
-                          {messages.items.actions.edit}
-                        </button>
-                        <button
-                          type="button"
-                          onClick={() => deleteItem(row.id)}
-                          disabled={loading}
-                          style={{ padding: '6px 10px', borderRadius: 6, cursor: 'pointer' }}
-                        >
-                          {messages.items.actions.delete}
-                        </button>
-                      </div>
-                    </td>
+                    {canWrite ? (
+                      <td style={{ borderBottom: '1px solid var(--border)', padding: '8px 6px' }}>
+                        <div style={{ display: 'flex', gap: 8, flexWrap: 'wrap' }}>
+                          <button
+                            type="button"
+                            onClick={() => startEdit(row)}
+                            disabled={loading}
+                            style={{ padding: '6px 10px', borderRadius: 6, cursor: 'pointer' }}
+                          >
+                            {messages.items.actions.edit}
+                          </button>
+                          <button
+                            type="button"
+                            onClick={() => deleteItem(row.id)}
+                            disabled={loading}
+                            style={{ padding: '6px 10px', borderRadius: 6, cursor: 'pointer' }}
+                          >
+                            {messages.items.actions.delete}
+                          </button>
+                        </div>
+                      </td>
+                    ) : null}
                   </tr>
                 ))}
               </tbody>

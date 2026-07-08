@@ -58,6 +58,7 @@ const es = {
   },
   items: {
     title: 'Ítems',
+    readOnly: 'Modo de solo lectura: puedes ver los ítems existentes pero no puedes crear, editar ni eliminar.',
     fields: {
       modelName: 'Nombre del ítem',
       identifier: 'Identificador del ítem',

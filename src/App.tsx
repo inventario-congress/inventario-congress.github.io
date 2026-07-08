@@ -43,6 +43,7 @@ function getRoleFromAccessToken(accessToken: string | null | undefined): string 
 function App() {
   const [language, setLanguage] = useState<Language>(() => getPreferredLanguage())
   const [theme, setTheme] = useState<Theme>(() => getPreferredTheme())
+  const [isAuthenticated, setIsAuthenticated] = useState(false)
   const [isWriter, setIsWriter] = useState(false)
   const messages = useMemo(() => translations[language], [language])
 
@@ -57,9 +58,12 @@ function App() {
       if (!supabase || !active) return
 
       if (!session?.user) {
+        setIsAuthenticated(false)
         setIsWriter(false)
         return
       }
+
+      setIsAuthenticated(true)
 
       const tokenRole = getRoleFromAccessToken(session.access_token)
       const metadataRole = (session.user.app_metadata?.user_role ?? session.user.user_metadata?.user_role) as
@@ -139,7 +143,7 @@ function App() {
           </select>
         </label>
       </div>
-        {isWriter ? <ItemsPanel messages={messages} /> : <AuthPanel messages={messages} />}
+        {isAuthenticated ? <ItemsPanel messages={messages} canWrite={isWriter} /> : <AuthPanel messages={messages} />}
     </main>
   )
 }
