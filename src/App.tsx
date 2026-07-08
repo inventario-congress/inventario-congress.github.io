@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useState } from 'react'
+import { useEffect, useMemo, useRef, useState } from 'react'
 import AuthPanel from './components/AuthPanel'
 import ItemsPanel from './components/ItemsPanel'
 import LocationsPanel from './components/LocationsPanel'
@@ -49,10 +49,14 @@ function App() {
   const [theme, setTheme] = useState<Theme>(() => getPreferredTheme())
   const [isAuthenticated, setIsAuthenticated] = useState(false)
   const [isWriter, setIsWriter] = useState(false)
+  const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false)
   const [activePanel, setActivePanel] = useState<AppPanel>('movements')
   const [sessionEmail, setSessionEmail] = useState<string | null>(null)
   const [sessionName, setSessionName] = useState<string | null>(null)
   const [sessionLastName, setSessionLastName] = useState<string | null>(null)
+  const menuToggleRef = useRef<HTMLButtonElement | null>(null)
+  const sidebarRef = useRef<HTMLElement | null>(null)
+  const didOpenMobileMenuRef = useRef(false)
   const messages = useMemo(() => translations[language], [language])
 
   useEffect(() => {
@@ -68,6 +72,7 @@ function App() {
       if (!session?.user) {
         setIsAuthenticated(false)
         setIsWriter(false)
+        setIsMobileMenuOpen(false)
         setSessionEmail(null)
         setSessionName(null)
         setSessionLastName(null)
@@ -97,6 +102,7 @@ function App() {
 
       if (session?.user) {
         setActivePanel('movements')
+        setIsMobileMenuOpen(false)
       }
     })()
 
@@ -107,6 +113,7 @@ function App() {
 
       if (event === 'SIGNED_IN') {
         setActivePanel('movements')
+        setIsMobileMenuOpen(false)
       }
     })
 
@@ -127,12 +134,99 @@ function App() {
     window.localStorage.setItem('theme', theme)
   }, [theme])
 
+  useEffect(() => {
+    if (!isAuthenticated) {
+      return
+    }
+
+    if (!isMobileMenuOpen) {
+      if (didOpenMobileMenuRef.current) {
+        menuToggleRef.current?.focus()
+        didOpenMobileMenuRef.current = false
+      }
+      return
+    }
+
+    didOpenMobileMenuRef.current = true
+
+    const focusableSelector =
+      'a[href], button:not([disabled]), textarea:not([disabled]), input:not([disabled]), select:not([disabled]), [tabindex]:not([tabindex="-1"])'
+
+    function getFocusableElements() {
+      if (!sidebarRef.current) {
+        return [] as HTMLElement[]
+      }
+
+      return Array.from(sidebarRef.current.querySelectorAll<HTMLElement>(focusableSelector))
+    }
+
+    const focusableElements = getFocusableElements()
+    if (focusableElements.length > 0) {
+      focusableElements[0].focus()
+    } else {
+      sidebarRef.current?.focus()
+    }
+
+    function handleKeyDown(event: KeyboardEvent) {
+      if (event.key === 'Escape') {
+        event.preventDefault()
+        setIsMobileMenuOpen(false)
+        return
+      }
+
+      if (event.key !== 'Tab') {
+        return
+      }
+
+      const activeElement = document.activeElement as HTMLElement | null
+      const elements = getFocusableElements()
+
+      if (elements.length === 0) {
+        event.preventDefault()
+        sidebarRef.current?.focus()
+        return
+      }
+
+      const firstElement = elements[0]
+      const lastElement = elements[elements.length - 1]
+      const isInsideSidebar = activeElement ? sidebarRef.current?.contains(activeElement) ?? false : false
+
+      if (!isInsideSidebar) {
+        event.preventDefault()
+        firstElement.focus()
+        return
+      }
+
+      if (event.shiftKey && activeElement === firstElement) {
+        event.preventDefault()
+        lastElement.focus()
+        return
+      }
+
+      if (!event.shiftKey && activeElement === lastElement) {
+        event.preventDefault()
+        firstElement.focus()
+      }
+    }
+
+    document.addEventListener('keydown', handleKeyDown)
+
+    return () => {
+      document.removeEventListener('keydown', handleKeyDown)
+    }
+  }, [isAuthenticated, isMobileMenuOpen])
+
   async function handleSignOut() {
     if (!supabase) {
       return
     }
 
     await supabase.auth.signOut()
+  }
+
+  function handleSelectPanel(panel: AppPanel) {
+    setActivePanel(panel)
+    setIsMobileMenuOpen(false)
   }
 
   function renderPanel() {
@@ -160,36 +254,22 @@ function App() {
 
   return (
     <main>
-      <div
-        style={{ display: 'flex', justifyContent: 'flex-end', alignItems: 'center', gap: 12, padding: '16px 16px 0' }}
-      >
+      <div className="top-controls">
         <button
           type="button"
           onClick={() => setTheme(theme === 'dark' ? 'light' : 'dark')}
           aria-label={theme === 'dark' ? messages.themeSwitcher.toLight : messages.themeSwitcher.toDark}
-          style={{
-            display: 'inline-flex',
-            alignItems: 'center',
-            padding: '8px',
-            borderRadius: 6,
-            border: '1px solid var(--border)',
-            background: 'transparent',
-            color: 'var(--text-h)',
-            cursor: 'pointer',
-          }}
+          className="control-button"
         >
           {theme === 'dark' ? <SunIcon /> : <MoonIcon />}
         </button>
-        <label
-          htmlFor="language"
-          style={{ display: 'inline-flex', alignItems: 'center', gap: 8 }}
-        >
+        <label htmlFor="language" className="language-control">
           <span>{messages.languageSwitcher.label}</span>
           <select
             id="language"
             value={language}
             onChange={(event) => setLanguage(event.target.value as Language)}
-            style={{ padding: '8px 10px', borderRadius: 6, border: '1px solid var(--border)' }}
+            className="language-select"
           >
             <option value="en">{messages.languageSwitcher.options.en}</option>
             <option value="es">{messages.languageSwitcher.options.es}</option>
@@ -198,14 +278,44 @@ function App() {
       </div>
 
       {isAuthenticated ? (
-        <div style={{ maxWidth: 1100, margin: '0 auto', padding: 16, display: 'grid', gap: 16 }}>
-          <Menu
-            messages={messages}
-            activePanel={activePanel}
-            onSelectPanel={setActivePanel}
-            onSignOut={handleSignOut}
+        <div className="app-shell">
+          <button
+            type="button"
+            className="menu-toggle"
+            ref={menuToggleRef}
+            aria-label={messages.menu.toggle}
+            aria-expanded={isMobileMenuOpen}
+            aria-controls="app-sidebar"
+            onClick={() => setIsMobileMenuOpen((current) => !current)}
+          >
+            <span aria-hidden="true">☰</span>
+            <span>{messages.menu.toggle}</span>
+          </button>
+
+          <button
+            type="button"
+            aria-label={messages.menu.close}
+            className={`menu-overlay ${isMobileMenuOpen ? 'open' : ''}`}
+            onClick={() => setIsMobileMenuOpen(false)}
           />
-          {renderPanel()}
+
+          <aside
+            id="app-sidebar"
+            ref={sidebarRef}
+            tabIndex={-1}
+            className={`app-sidebar ${isMobileMenuOpen ? 'open' : ''}`}
+          >
+            <Menu
+              messages={messages}
+              activePanel={activePanel}
+              onSelectPanel={handleSelectPanel}
+              onSignOut={handleSignOut}
+            />
+          </aside>
+
+          <section className="app-content">
+            {renderPanel()}
+          </section>
         </div>
       ) : (
         <AuthPanel messages={messages} />

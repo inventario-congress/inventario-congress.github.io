@@ -22,14 +22,7 @@ function MenuButton({
     <button
       type="button"
       onClick={onClick}
-      style={{
-        padding: '10px 14px',
-        borderRadius: 8,
-        border: selected ? '2px solid var(--text-h)' : '1px solid var(--border)',
-        background: selected ? 'var(--bg-soft)' : 'transparent',
-        color: 'var(--text-h)',
-        cursor: 'pointer',
-      }}
+      className={`menu-button ${selected ? 'selected' : ''}`}
     >
       {label}
     </button>
@@ -38,20 +31,10 @@ function MenuButton({
 
 export default function Menu({ messages, activePanel, onSelectPanel, onSignOut }: MenuProps) {
   return (
-    <nav
-      aria-label={messages.menu.ariaLabel}
-      style={{
-        border: '1px solid var(--border)',
-        borderRadius: 12,
-        padding: 12,
-        display: 'grid',
-        gap: 12,
-        background: 'var(--bg-soft)',
-      }}
-    >
-      <section style={{ display: 'grid', gap: 8, textAlign: 'left' }}>
-        <h3 style={{ margin: 0 }}>{messages.menu.system.title}</h3>
-        <div style={{ display: 'flex', gap: 8, flexWrap: 'wrap' }}>
+    <nav aria-label={messages.menu.ariaLabel} className="menu-panel">
+      <section className="menu-section">
+        <h3 className="menu-title">{messages.menu.system.title}</h3>
+        <div className="menu-list">
           <MenuButton
             label={messages.menu.system.items}
             selected={activePanel === 'items'}
@@ -70,9 +53,9 @@ export default function Menu({ messages, activePanel, onSelectPanel, onSignOut }
         </div>
       </section>
 
-      <section style={{ display: 'grid', gap: 8, textAlign: 'left' }}>
-        <h3 style={{ margin: 0 }}>{messages.menu.user.title}</h3>
-        <div style={{ display: 'flex', gap: 8, flexWrap: 'wrap' }}>
+      <section className="menu-section">
+        <h3 className="menu-title">{messages.menu.user.title}</h3>
+        <div className="menu-list">
           <MenuButton
             label={messages.menu.user.profile}
             selected={activePanel === 'profile'}
@@ -81,14 +64,7 @@ export default function Menu({ messages, activePanel, onSelectPanel, onSignOut }
           <button
             type="button"
             onClick={onSignOut}
-            style={{
-              padding: '10px 14px',
-              borderRadius: 8,
-              border: '1px solid var(--border)',
-              color: 'var(--text-h)',
-              background: 'transparent',
-              cursor: 'pointer',
-            }}
+            className="menu-button"
           >
             {messages.menu.user.signOut}
           </button>

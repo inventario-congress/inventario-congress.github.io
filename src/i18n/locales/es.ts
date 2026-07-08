@@ -95,6 +95,8 @@ const es = {
   },
   menu: {
     ariaLabel: 'Menú de la aplicación',
+    toggle: 'Menú',
+    close: 'Cerrar menú',
     system: {
       title: 'Sistema',
       items: 'Ítems',

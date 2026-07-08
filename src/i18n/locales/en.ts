@@ -95,6 +95,8 @@ const en = {
   },
   menu: {
     ariaLabel: 'Application menu',
+    toggle: 'Menu',
+    close: 'Close menu',
     system: {
       title: 'System',
       items: 'Items',
