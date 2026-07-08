@@ -5,8 +5,10 @@ import LocationsPanel from './components/LocationsPanel'
 import Menu, { type AppPanel } from './components/Menu'
 import MovementsPanel from './components/MovementsPanel'
 import ProfilePanel from './components/ProfilePanel'
+import BasePanel from './components/BasePanel'
 import { MoonIcon, SunIcon } from './components/icons'
 import { getPreferredLanguage, translations, type Language } from './i18n'
+
 import { supabase } from './supabaseClient'
 import type { Session } from '@supabase/supabase-js'
 import './App.css'
@@ -51,6 +53,7 @@ function App() {
   const [isWriter, setIsWriter] = useState(false)
   const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false)
   const [activePanel, setActivePanel] = useState<AppPanel>('movements')
+
   const [sessionEmail, setSessionEmail] = useState<string | null>(null)
   const [sessionName, setSessionName] = useState<string | null>(null)
   const [sessionLastName, setSessionLastName] = useState<string | null>(null)
@@ -234,9 +237,14 @@ function App() {
       return <ItemsPanel messages={messages} canWrite={isWriter} />
     }
 
+    if (activePanel === 'bases') {
+      return <BasePanel messages={messages} canWrite={isWriter} />
+    }
+
     if (activePanel === 'locations') {
       return <LocationsPanel messages={messages} canWrite={isWriter} />
     }
+
 
     if (activePanel === 'profile') {
       return (

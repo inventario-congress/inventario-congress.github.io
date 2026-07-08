@@ -1,6 +1,7 @@
 import type { Messages } from '../i18n'
 
-export type AppPanel = 'items' | 'locations' | 'movements' | 'profile'
+export type AppPanel = 'items' | 'bases' | 'locations' | 'movements' | 'profile'
+
 
 type MenuProps = {
   messages: Messages
@@ -41,10 +42,16 @@ export default function Menu({ messages, activePanel, onSelectPanel, onSignOut }
             onClick={() => onSelectPanel('items')}
           />
           <MenuButton
+            label={'Bases'}
+            selected={activePanel === 'bases'}
+            onClick={() => onSelectPanel('bases')}
+          />
+          <MenuButton
             label={messages.menu.system.locations}
             selected={activePanel === 'locations'}
             onClick={() => onSelectPanel('locations')}
           />
+
           <MenuButton
             label={messages.menu.system.movements}
             selected={activePanel === 'movements'}

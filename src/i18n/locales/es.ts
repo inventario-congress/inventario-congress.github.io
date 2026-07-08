@@ -233,6 +233,30 @@ const es = {
       email: 'Correo electrónico:',
     },
   },
+  bases: {
+    title: 'Bases',
+    readOnly: 'Modo de solo lectura: puedes ver las bases existentes pero no puedes crear, editar ni eliminar.',
+    fields: {
+      identifier: 'Identificador de la base',
+      maxMicCount: 'Cantidad máxima de micrófonos',
+    },
+    actions: {
+      create: 'Crear base',
+      update: 'Actualizar base',
+      cancelEdit: 'Cancelar',
+      edit: 'Editar',
+      delete: 'Eliminar',
+      refresh: 'Actualizar',
+    },
+    table: {
+      title: 'Bases registradas',
+      identifier: 'Identificador',
+      maxMicCount: 'Cantidad máxima de micrófonos',
+      actions: 'Acciones',
+      empty: 'Todavía no hay bases.',
+    },
+  },
 } as const
 
 export default es
+

@@ -233,6 +233,30 @@ const en = {
       email: 'Email:',
     },
   },
+  bases: {
+    title: 'Bases',
+    readOnly: 'Read-only mode: you can view existing bases but cannot create, edit, or delete.',
+    fields: {
+      identifier: 'Base identifier',
+      maxMicCount: 'Max mic count',
+    },
+    actions: {
+      create: 'Create base',
+      update: 'Update base',
+      cancelEdit: 'Cancel',
+      edit: 'Edit',
+      delete: 'Delete',
+      refresh: 'Refresh',
+    },
+    table: {
+      title: 'Registered bases',
+      identifier: 'Identifier',
+      maxMicCount: 'Max mic count',
+      actions: 'Actions',
+      empty: 'No bases yet.',
+    },
+  },
 } as const
 
 export default en
+
