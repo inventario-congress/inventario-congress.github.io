@@ -8,3 +8,7 @@ export const isSupabaseConfigured = Boolean(supabaseUrl && supabaseAnonKey)
 export const supabase = isSupabaseConfigured
   ? createClient(supabaseUrl as string, supabaseAnonKey as string)
   : null
+
+if (typeof window !== 'undefined') {
+    ;(window as any).supabase = supabase
+}
