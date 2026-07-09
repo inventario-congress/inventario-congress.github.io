@@ -71,6 +71,7 @@ const es = {
       cancelEdit: 'Cancelar edición',
       edit: 'Editar',
       delete: 'Eliminar',
+      attach: 'Anexar',
       refresh: 'Actualizar',
       signOut: 'Cerrar sesión',
     },

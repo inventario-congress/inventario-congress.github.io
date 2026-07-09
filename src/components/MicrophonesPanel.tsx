@@ -32,6 +32,13 @@ export default function MicrophonesPanel({ messages, canWrite }: MicrophonesPane
   const [error, setError] = useState<string | null>(null)
   const [status, setStatus] = useState<string | null>(null)
 
+  const [attachDialogOpen, setAttachDialogOpen] = useState(false)
+  const [attachDialogLoading, setAttachDialogLoading] = useState(false)
+  const [attachBaseChoices, setAttachBaseChoices] = useState<Array<{ id: number; label: string }>>([])
+  const [attachBaseId, setAttachBaseId] = useState('')
+  const [attachForMicrophone, setAttachForMicrophone] = useState<MicrophoneRow | null>(null)
+
+
   useEffect(() => {
     if (!supabase) {
       return
@@ -288,6 +295,155 @@ export default function MicrophonesPanel({ messages, canWrite }: MicrophonesPane
     }
   }
 
+  async function attachMicrophone(row: MicrophoneRow) {
+
+    if (!supabase) {
+      return
+    }
+
+    if (!canWrite) {
+      return
+    }
+
+    setError(null)
+    setStatus(null)
+    setAttachDialogOpen(true)
+    setAttachForMicrophone(row)
+    setAttachBaseChoices([])
+    setAttachBaseId('')
+
+    setAttachDialogLoading(true)
+
+    try {
+      // Find bases compatible with this microphone's model.
+      // Filter out bases the microphone is already attached to.
+      const micId = row.id
+      const modelId = row.modelId
+
+      // 1) Fetch current attachments for this microphone
+      const { data: currentAttachments, error: attachmentsError } = await supabase
+        .from('attachment')
+        .select('base')
+        .eq('microphone', micId)
+
+      if (attachmentsError) throw attachmentsError
+
+      const alreadyAttachedBaseIds = new Set<number>(
+        (currentAttachments ?? []).map((a) => (a.base as number) ?? -1).filter((n) => n !== -1),
+      )
+
+      // 2) Fetch candidate base ids from base_mic_models for this model
+      const { data: baseMicModelRows, error: baseMicModelsError } = await supabase
+        .from('base_mic_models')
+        .select('base')
+        .eq('model', modelId)
+
+      if (baseMicModelsError) throw baseMicModelsError
+
+      const candidateBaseIds = Array.from(
+        new Set(
+          (baseMicModelRows ?? [])
+            .map((r) => (r.base as number) ?? -1)
+            .filter((n) => n !== -1)
+            .filter((baseId) => !alreadyAttachedBaseIds.has(baseId)),
+        ),
+      )
+
+      if (candidateBaseIds.length === 0) {
+        setAttachBaseChoices([])
+        setAttachBaseId('')
+        setError(null)
+        setStatus(messages.microphones.feedback.loadFailed)
+        return
+      }
+
+      // 3) Fetch base labels for the dropdown
+      const { data: bases, error: basesError } = await supabase
+        .from('base')
+        .select('id, identifier')
+        .in('id', candidateBaseIds)
+
+      if (basesError) throw basesError
+
+      const mapped = (bases ?? [])
+        .map((b) => ({ id: b.id as number, label: String(b.identifier) }))
+        .sort((a, b) => a.label.localeCompare(b.label, undefined, { numeric: true }))
+
+      setAttachBaseChoices(mapped)
+    } catch (e) {
+      const msg = e instanceof Error ? e.message : messages.microphones.feedback.loadFailed
+      setError(msg)
+    } finally {
+      setAttachDialogLoading(false)
+    }
+  }
+
+  async function confirmAttach() {
+    if (!supabase) {
+      return
+    }
+    if (!canWrite) {
+      return
+    }
+    if (!attachForMicrophone) {
+      return
+    }
+
+    const baseId = Number.parseInt(attachBaseId, 10)
+    const microphoneId = attachForMicrophone.id
+
+    if (Number.isNaN(baseId)) {
+      return
+    }
+
+    setError(null)
+    setStatus(null)
+    setAttachDialogLoading(true)
+
+    try {
+      const {
+        data: { session },
+      } = await supabase.auth.getSession()
+
+      const userId = session?.user?.id
+      if (!userId) {
+        throw new Error(messages.microphones.feedback.authRequired)
+      }
+
+      const payload = {
+        base: baseId,
+        microphone: microphoneId,
+        user: userId,
+      }
+
+      const { error: createError } = await supabase.from('attachment').insert(payload)
+      if (createError) throw createError
+
+      setStatus(messages.attachments.feedback.created)
+
+
+      setAttachDialogOpen(false)
+      setAttachForMicrophone(null)
+      setAttachBaseChoices([])
+      setAttachBaseId('')
+
+      await loadMicrophones()
+    } catch (e) {
+      const msg = e instanceof Error ? e.message : messages.attachments.feedback.createFailed
+      setError(msg)
+    } finally {
+      setAttachDialogLoading(false)
+    }
+  }
+
+  function cancelAttachDialog() {
+    setAttachDialogOpen(false)
+    setAttachForMicrophone(null)
+    setAttachBaseChoices([])
+    setAttachBaseId('')
+  }
+
+
   return (
     <div style={{ maxWidth: 820, margin: '0 auto', padding: 16, textAlign: 'left' }}>
       <h2 style={{ marginTop: 24 }}>{messages.microphones.title}</h2>
@@ -441,6 +597,73 @@ export default function MicrophonesPanel({ messages, canWrite }: MicrophonesPane
       <div style={{ marginTop: 24, textAlign: 'left' }}>
         <h3 style={{ margin: '0 0 10px' }}>{messages.microphones.table.title}</h3>
 
+        {attachDialogOpen ? (
+          <div
+            role="dialog"
+            aria-modal="true"
+            style={{
+              border: '1px solid var(--border)',
+              borderRadius: 10,
+              padding: 12,
+              marginBottom: 16,
+              background: 'var(--card)',
+            }}
+          >
+            <h4 style={{ margin: '0 0 10px' }}>{messages.microphones.actions.attach}</h4>
+
+            {attachForMicrophone ? (
+              <div style={{ marginBottom: 10, opacity: 0.9 }}>
+                {attachForMicrophone.modelName} #{attachForMicrophone.identifier}
+              </div>
+            ) : null}
+
+            <label htmlFor="attach-base" style={{ textAlign: 'left' }}>
+              {messages.attachments.fields.selectBase}
+            </label>
+            <select
+              id="attach-base"
+              value={attachBaseId}
+              onChange={(event) => setAttachBaseId(event.target.value)}
+              disabled={attachDialogLoading}
+              style={{
+                width: '100%',
+                boxSizing: 'border-box',
+                padding: 10,
+                borderRadius: 6,
+                border: '1px solid var(--border)',
+                marginTop: 6,
+              }}
+            >
+              <option value="">{messages.attachments.fields.selectBase}</option>
+              {attachBaseChoices.map((choice) => (
+                <option key={choice.id} value={choice.id}>
+                  {choice.label}
+                </option>
+              ))}
+            </select>
+
+            <div style={{ display: 'flex', gap: 10, flexWrap: 'wrap', marginTop: 12 }}>
+              <button
+                type="button"
+                onClick={confirmAttach}
+                disabled={attachDialogLoading || !attachBaseId}
+                style={{ padding: '10px 14px', borderRadius: 6, cursor: 'pointer' }}
+              >
+                {messages.microphones.actions.attach}
+              </button>
+              <button
+                type="button"
+                onClick={cancelAttachDialog}
+                disabled={attachDialogLoading}
+                style={{ padding: '10px 14px', borderRadius: 6, cursor: 'pointer' }}
+              >
+                {messages.microphones.actions.cancelEdit}
+              </button>
+            </div>
+          </div>
+        ) : null}
+
+
         {rows.length === 0 ? (
           <div>{messages.microphones.table.empty}</div>
         ) : (
@@ -480,6 +703,14 @@ export default function MicrophonesPanel({ messages, canWrite }: MicrophonesPane
                             style={{ padding: '6px 10px', borderRadius: 6, cursor: 'pointer' }}
                           >
                             {messages.microphones.actions.edit}
+                          </button>
+                          <button
+                            type="button"
+                            onClick={() => attachMicrophone(row)}
+                            disabled={loading}
+                            style={{ padding: '6px 10px', borderRadius: 6, cursor: 'pointer' }}
+                          >
+                            {messages.microphones.actions.attach}
                           </button>
                           <button
                             type="button"

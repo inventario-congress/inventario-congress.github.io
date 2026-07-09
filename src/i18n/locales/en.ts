@@ -71,6 +71,7 @@ const en = {
       cancelEdit: 'Cancel edit',
       edit: 'Edit',
       delete: 'Delete',
+      attach: 'Attach',
       refresh: 'Refresh',
       signOut: 'Sign out',
     },
