@@ -1,6 +1,6 @@
 import { useEffect, useMemo, useRef, useState } from 'react'
 import AuthPanel from './components/AuthPanel'
-import ItemsPanel from './components/ItemsPanel'
+import MicrophonesPanel from './components/MicrophonesPanel'
 import LocationsPanel from './components/LocationsPanel'
 import Menu, { type AppPanel } from './components/Menu'
 import MovementsPanel from './components/MovementsPanel'
@@ -52,7 +52,7 @@ function App() {
   const [isAuthenticated, setIsAuthenticated] = useState(false)
   const [isWriter, setIsWriter] = useState(false)
   const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false)
-  const [activePanel, setActivePanel] = useState<AppPanel>('movements')
+  const [activePanel, setActivePanel] = useState<AppPanel>('microphones')
 
   const [sessionEmail, setSessionEmail] = useState<string | null>(null)
   const [sessionName, setSessionName] = useState<string | null>(null)
@@ -104,7 +104,7 @@ function App() {
       await loadWriterAccess(session)
 
       if (session?.user) {
-        setActivePanel('movements')
+        setActivePanel('microphones')
         setIsMobileMenuOpen(false)
       }
     })()
@@ -115,7 +115,7 @@ function App() {
       void loadWriterAccess(session)
 
       if (event === 'SIGNED_IN') {
-        setActivePanel('movements')
+        setActivePanel('microphones')
         setIsMobileMenuOpen(false)
       }
     })
@@ -233,8 +233,8 @@ function App() {
   }
 
   function renderPanel() {
-    if (activePanel === 'items') {
-      return <ItemsPanel messages={messages} canWrite={isWriter} />
+    if (activePanel === 'microphones') {
+      return <MicrophonesPanel messages={messages} canWrite={isWriter} />
     }
 
     if (activePanel === 'bases') {

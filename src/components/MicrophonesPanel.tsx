@@ -2,25 +2,33 @@ import { useEffect, useState } from 'react'
 import type { Messages } from '../i18n'
 import { supabase } from '../supabaseClient'
 
-type ItemRow = {
+type MicrophoneRow = {
   id: number
   identifier: number
   modelId: number
   modelName: string
+  micTypeId: number | null
+  micTypeName: string
 }
 
-type ItemsPanelProps = {
+
+type MicrophonesPanelProps = {
   messages: Messages
   canWrite: boolean
 }
 
-export default function ItemsPanel({ messages, canWrite }: ItemsPanelProps) {
+export default function MicrophonesPanel({ messages, canWrite }: MicrophonesPanelProps) {
   const [modelName, setModelName] = useState('')
+  const [micTypeName, setMicTypeName] = useState('')
   const [identifier, setIdentifier] = useState('')
   const [editingId, setEditingId] = useState<number | null>(null)
 
+  const [micTypeChoices, setMicTypeChoices] = useState<string[]>([])
+
+
+
   const [loading, setLoading] = useState(false)
-  const [rows, setRows] = useState<ItemRow[]>([])
+  const [rows, setRows] = useState<MicrophoneRow[]>([])
   const [error, setError] = useState<string | null>(null)
   const [status, setStatus] = useState<string | null>(null)
 
@@ -38,7 +46,7 @@ export default function ItemsPanel({ messages, canWrite }: ItemsPanelProps) {
         return
       }
 
-      await loadItems()
+      await loadMicrophones()
     })()
 
     return () => {
@@ -46,7 +54,7 @@ export default function ItemsPanel({ messages, canWrite }: ItemsPanelProps) {
     }
   }, [])
 
-  async function loadItems() {
+  async function loadMicrophones() {
     if (!supabase) {
       return
     }
@@ -55,16 +63,26 @@ export default function ItemsPanel({ messages, canWrite }: ItemsPanelProps) {
     setLoading(true)
 
     try {
-      const { data: items, error: itemsError } = await supabase
-        .from('item')
-        .select('id, identifier, model')
-        .order('id', { ascending: false })
+      const [{ data: microphones, error: microphonesError }, { data: micTypes, error: micTypesError }] = await Promise.all([
+        supabase
+          .from('microphone')
+          .select('id, identifier, model, mic_type')
+          .order('id', { ascending: false }),
+        supabase.from('mic_type').select('id, name').order('name', { ascending: true }),
+      ])
 
-      if (itemsError) throw itemsError
+      if (microphonesError) throw microphonesError
+      if (micTypesError) throw micTypesError
+
+      const micTypeNames = Array.from(
+        new Set((micTypes ?? []).map((t) => (t.name as string) ?? '')),
+      ).filter(Boolean)
+      setMicTypeChoices(micTypeNames)
 
       const modelIds = Array.from(
-        new Set((items ?? []).map((item) => item.model as number)),
+        new Set((microphones ?? []).map((microphone) => microphone.model as number)),
       )
+
 
       let modelMap = new Map<number, string>()
 
@@ -81,17 +99,33 @@ export default function ItemsPanel({ messages, canWrite }: ItemsPanelProps) {
         )
       }
 
-      const mappedRows: ItemRow[] = (items ?? []).map((item) => ({
-        id: item.id as number,
-        identifier: item.identifier as number,
-        modelId: item.model as number,
-        modelName: modelMap.get(item.model as number) ?? '',
+      const micTypeMap = new Map<number, string>((micTypes ?? []).map((t) => [t.id as number, t.name as string]))
+
+
+      const mappedRows: MicrophoneRow[] = (microphones ?? []).map((microphone) => ({
+        id: microphone.id as number,
+        identifier: microphone.identifier as number,
+        modelId: microphone.model as number,
+        modelName: modelMap.get(microphone.model as number) ?? '',
+        micTypeId: microphone.mic_type ? (microphone.mic_type as number) : null,
+        micTypeName: microphone.mic_type
+          ? micTypeMap.get(microphone.mic_type as number) ?? ''
+          : '',
       }))
+      // Sort the rows by model name, then by identifier
+      mappedRows.sort((a, b) => {
+        const modelNameComparison = a.modelName.localeCompare(b.modelName)
+        if (modelNameComparison !== 0) {
+          return modelNameComparison
+        }
+        return a.identifier - b.identifier
+      })
 
       setRows(mappedRows)
-      setStatus(messages.items.feedback.loaded)
+      setStatus(messages.microphones.feedback.loaded)
+
     } catch (e) {
-      const msg = e instanceof Error ? e.message : messages.items.feedback.loadFailed
+      const msg = e instanceof Error ? e.message : messages.microphones.feedback.loadFailed
       setError(msg)
     } finally {
       setLoading(false)
@@ -100,7 +134,7 @@ export default function ItemsPanel({ messages, canWrite }: ItemsPanelProps) {
 
   async function ensureModelId(name: string): Promise<number> {
     if (!supabase) {
-      throw new Error(messages.items.feedback.authRequired)
+      throw new Error(messages.microphones.feedback.authRequired)
     }
 
     const trimmed = name.trim()
@@ -112,11 +146,32 @@ export default function ItemsPanel({ messages, canWrite }: ItemsPanelProps) {
       .single()
 
     if (error || !data?.id) {
-      throw error ?? new Error(messages.items.feedback.createFailed)
+      throw error ?? new Error(messages.microphones.feedback.createFailed)
     }
 
     return data.id as number
   }
+
+  async function ensureMicTypeId(name: string): Promise<number> {
+    if (!supabase) {
+      throw new Error(messages.microphones.feedback.authRequired)
+    }
+
+    const trimmed = name.trim()
+
+    const { data, error } = await supabase
+      .from('mic_type')
+      .upsert({ name: trimmed }, { onConflict: 'name' })
+      .select('id')
+      .single()
+
+    if (error || !data?.id) {
+      throw error ?? new Error(messages.microphones.feedback.createFailed)
+    }
+
+    return data.id as number
+  }
+
 
   async function handleSubmit() {
     if (!supabase) {
@@ -128,11 +183,13 @@ export default function ItemsPanel({ messages, canWrite }: ItemsPanelProps) {
     }
 
     const trimmedName = modelName.trim()
+    const trimmedMicTypeName = micTypeName.trim()
     const parsedIdentifier = Number.parseInt(identifier, 10)
 
-    if (!trimmedName || Number.isNaN(parsedIdentifier)) {
+    if (!trimmedName || !trimmedMicTypeName || Number.isNaN(parsedIdentifier)) {
       return
     }
+
 
     setError(null)
     setStatus(null)
@@ -140,35 +197,41 @@ export default function ItemsPanel({ messages, canWrite }: ItemsPanelProps) {
 
     try {
       const resolvedModelId = await ensureModelId(trimmedName)
+      const resolvedMicTypeId = await ensureMicTypeId(trimmedMicTypeName)
 
-      const itemPayload = {
+      const microphonePayload = {
         identifier: parsedIdentifier,
         model: resolvedModelId,
+        mic_type: resolvedMicTypeId,
       }
 
+
+
       if (editingId === null) {
-        const { error } = await supabase.from('item').insert(itemPayload)
+        const { error } = await supabase.from('microphone').insert(microphonePayload)
 
         if (error) throw error
 
-        setStatus(messages.items.feedback.created)
+        setStatus(messages.microphones.feedback.created)
       } else {
         const { error } = await supabase
-          .from('item')
-          .update(itemPayload)
+          .from('microphone')
+          .update(microphonePayload)
           .eq('id', editingId)
 
         if (error) throw error
 
-        setStatus(messages.items.feedback.updated)
+        setStatus(messages.microphones.feedback.updated)
       }
 
       setModelName('')
+      setMicTypeName('')
       setIdentifier('')
       setEditingId(null)
-      await loadItems()
+      await loadMicrophones()
+
     } catch (e) {
-      const fallback = editingId === null ? messages.items.feedback.createFailed : messages.items.feedback.updateFailed
+      const fallback = editingId === null ? messages.microphones.feedback.createFailed : messages.microphones.feedback.updateFailed
       const msg = e instanceof Error ? e.message : fallback
       setError(msg)
     } finally {
@@ -176,21 +239,25 @@ export default function ItemsPanel({ messages, canWrite }: ItemsPanelProps) {
     }
   }
 
-  function startEdit(row: ItemRow) {
+  function startEdit(row: MicrophoneRow) {
     setEditingId(row.id)
     setModelName(row.modelName)
+    setMicTypeName(row.micTypeName)
     setIdentifier(String(row.identifier))
     setError(null)
     setStatus(null)
   }
 
+
   function cancelEdit() {
     setEditingId(null)
     setModelName('')
+    setMicTypeName('')
     setIdentifier('')
   }
 
-  async function deleteItem(id: number) {
+
+  async function deleteMicrophone(id: number) {
     if (!supabase) {
       return
     }
@@ -204,17 +271,17 @@ export default function ItemsPanel({ messages, canWrite }: ItemsPanelProps) {
     setLoading(true)
 
     try {
-      const { error } = await supabase.from('item').delete().eq('id', id)
+      const { error } = await supabase.from('microphone').delete().eq('id', id)
       if (error) throw error
 
       if (editingId === id) {
         cancelEdit()
       }
 
-      setStatus(messages.items.feedback.deleted)
-      await loadItems()
+      setStatus(messages.microphones.feedback.deleted)
+      await loadMicrophones()
     } catch (e) {
-      const msg = e instanceof Error ? e.message : messages.items.feedback.deleteFailed
+      const msg = e instanceof Error ? e.message : messages.microphones.feedback.deleteFailed
       setError(msg)
     } finally {
       setLoading(false)
@@ -222,40 +289,22 @@ export default function ItemsPanel({ messages, canWrite }: ItemsPanelProps) {
   }
 
   return (
-    <div style={{ maxWidth: 760, margin: '0 auto', padding: 16 }}>
-      <h2 style={{ marginTop: 24 }}>{messages.items.title}</h2>
+    <div style={{ maxWidth: 820, margin: '0 auto', padding: 16, textAlign: 'left' }}>
+      <h2 style={{ marginTop: 24 }}>{messages.microphones.title}</h2>
 
       {canWrite ? (
         <div style={{ display: 'grid', gap: 10, marginTop: 12 }}>
-          <label htmlFor="item-model-name" style={{ textAlign: 'left' }}>
-            {messages.items.fields.modelName}
-          </label>
-          <input
-            id="item-model-name"
-            value={modelName}
-            onChange={(event) => setModelName(event.target.value)}
-            type="text"
-            required
-            placeholder={messages.items.fields.modelName}
-            style={{
-              width: '100%',
-              boxSizing: 'border-box',
-              padding: 10,
-              borderRadius: 6,
-              border: '1px solid var(--border)',
-            }}
-          />
 
-          <label htmlFor="item-identifier" style={{ textAlign: 'left' }}>
-            {messages.items.fields.identifier}
+          <label htmlFor="microphone-identifier" style={{ textAlign: 'left' }}>
+            {messages.microphones.fields.identifier}
           </label>
           <input
-            id="item-identifier"
+            id="microphone-identifier"
             value={identifier}
             onChange={(event) => setIdentifier(event.target.value)}
             type="number"
             required
-            placeholder={messages.items.fields.identifier}
+            placeholder={messages.microphones.fields.identifier}
             style={{
               width: '100%',
               boxSizing: 'border-box',
@@ -264,16 +313,79 @@ export default function ItemsPanel({ messages, canWrite }: ItemsPanelProps) {
               border: '1px solid var(--border)',
             }}
           />
+
+          <label htmlFor="microphone-model-name" style={{ textAlign: 'left' }}>
+            {messages.microphones.fields.modelName}
+          </label>
+          <input
+            id="microphone-model-name"
+            value={modelName}
+            onChange={(event) => setModelName(event.target.value)}
+            type="text"
+            required
+            placeholder={messages.microphones.fields.modelName}
+            style={{
+              width: '100%',
+              boxSizing: 'border-box',
+              padding: 10,
+              borderRadius: 6,
+              border: '1px solid var(--border)',
+            }}
+          />
+
+          <label htmlFor="microphone-mic-type" style={{ textAlign: 'left' }}>
+            {messages.microphones.fields.micTypeName}
+          </label>
+          <select
+            id="microphone-mic-type"
+            value={micTypeName}
+            onChange={(event) => setMicTypeName(event.target.value)}
+            style={{
+              width: '100%',
+              boxSizing: 'border-box',
+              padding: 10,
+              borderRadius: 6,
+              border: '1px solid var(--border)',
+            }}
+          >
+            <option value="">{messages.microphones.fields.micTypeName}</option>
+            {micTypeChoices.map((choice) => (
+              <option key={choice} value={choice}>
+                {choice}
+              </option>
+            ))}
+          </select>
+
+          <label htmlFor="microphone-mic-type-new" style={{ textAlign: 'left', marginTop: 6 }}>
+            {messages.microphones.fields.micTypeName}
+          </label>
+          {/* <input
+            id="microphone-mic-type-new"
+            value={micTypeName}
+            onChange={(event) => setMicTypeName(event.target.value)}
+            type="text"
+            required
+            placeholder={messages.microphones.fields.micTypeName}
+            style={{
+              width: '100%',
+              boxSizing: 'border-box',
+              padding: 10,
+              borderRadius: 6,
+              border: '1px solid var(--border)',
+              marginTop: 8,
+            }}
+          /> */}
 
           <div style={{ display: 'flex', gap: 10, flexWrap: 'wrap' }}>
             <button
               type="button"
               onClick={handleSubmit}
-              disabled={loading || !modelName.trim() || !identifier.trim()}
+              disabled={loading || !modelName.trim() || !micTypeName.trim() || !identifier.trim()}
               style={{ padding: '10px 14px', borderRadius: 6, cursor: 'pointer' }}
             >
-              {editingId === null ? messages.items.actions.create : messages.items.actions.update}
+              {editingId === null ? messages.microphones.actions.create : messages.microphones.actions.update}
             </button>
+
 
             {editingId !== null ? (
               <button
@@ -282,34 +394,34 @@ export default function ItemsPanel({ messages, canWrite }: ItemsPanelProps) {
                 disabled={loading}
                 style={{ padding: '10px 14px', borderRadius: 6, cursor: 'pointer' }}
               >
-                {messages.items.actions.cancelEdit}
+                {messages.microphones.actions.cancelEdit}
               </button>
             ) : null}
 
             <button
               type="button"
-              onClick={loadItems}
+              onClick={loadMicrophones}
               disabled={loading}
               style={{ padding: '10px 14px', borderRadius: 6, cursor: 'pointer' }}
             >
-              {messages.items.actions.refresh}
+              {messages.microphones.actions.refresh}
             </button>
           </div>
         </div>
       ) : (
         <div style={{ marginTop: 12, textAlign: 'left' }}>
-          {messages.items.readOnly}
+          {messages.microphones.readOnly}
         </div>
       )}
       {!canWrite ? (
         <div style={{ display: 'flex', gap: 10, flexWrap: 'wrap', marginTop: 10 }}>
           <button
             type="button"
-            onClick={loadItems}
+            onClick={loadMicrophones}
             disabled={loading}
             style={{ padding: '10px 14px', borderRadius: 6, cursor: 'pointer' }}
           >
-            {messages.items.actions.refresh}
+            {messages.microphones.actions.refresh}
           </button>
         </div>
       ) : null}
@@ -327,24 +439,27 @@ export default function ItemsPanel({ messages, canWrite }: ItemsPanelProps) {
       ) : null}
 
       <div style={{ marginTop: 24, textAlign: 'left' }}>
-        <h3 style={{ margin: '0 0 10px' }}>{messages.items.table.title}</h3>
+        <h3 style={{ margin: '0 0 10px' }}>{messages.microphones.table.title}</h3>
 
         {rows.length === 0 ? (
-          <div>{messages.items.table.empty}</div>
+          <div>{messages.microphones.table.empty}</div>
         ) : (
           <div style={{ overflowX: 'auto' }}>
             <table style={{ width: '100%', borderCollapse: 'collapse' }}>
               <thead>
                 <tr>
                   <th style={{ textAlign: 'left', borderBottom: '1px solid var(--border)', padding: '8px 6px' }}>
-                    {messages.items.table.modelName}
+                    {messages.microphones.table.identifier}
                   </th>
                   <th style={{ textAlign: 'left', borderBottom: '1px solid var(--border)', padding: '8px 6px' }}>
-                    {messages.items.table.identifier}
+                    {messages.microphones.table.modelName}
+                  </th>
+                  <th style={{ textAlign: 'left', borderBottom: '1px solid var(--border)', padding: '8px 6px' }}>
+                    {messages.microphones.table.micTypeName}
                   </th>
                   {canWrite ? (
                     <th style={{ textAlign: 'left', borderBottom: '1px solid var(--border)', padding: '8px 6px' }}>
-                      {messages.items.table.actions}
+                      {messages.microphones.table.actions}
                     </th>
                   ) : null}
                 </tr>
@@ -352,8 +467,9 @@ export default function ItemsPanel({ messages, canWrite }: ItemsPanelProps) {
               <tbody>
                 {rows.map((row) => (
                   <tr key={row.id}>
-                    <td style={{ borderBottom: '1px solid var(--border)', padding: '8px 6px' }}>{row.modelName}</td>
                     <td style={{ borderBottom: '1px solid var(--border)', padding: '8px 6px' }}>{row.identifier}</td>
+                    <td style={{ borderBottom: '1px solid var(--border)', padding: '8px 6px' }}>{row.modelName}</td>
+                    <td style={{ borderBottom: '1px solid var(--border)', padding: '8px 6px' }}>{row.micTypeName}</td>
                     {canWrite ? (
                       <td style={{ borderBottom: '1px solid var(--border)', padding: '8px 6px' }}>
                         <div style={{ display: 'flex', gap: 8, flexWrap: 'wrap' }}>
@@ -363,15 +479,15 @@ export default function ItemsPanel({ messages, canWrite }: ItemsPanelProps) {
                             disabled={loading}
                             style={{ padding: '6px 10px', borderRadius: 6, cursor: 'pointer' }}
                           >
-                            {messages.items.actions.edit}
+                            {messages.microphones.actions.edit}
                           </button>
                           <button
                             type="button"
-                            onClick={() => deleteItem(row.id)}
+                            onClick={() => deleteMicrophone(row.id)}
                             disabled={loading}
                             style={{ padding: '6px 10px', borderRadius: 6, cursor: 'pointer' }}
                           >
-                            {messages.items.actions.delete}
+                            {messages.microphones.actions.delete}
                           </button>
                         </div>
                       </td>
