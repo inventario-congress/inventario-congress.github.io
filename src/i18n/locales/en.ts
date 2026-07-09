@@ -81,6 +81,7 @@ const en = {
       modelName: 'Model',
       identifier: 'Identifier',
       micTypeName: 'Type',
+      latestAttachmentBase: 'Base',
       actions: 'Actions',
       empty: 'No microphones yet.',
     },

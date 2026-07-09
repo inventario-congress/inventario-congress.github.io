@@ -80,6 +80,7 @@ const es = {
       modelName: 'Modelo',
       identifier: 'Identificador',
       micTypeName: 'Tipo',
+      latestAttachmentBase: 'Base',
       actions: 'Acciones',
       empty: 'Todavía no hay micrófonos.',
     },

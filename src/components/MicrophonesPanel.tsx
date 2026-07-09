@@ -9,7 +9,9 @@ type MicrophoneRow = {
   modelName: string
   micTypeId: number | null
   micTypeName: string
+  latestAttachmentBase: number | null
 }
+
 
 
 type MicrophonesPanelProps = {
@@ -108,7 +110,6 @@ export default function MicrophonesPanel({ messages, canWrite }: MicrophonesPane
 
       const micTypeMap = new Map<number, string>((micTypes ?? []).map((t) => [t.id as number, t.name as string]))
 
-
       const mappedRows: MicrophoneRow[] = (microphones ?? []).map((microphone) => ({
         id: microphone.id as number,
         identifier: microphone.identifier as number,
@@ -118,7 +119,27 @@ export default function MicrophonesPanel({ messages, canWrite }: MicrophonesPane
         micTypeName: microphone.mic_type
           ? micTypeMap.get(microphone.mic_type as number) ?? ''
           : '',
+        latestAttachmentBase: null, // Placeholder for the latest attachment base
       }))
+      // Populate the latestAttachmentBase for each microphone
+      for (const row of mappedRows) {
+          const { data: attachments, error: attachmentsError } = await supabase
+              .from('attachment')
+              .select('base')
+              .eq('microphone', row.id)
+              .order('created_at', { ascending: false })
+              .limit(1)
+
+          if (attachmentsError) {
+              console.error('Error fetching latest attachment:', attachmentsError)
+          } else {
+              // Get the base identifier for the latest attachment
+              const baseIdentifier = attachments?.[0]?.base ?? null
+              row.latestAttachmentBase = baseIdentifier
+          }
+
+      }
+
       // Sort the rows by model name, then by identifier
       mappedRows.sort((a, b) => {
         const modelNameComparison = a.modelName.localeCompare(b.modelName)
@@ -680,6 +701,9 @@ export default function MicrophonesPanel({ messages, canWrite }: MicrophonesPane
                   <th style={{ textAlign: 'left', borderBottom: '1px solid var(--border)', padding: '8px 6px' }}>
                     {messages.microphones.table.micTypeName}
                   </th>
+                  <th style={{ textAlign: 'left', borderBottom: '1px solid var(--border)', padding: '8px 6px' }}>
+                    {messages.microphones.table.latestAttachmentBase}
+                  </th>
                   {canWrite ? (
                     <th style={{ textAlign: 'left', borderBottom: '1px solid var(--border)', padding: '8px 6px' }}>
                       {messages.microphones.table.actions}
@@ -693,6 +717,9 @@ export default function MicrophonesPanel({ messages, canWrite }: MicrophonesPane
                     <td style={{ borderBottom: '1px solid var(--border)', padding: '8px 6px' }}>{row.identifier}</td>
                     <td style={{ borderBottom: '1px solid var(--border)', padding: '8px 6px' }}>{row.modelName}</td>
                     <td style={{ borderBottom: '1px solid var(--border)', padding: '8px 6px' }}>{row.micTypeName}</td>
+                    <td style={{ borderBottom: '1px solid var(--border)', padding: '8px 6px' }}>
+                        {row.latestAttachmentBase ? ( <>{row.latestAttachmentBase}</> ) : null}
+                    </td>
                     {canWrite ? (
                       <td style={{ borderBottom: '1px solid var(--border)', padding: '8px 6px' }}>
                         <div style={{ display: 'flex', gap: 8, flexWrap: 'wrap' }}>
