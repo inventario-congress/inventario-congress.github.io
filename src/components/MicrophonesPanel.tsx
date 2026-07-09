@@ -125,7 +125,7 @@ export default function MicrophonesPanel({ messages, canWrite }: MicrophonesPane
       for (const row of mappedRows) {
           const { data: attachments, error: attachmentsError } = await supabase
               .from('attachment')
-              .select('base')
+              .select('base:base(identifier)')
               .eq('microphone', row.id)
               .order('created_at', { ascending: false })
               .limit(1)
@@ -134,9 +134,10 @@ export default function MicrophonesPanel({ messages, canWrite }: MicrophonesPane
               console.error('Error fetching latest attachment:', attachmentsError)
           } else {
               // Get the base identifier for the latest attachment
-              const baseIdentifier = attachments?.[0]?.base ?? null
+              const baseIdentifier = attachments?.[0]?.base?.identifier ?? null
               row.latestAttachmentBase = baseIdentifier
           }
+
 
       }
 
