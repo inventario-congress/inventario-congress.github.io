@@ -1,4 +1,4 @@
-import { useEffect, useState } from 'react'
+import { useEffect, useState, useCallback } from 'react'
 import type { Messages } from '../i18n'
 import { supabase } from '../supabaseClient'
 
@@ -22,11 +22,7 @@ export default function LocationsPanel({ messages, canWrite }: LocationsPanelPro
   const [error, setError] = useState<string | null>(null)
   const [status, setStatus] = useState<string | null>(null)
 
-  useEffect(() => {
-    void loadLocations()
-  }, [])
-
-  async function loadLocations() {
+  const loadLocations = useCallback(async () => {
     if (!supabase) {
       return
     }
@@ -55,7 +51,29 @@ export default function LocationsPanel({ messages, canWrite }: LocationsPanelPro
     } finally {
       setLoading(false)
     }
-  }
+  }, [messages.locations.feedback.loaded, messages.locations.feedback.loadFailed])
+
+  useEffect(() => {
+    if (!supabase) {
+      return
+    }
+
+    let active = true
+
+    ;(async () => {
+      await supabase.auth.getSession()
+
+      if (!active) {
+        return
+      }
+
+      await loadLocations()
+    })()
+
+    return () => {
+      active = false
+    }
+  }, [loadLocations])
 
   async function saveLocation() {
     if (!supabase || !canWrite) {

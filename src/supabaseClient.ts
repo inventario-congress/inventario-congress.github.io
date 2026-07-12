@@ -10,5 +10,5 @@ export const supabase = isSupabaseConfigured
   : null
 
 if (import.meta.env.DEV && typeof window !== 'undefined') {
-  ;(window as any).supabase = supabase
+  ;(window as unknown as { supabase: typeof supabase }).supabase = supabase
 }

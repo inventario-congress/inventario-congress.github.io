@@ -1,4 +1,4 @@
-import { useEffect, useState } from 'react'
+import { useEffect, useState, useCallback } from 'react'
 import type { Messages } from '../i18n'
 import { supabase } from '../supabaseClient'
 
@@ -24,29 +24,7 @@ export default function BasePanel({ messages, canWrite }: BasePanelProps) {
   const [error, setError] = useState<string | null>(null)
   const [status, setStatus] = useState<string | null>(null)
 
-  useEffect(() => {
-    if (!supabase) {
-      return
-    }
-
-    let active = true
-
-    ;(async () => {
-      await supabase.auth.getSession()
-
-      if (!active) {
-        return
-      }
-
-      await loadBases()
-    })()
-
-    return () => {
-      active = false
-    }
-  }, [])
-
-  async function loadBases() {
+  const loadBases = useCallback(async () => {
     if (!supabase) {
       return
     }
@@ -101,7 +79,29 @@ export default function BasePanel({ messages, canWrite }: BasePanelProps) {
     } finally {
       setLoading(false)
     }
-  }
+  }, [messages.bases.feedback.loaded, messages.bases.feedback.loadFailed])
+
+  useEffect(() => {
+    if (!supabase) {
+      return
+    }
+
+    let active = true
+
+    ;(async () => {
+      await supabase.auth.getSession()
+
+      if (!active) {
+        return
+      }
+
+      await loadBases()
+    })()
+
+    return () => {
+      active = false
+    }
+  }, [loadBases])
 
   function resetForm() {
     setIdentifier('')

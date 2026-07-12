@@ -1,4 +1,4 @@
-import { useEffect, useState } from 'react'
+import { useEffect, useState, useCallback } from 'react'
 import type { Messages } from '../i18n'
 import { supabase } from '../supabaseClient'
 
@@ -40,30 +40,7 @@ export default function MicrophonesPanel({ messages, canWrite }: MicrophonesPane
   const [attachBaseId, setAttachBaseId] = useState('')
   const [attachForMicrophone, setAttachForMicrophone] = useState<MicrophoneRow | null>(null)
 
-
-  useEffect(() => {
-    if (!supabase) {
-      return
-    }
-
-    let active = true
-
-    ;(async () => {
-      await supabase.auth.getSession()
-
-      if (!active) {
-        return
-      }
-
-      await loadMicrophones()
-    })()
-
-    return () => {
-      active = false
-    }
-  }, [])
-
-  async function loadMicrophones() {
+  const loadMicrophones = useCallback(async () => {
     if (!supabase) {
       return
     }
@@ -159,7 +136,29 @@ export default function MicrophonesPanel({ messages, canWrite }: MicrophonesPane
     } finally {
       setLoading(false)
     }
-  }
+  }, [messages.microphones.feedback.loaded, messages.microphones.feedback.loadFailed])
+
+  useEffect(() => {
+    if (!supabase) {
+      return
+    }
+
+    let active = true
+
+    ;(async () => {
+      await supabase.auth.getSession()
+
+      if (!active) {
+        return
+      }
+
+      await loadMicrophones()
+    })()
+
+    return () => {
+      active = false
+    }
+  }, [loadMicrophones])
 
   async function ensureModelId(name: string): Promise<number> {
     if (!supabase) {
