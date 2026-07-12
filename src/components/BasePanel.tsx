@@ -1,4 +1,5 @@
-import { useEffect, useState, useCallback } from 'react'
+import { useEffect, useMemo, useState, useCallback } from 'react'
+
 
 import type { Messages } from '../i18n'
 import { supabase } from '../supabaseClient'
@@ -37,6 +38,38 @@ export default function BasePanel({ messages, canWrite }: BasePanelProps) {
 
   const [moveLocationId, setMoveLocationId] = useState<number | ''>('')
   const [moveLocationChoices, setMoveLocationChoices] = useState<LocationChoice[]>([])
+
+  type SortColumn = 'identifier' | 'latestLocationName'
+  type SortDirection = 'asc' | 'desc'
+
+  const SORT_STORAGE_KEY = 'inventario_congress:bases:sort'
+
+  const [sortColumn, setSortColumn] = useState<SortColumn>(() => {
+    try {
+      const raw = window.localStorage.getItem(SORT_STORAGE_KEY)
+      if (!raw) return 'identifier'
+      const parsed = JSON.parse(raw) as { sortColumn?: unknown; sortDirection?: unknown }
+      const candidate = parsed.sortColumn
+      if (candidate === 'identifier' || candidate === 'latestLocationName') return candidate
+    } catch {
+      // ignore
+    }
+    return 'identifier'
+  })
+
+  const [sortDirection, setSortDirection] = useState<SortDirection>(() => {
+    try {
+      const raw = window.localStorage.getItem(SORT_STORAGE_KEY)
+      if (!raw) return 'asc'
+      const parsed = JSON.parse(raw) as { sortColumn?: unknown; sortDirection?: unknown }
+      const candidate = parsed.sortDirection
+      if (candidate === 'asc' || candidate === 'desc') return candidate
+    } catch {
+      // ignore
+    }
+    return 'asc'
+  })
+
 
 
   const resetMoveDialog = useCallback(() => {
@@ -343,9 +376,63 @@ export default function BasePanel({ messages, canWrite }: BasePanelProps) {
     }
   }
 
+  const sortedRows = useMemo(() => {
+    const copy = [...rows]
+    const dirMul = sortDirection === 'asc' ? 1 : -1
+
+    copy.sort((a, b) => {
+      switch (sortColumn) {
+        case 'identifier':
+          return (a.identifier - b.identifier) * dirMul
+        case 'latestLocationName': {
+          const av = a.latestLocationName ?? ''
+          const bv = b.latestLocationName ?? ''
+          return av.localeCompare(bv) * dirMul
+        }
+        default:
+          return 0
+      }
+    })
+
+    return copy
+  }, [rows, sortColumn, sortDirection])
+
+  function toggleSort(column: SortColumn) {
+    if (sortColumn === column) {
+      const next: SortDirection = sortDirection === 'asc' ? 'desc' : 'asc'
+      setSortDirection(next)
+      window.localStorage.setItem(SORT_STORAGE_KEY, JSON.stringify({ sortColumn: column, sortDirection: next }))
+    } else {
+      const next: SortDirection = 'asc'
+      setSortColumn(column)
+      setSortDirection(next)
+      window.localStorage.setItem(SORT_STORAGE_KEY, JSON.stringify({ sortColumn: column, sortDirection: next }))
+    }
+  }
+
+  function SortIcon({ active }: { active: boolean }) {
+    return (
+      <span
+        aria-hidden="true"
+        style={{
+          display: 'inline-block',
+          width: 14,
+          textAlign: 'center',
+          marginLeft: 6,
+          transform: active && sortDirection === 'asc' ? 'rotate(180deg)' : 'rotate(0deg)',
+          transition: 'transform 120ms ease',
+          visibility: active ? 'visible' : 'hidden',
+        }}
+      >
+        ▼
+      </span>
+    )
+  }
+
   return (
     <div style={{ maxWidth: 820, margin: '0 auto', padding: 16, textAlign: 'left' }}>
       <h2 style={{ marginTop: 24 }}>{messages.bases.title}</h2>
+
 
 
       {canWrite ? (
@@ -471,15 +558,40 @@ export default function BasePanel({ messages, canWrite }: BasePanelProps) {
             <table style={{ width: '100%', borderCollapse: 'collapse' }}>
               <thead>
                 <tr>
-                  <th style={{ textAlign: 'left', borderBottom: '1px solid var(--border)', padding: '8px 6px' }}>
+                  <th
+                    onClick={() => toggleSort('identifier')}
+                    style={{
+                      cursor: 'pointer',
+                      userSelect: 'none',
+                      textAlign: 'left',
+                      borderBottom: '1px solid var(--border)',
+                      padding: '8px 6px',
+                      opacity: sortColumn === 'identifier' ? 1 : 0.9,
+                      whiteSpace: 'nowrap',
+                    }}
+                  >
                     {messages.bases.table.identifier}
+                    <SortIcon active={sortColumn === 'identifier'} />
                   </th>
                   <th style={{ textAlign: 'left', borderBottom: '1px solid var(--border)', padding: '8px 6px' }}>
                     {messages.bases.table.maxMicCount}
                   </th>
-                  <th style={{ textAlign: 'left', borderBottom: '1px solid var(--border)', padding: '8px 6px' }}>
+                  <th
+                    onClick={() => toggleSort('latestLocationName')}
+                    style={{
+                      cursor: 'pointer',
+                      userSelect: 'none',
+                      textAlign: 'left',
+                      borderBottom: '1px solid var(--border)',
+                      padding: '8px 6px',
+                      opacity: sortColumn === 'latestLocationName' ? 1 : 0.9,
+                      whiteSpace: 'nowrap',
+                    }}
+                  >
                     {messages.bases.table.latestLocation}
+                    <SortIcon active={sortColumn === 'latestLocationName'} />
                   </th>
+
                   {canWrite ? (
                     <th style={{ textAlign: 'left', borderBottom: '1px solid var(--border)', padding: '8px 6px' }}>
                       {messages.bases.table.actions}
@@ -488,7 +600,9 @@ export default function BasePanel({ messages, canWrite }: BasePanelProps) {
                 </tr>
               </thead>
               <tbody>
-                {rows.map((row) => (
+                {sortedRows.map((row: BaseRow) => (
+
+
                   <tr key={row.id}>
                     <td style={{ borderBottom: '1px solid var(--border)', padding: '8px 6px' }}>{row.identifier}</td>
                     <td style={{ borderBottom: '1px solid var(--border)', padding: '8px 6px' }}>{row.maxMicCount}</td>
