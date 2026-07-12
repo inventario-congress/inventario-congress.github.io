@@ -134,7 +134,7 @@ export default function MicrophonesPanel({ messages, canWrite }: MicrophonesPane
               console.error('Error fetching latest attachment:', attachmentsError)
           } else {
               // Get the base identifier for the latest attachment
-              const baseIdentifier = attachments?.[0]?.base?.identifier ?? null
+              const baseIdentifier = (attachments?.[0] as { base?: { identifier?: number | null } } | undefined)?.base?.identifier ?? null
               row.latestAttachmentBase = baseIdentifier
           }
 
