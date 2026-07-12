@@ -197,6 +197,30 @@ const en = {
       lastName: 'Last name:',
       email: 'Email:',
     },
+    actions: {
+      changePassword: 'Change password',
+    },
+    dialogs: {
+      changePassword: {
+        title: 'Change your password',
+        description: 'Enter a new password below. You will remain signed in.',
+        fields: {
+          newPassword: 'New password',
+          confirmPassword: 'Confirm new password',
+        },
+        actions: {
+          cancel: 'Cancel',
+          save: 'Save password',
+        },
+        feedback: {
+          passwordMismatch: 'Passwords do not match.',
+          saved: 'Password updated successfully.',
+          saveFailed: 'Failed to update password.',
+          notAuthenticated: 'You must be signed in to change your password.',
+          loading: 'Saving...',
+        },
+      },
+    },
   },
   bases: {
     title: 'Bases',

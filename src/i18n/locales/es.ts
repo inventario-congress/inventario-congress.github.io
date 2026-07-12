@@ -197,6 +197,30 @@ const es = {
       lastName: 'Apellido:',
       email: 'Correo electrónico:',
     },
+    actions: {
+      changePassword: 'Cambiar contraseña',
+    },
+    dialogs: {
+      changePassword: {
+        title: 'Cambiar tu contraseña',
+        description: 'Ingresa una nueva contraseña abajo. Seguirás con la sesión iniciada.',
+        fields: {
+          newPassword: 'Nueva contraseña',
+          confirmPassword: 'Confirmar nueva contraseña',
+        },
+        actions: {
+          cancel: 'Cancelar',
+          save: 'Guardar contraseña',
+        },
+        feedback: {
+          passwordMismatch: 'Las contraseñas no coinciden.',
+          saved: 'Contraseña actualizada correctamente.',
+          saveFailed: 'No se pudo actualizar la contraseña.',
+          notAuthenticated: 'Debes iniciar sesión para cambiar tu contraseña.',
+          loading: 'Guardando...',
+        },
+      },
+    },
   },
   bases: {
     title: 'Bases',
