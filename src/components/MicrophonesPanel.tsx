@@ -1,4 +1,4 @@
-import { useEffect, useState, useCallback } from 'react'
+import { useCallback, useEffect, useMemo, useState } from 'react'
 import type { Messages } from '../i18n'
 import { supabase } from '../supabaseClient'
 
@@ -12,7 +12,9 @@ type MicrophoneRow = {
   latestAttachmentBase: number | null
 }
 
+type SortColumn = 'identifier' | 'modelName' | 'micTypeName' | 'latestAttachmentBase'
 
+type SortDirection = 'asc' | 'desc'
 
 type MicrophonesPanelProps = {
   messages: Messages
@@ -27,7 +29,40 @@ export default function MicrophonesPanel({ messages, canWrite }: MicrophonesPane
 
   const [micTypeChoices, setMicTypeChoices] = useState<string[]>([])
 
+  const SORT_STORAGE_KEY = 'inventario_congress:microphones:sort'
 
+  const [sortColumn, setSortColumn] = useState<SortColumn>(() => {
+    try {
+      const raw = window.localStorage.getItem(SORT_STORAGE_KEY)
+      if (!raw) return 'modelName'
+      const parsed = JSON.parse(raw) as { sortColumn?: unknown; sortDirection?: unknown }
+      const candidate = parsed.sortColumn
+      if (
+        candidate === 'identifier' ||
+        candidate === 'modelName' ||
+        candidate === 'micTypeName' ||
+        candidate === 'latestAttachmentBase'
+      ) {
+        return candidate
+      }
+    } catch {
+      // ignore
+    }
+    return 'modelName'
+  })
+
+  const [sortDirection, setSortDirection] = useState<SortDirection>(() => {
+    try {
+      const raw = window.localStorage.getItem(SORT_STORAGE_KEY)
+      if (!raw) return 'asc'
+      const parsed = JSON.parse(raw) as { sortColumn?: unknown; sortDirection?: unknown }
+      const candidate = parsed.sortDirection
+      if (candidate === 'asc' || candidate === 'desc') return candidate
+    } catch {
+      // ignore
+    }
+    return 'asc'
+  })
 
   const [loading, setLoading] = useState(false)
   const [rows, setRows] = useState<MicrophoneRow[]>([])
@@ -40,49 +75,61 @@ export default function MicrophonesPanel({ messages, canWrite }: MicrophonesPane
   const [attachBaseId, setAttachBaseId] = useState('')
   const [attachForMicrophone, setAttachForMicrophone] = useState<MicrophoneRow | null>(null)
 
+  const sortedRows = useMemo(() => {
+    const copy = [...rows]
+    const dirMul = sortDirection === 'asc' ? 1 : -1
+
+    copy.sort((a, b) => {
+      switch (sortColumn) {
+        case 'identifier':
+          return (a.identifier - b.identifier) * dirMul
+        case 'modelName':
+          return a.modelName.localeCompare(b.modelName) * dirMul
+        case 'micTypeName':
+          return a.micTypeName.localeCompare(b.micTypeName) * dirMul
+        case 'latestAttachmentBase': {
+          const av = a.latestAttachmentBase ?? -Infinity
+          const bv = b.latestAttachmentBase ?? -Infinity
+          if (av === bv) return 0
+          return (av - bv) * dirMul
+        }
+        default:
+          return 0
+      }
+    })
+
+    return copy
+  }, [rows, sortColumn, sortDirection])
+
   const loadMicrophones = useCallback(async () => {
-    if (!supabase) {
-      return
-    }
+    if (!supabase) return
 
     setError(null)
     setLoading(true)
 
     try {
-      const [{ data: microphones, error: microphonesError }, { data: micTypes, error: micTypesError }] = await Promise.all([
-        supabase
-          .from('microphone')
-          .select('id, identifier, model, mic_type')
-          .order('id', { ascending: false }),
-        supabase.from('mic_type').select('id, name').order('name', { ascending: true }),
-      ])
+      const [{ data: microphones, error: microphonesError }, { data: micTypes, error: micTypesError }] =
+        await Promise.all([
+          supabase
+            .from('microphone')
+            .select('id, identifier, model, mic_type')
+            .order('id', { ascending: false }),
+          supabase.from('mic_type').select('id, name').order('name', { ascending: true }),
+        ])
 
       if (microphonesError) throw microphonesError
       if (micTypesError) throw micTypesError
 
-      const micTypeNames = Array.from(
-        new Set((micTypes ?? []).map((t) => (t.name as string) ?? '')),
-      ).filter(Boolean)
+      const micTypeNames = Array.from(new Set((micTypes ?? []).map((t) => (t.name as string) ?? ''))).filter(Boolean)
       setMicTypeChoices(micTypeNames)
 
-      const modelIds = Array.from(
-        new Set((microphones ?? []).map((microphone) => microphone.model as number)),
-      )
-
+      const modelIds = Array.from(new Set((microphones ?? []).map((microphone) => microphone.model as number)))
 
       let modelMap = new Map<number, string>()
-
       if (modelIds.length > 0) {
-        const { data: models, error: modelsError } = await supabase
-          .from('model')
-          .select('id, name')
-          .in('id', modelIds)
-
+        const { data: models, error: modelsError } = await supabase.from('model').select('id, name').in('id', modelIds)
         if (modelsError) throw modelsError
-
-        modelMap = new Map(
-          (models ?? []).map((model) => [model.id as number, model.name as string]),
-        )
+        modelMap = new Map((models ?? []).map((model) => [model.id as number, model.name as string]))
       }
 
       const micTypeMap = new Map<number, string>((micTypes ?? []).map((t) => [t.id as number, t.name as string]))
@@ -93,43 +140,36 @@ export default function MicrophonesPanel({ messages, canWrite }: MicrophonesPane
         modelId: microphone.model as number,
         modelName: modelMap.get(microphone.model as number) ?? '',
         micTypeId: microphone.mic_type ? (microphone.mic_type as number) : null,
-        micTypeName: microphone.mic_type
-          ? micTypeMap.get(microphone.mic_type as number) ?? ''
-          : '',
-        latestAttachmentBase: null, // Placeholder for the latest attachment base
+        micTypeName: microphone.mic_type ? micTypeMap.get(microphone.mic_type as number) ?? '' : '',
+        latestAttachmentBase: null,
       }))
-      // Populate the latestAttachmentBase for each microphone
+
       for (const row of mappedRows) {
-          const { data: attachments, error: attachmentsError } = await supabase
-              .from('attachment')
-              .select('base:base(identifier)')
-              .eq('microphone', row.id)
-              .order('created_at', { ascending: false })
-              .limit(1)
+        const { data: attachments, error: attachmentsError } = await supabase
+          .from('attachment')
+          .select('base:base(identifier)')
+          .eq('microphone', row.id)
+          .order('created_at', { ascending: false })
+          .limit(1)
 
-          if (attachmentsError) {
-              console.error('Error fetching latest attachment:', attachmentsError)
-          } else {
-              // Get the base identifier for the latest attachment
-              const baseIdentifier = (attachments?.[0] as { base?: { identifier?: number | null } } | undefined)?.base?.identifier ?? null
-              row.latestAttachmentBase = baseIdentifier
-          }
-
-
+        if (attachmentsError) {
+          console.error('Error fetching latest attachment:', attachmentsError)
+        } else {
+          const baseIdentifier =
+            (attachments?.[0] as { base?: { identifier?: number | null } } | undefined)?.base?.identifier ?? null
+          row.latestAttachmentBase = baseIdentifier
+        }
       }
 
-      // Sort the rows by model name, then by identifier
+      // Stable baseline ordering; `sortedRows` applies actual sort.
       mappedRows.sort((a, b) => {
         const modelNameComparison = a.modelName.localeCompare(b.modelName)
-        if (modelNameComparison !== 0) {
-          return modelNameComparison
-        }
+        if (modelNameComparison !== 0) return modelNameComparison
         return a.identifier - b.identifier
       })
 
       setRows(mappedRows)
       setStatus(messages.microphones.feedback.loaded)
-
     } catch (e) {
       const msg = e instanceof Error ? e.message : messages.microphones.feedback.loadFailed
       setError(msg)
@@ -139,19 +179,13 @@ export default function MicrophonesPanel({ messages, canWrite }: MicrophonesPane
   }, [messages.microphones.feedback.loaded, messages.microphones.feedback.loadFailed])
 
   useEffect(() => {
-    if (!supabase) {
-      return
-    }
+    if (!supabase) return
 
     let active = true
 
     ;(async () => {
       await supabase.auth.getSession()
-
-      if (!active) {
-        return
-      }
-
+      if (!active) return
       await loadMicrophones()
     })()
 
@@ -161,10 +195,7 @@ export default function MicrophonesPanel({ messages, canWrite }: MicrophonesPane
   }, [loadMicrophones])
 
   async function ensureModelId(name: string): Promise<number> {
-    if (!supabase) {
-      throw new Error(messages.microphones.feedback.authRequired)
-    }
-
+    if (!supabase) throw new Error(messages.microphones.feedback.authRequired)
     const trimmed = name.trim()
 
     const { data, error } = await supabase
@@ -173,18 +204,12 @@ export default function MicrophonesPanel({ messages, canWrite }: MicrophonesPane
       .select('id')
       .single()
 
-    if (error || !data?.id) {
-      throw error ?? new Error(messages.microphones.feedback.createFailed)
-    }
-
+    if (error || !data?.id) throw error ?? new Error(messages.microphones.feedback.createFailed)
     return data.id as number
   }
 
   async function ensureMicTypeId(name: string): Promise<number> {
-    if (!supabase) {
-      throw new Error(messages.microphones.feedback.authRequired)
-    }
-
+    if (!supabase) throw new Error(messages.microphones.feedback.authRequired)
     const trimmed = name.trim()
 
     const { data, error } = await supabase
@@ -193,31 +218,19 @@ export default function MicrophonesPanel({ messages, canWrite }: MicrophonesPane
       .select('id')
       .single()
 
-    if (error || !data?.id) {
-      throw error ?? new Error(messages.microphones.feedback.createFailed)
-    }
-
+    if (error || !data?.id) throw error ?? new Error(messages.microphones.feedback.createFailed)
     return data.id as number
   }
 
-
   async function handleSubmit() {
-    if (!supabase) {
-      return
-    }
-
-    if (!canWrite) {
-      return
-    }
+    if (!supabase) return
+    if (!canWrite) return
 
     const trimmedName = modelName.trim()
     const trimmedMicTypeName = micTypeName.trim()
     const parsedIdentifier = Number.parseInt(identifier, 10)
 
-    if (!trimmedName || !trimmedMicTypeName || Number.isNaN(parsedIdentifier)) {
-      return
-    }
-
+    if (!trimmedName || !trimmedMicTypeName || Number.isNaN(parsedIdentifier)) return
 
     setError(null)
     setStatus(null)
@@ -233,22 +246,13 @@ export default function MicrophonesPanel({ messages, canWrite }: MicrophonesPane
         mic_type: resolvedMicTypeId,
       }
 
-
-
       if (editingId === null) {
         const { error } = await supabase.from('microphone').insert(microphonePayload)
-
         if (error) throw error
-
         setStatus(messages.microphones.feedback.created)
       } else {
-        const { error } = await supabase
-          .from('microphone')
-          .update(microphonePayload)
-          .eq('id', editingId)
-
+        const { error } = await supabase.from('microphone').update(microphonePayload).eq('id', editingId)
         if (error) throw error
-
         setStatus(messages.microphones.feedback.updated)
       }
 
@@ -257,7 +261,6 @@ export default function MicrophonesPanel({ messages, canWrite }: MicrophonesPane
       setIdentifier('')
       setEditingId(null)
       await loadMicrophones()
-
     } catch (e) {
       const fallback = editingId === null ? messages.microphones.feedback.createFailed : messages.microphones.feedback.updateFailed
       const msg = e instanceof Error ? e.message : fallback
@@ -276,7 +279,6 @@ export default function MicrophonesPanel({ messages, canWrite }: MicrophonesPane
     setStatus(null)
   }
 
-
   function cancelEdit() {
     setEditingId(null)
     setModelName('')
@@ -284,15 +286,9 @@ export default function MicrophonesPanel({ messages, canWrite }: MicrophonesPane
     setIdentifier('')
   }
 
-
   async function deleteMicrophone(id: number) {
-    if (!supabase) {
-      return
-    }
-
-    if (!canWrite) {
-      return
-    }
+    if (!supabase) return
+    if (!canWrite) return
 
     setError(null)
     setStatus(null)
@@ -302,9 +298,7 @@ export default function MicrophonesPanel({ messages, canWrite }: MicrophonesPane
       const { error } = await supabase.from('microphone').delete().eq('id', id)
       if (error) throw error
 
-      if (editingId === id) {
-        cancelEdit()
-      }
+      if (editingId === id) cancelEdit()
 
       setStatus(messages.microphones.feedback.deleted)
       await loadMicrophones()
@@ -317,14 +311,8 @@ export default function MicrophonesPanel({ messages, canWrite }: MicrophonesPane
   }
 
   async function attachMicrophone(row: MicrophoneRow) {
-
-    if (!supabase) {
-      return
-    }
-
-    if (!canWrite) {
-      return
-    }
+    if (!supabase) return
+    if (!canWrite) return
 
     setError(null)
     setStatus(null)
@@ -332,16 +320,12 @@ export default function MicrophonesPanel({ messages, canWrite }: MicrophonesPane
     setAttachForMicrophone(row)
     setAttachBaseChoices([])
     setAttachBaseId('')
-
     setAttachDialogLoading(true)
 
     try {
-      // Find bases compatible with this microphone's model.
-      // Filter out bases the microphone is already attached to.
       const micId = row.id
       const modelId = row.modelId
 
-      // 1) Fetch current attachments for this microphone
       const { data: currentAttachments, error: attachmentsError } = await supabase
         .from('attachment')
         .select('base')
@@ -353,7 +337,6 @@ export default function MicrophonesPanel({ messages, canWrite }: MicrophonesPane
         (currentAttachments ?? []).map((a) => (a.base as number) ?? -1).filter((n) => n !== -1),
       )
 
-      // 2) Fetch candidate base ids from base_mic_models for this model
       const { data: baseMicModelRows, error: baseMicModelsError } = await supabase
         .from('base_mic_models')
         .select('base')
@@ -378,7 +361,6 @@ export default function MicrophonesPanel({ messages, canWrite }: MicrophonesPane
         return
       }
 
-      // 3) Fetch base labels for the dropdown
       const { data: bases, error: basesError } = await supabase
         .from('base')
         .select('id, identifier')
@@ -400,22 +382,14 @@ export default function MicrophonesPanel({ messages, canWrite }: MicrophonesPane
   }
 
   async function confirmAttach() {
-    if (!supabase) {
-      return
-    }
-    if (!canWrite) {
-      return
-    }
-    if (!attachForMicrophone) {
-      return
-    }
+    if (!supabase) return
+    if (!canWrite) return
+    if (!attachForMicrophone) return
 
     const baseId = Number.parseInt(attachBaseId, 10)
     const microphoneId = attachForMicrophone.id
 
-    if (Number.isNaN(baseId)) {
-      return
-    }
+    if (Number.isNaN(baseId)) return
 
     setError(null)
     setStatus(null)
@@ -427,9 +401,7 @@ export default function MicrophonesPanel({ messages, canWrite }: MicrophonesPane
       } = await supabase.auth.getSession()
 
       const userId = session?.user?.id
-      if (!userId) {
-        throw new Error(messages.microphones.feedback.authRequired)
-      }
+      if (!userId) throw new Error(messages.microphones.feedback.authRequired)
 
       const payload = {
         base: baseId,
@@ -441,7 +413,6 @@ export default function MicrophonesPanel({ messages, canWrite }: MicrophonesPane
       if (createError) throw createError
 
       setStatus(messages.attachments.feedback.created)
-
 
       setAttachDialogOpen(false)
       setAttachForMicrophone(null)
@@ -464,6 +435,37 @@ export default function MicrophonesPanel({ messages, canWrite }: MicrophonesPane
     setAttachBaseId('')
   }
 
+  function toggleSort(column: SortColumn) {
+    if (sortColumn === column) {
+      const next: SortDirection = sortDirection === 'asc' ? 'desc' : 'asc'
+      setSortDirection(next)
+      window.localStorage.setItem(SORT_STORAGE_KEY, JSON.stringify({ sortColumn: column, sortDirection: next }))
+    } else {
+      const next: SortDirection = 'asc'
+      setSortColumn(column)
+      setSortDirection(next)
+      window.localStorage.setItem(SORT_STORAGE_KEY, JSON.stringify({ sortColumn: column, sortDirection: next }))
+    }
+  }
+
+  function SortIcon({ active }: { active: boolean }) {
+    return (
+      <span
+        aria-hidden="true"
+        style={{
+          display: 'inline-block',
+          width: 14,
+          textAlign: 'center',
+          marginLeft: 6,
+          transform: active && sortDirection === 'asc' ? 'rotate(180deg)' : 'rotate(0deg)',
+          transition: 'transform 120ms ease',
+          visibility: active ? 'visible' : 'hidden',
+        }}
+      >
+        ▼
+      </span>
+    )
+  }
 
   return (
     <div style={{ maxWidth: 820, margin: '0 auto', padding: 16, textAlign: 'left' }}>
@@ -471,7 +473,6 @@ export default function MicrophonesPanel({ messages, canWrite }: MicrophonesPane
 
       {canWrite ? (
         <div style={{ display: 'grid', gap: 10, marginTop: 12 }}>
-
           <label htmlFor="microphone-identifier" style={{ textAlign: 'left' }}>
             {messages.microphones.fields.identifier}
           </label>
@@ -536,22 +537,6 @@ export default function MicrophonesPanel({ messages, canWrite }: MicrophonesPane
           <label htmlFor="microphone-mic-type-new" style={{ textAlign: 'left', marginTop: 6 }}>
             {messages.microphones.fields.micTypeName}
           </label>
-          {/* <input
-            id="microphone-mic-type-new"
-            value={micTypeName}
-            onChange={(event) => setMicTypeName(event.target.value)}
-            type="text"
-            required
-            placeholder={messages.microphones.fields.micTypeName}
-            style={{
-              width: '100%',
-              boxSizing: 'border-box',
-              padding: 10,
-              borderRadius: 6,
-              border: '1px solid var(--border)',
-              marginTop: 8,
-            }}
-          /> */}
 
           <div style={{ display: 'flex', gap: 10, flexWrap: 'wrap' }}>
             <button
@@ -562,7 +547,6 @@ export default function MicrophonesPanel({ messages, canWrite }: MicrophonesPane
             >
               {editingId === null ? messages.microphones.actions.create : messages.microphones.actions.update}
             </button>
-
 
             {editingId !== null ? (
               <button
@@ -586,10 +570,9 @@ export default function MicrophonesPanel({ messages, canWrite }: MicrophonesPane
           </div>
         </div>
       ) : (
-        <div style={{ marginTop: 12, textAlign: 'left' }}>
-          {messages.microphones.readOnly}
-        </div>
+        <div style={{ marginTop: 12, textAlign: 'left' }}>{messages.microphones.readOnly}</div>
       )}
+
       {!canWrite ? (
         <div style={{ display: 'flex', gap: 10, flexWrap: 'wrap', marginTop: 10 }}>
           <button
@@ -684,7 +667,6 @@ export default function MicrophonesPanel({ messages, canWrite }: MicrophonesPane
           </div>
         ) : null}
 
-
         {rows.length === 0 ? (
           <div>{messages.microphones.table.empty}</div>
         ) : (
@@ -692,18 +674,70 @@ export default function MicrophonesPanel({ messages, canWrite }: MicrophonesPane
             <table style={{ width: '100%', borderCollapse: 'collapse' }}>
               <thead>
                 <tr>
-                  <th style={{ textAlign: 'left', borderBottom: '1px solid var(--border)', padding: '8px 6px' }}>
+                  <th
+                    onClick={() => toggleSort('identifier')}
+                    style={{
+                      cursor: 'pointer',
+                      userSelect: 'none',
+                      textAlign: 'left',
+                      borderBottom: '1px solid var(--border)',
+                      padding: '8px 6px',
+                      opacity: sortColumn === 'identifier' ? 1 : 0.9,
+                      whiteSpace: 'nowrap',
+                    }}
+                  >
                     {messages.microphones.table.identifier}
+                    <SortIcon active={sortColumn === 'identifier'} />
                   </th>
-                  <th style={{ textAlign: 'left', borderBottom: '1px solid var(--border)', padding: '8px 6px' }}>
+
+                  <th
+                    onClick={() => toggleSort('modelName')}
+                    style={{
+                      cursor: 'pointer',
+                      userSelect: 'none',
+                      textAlign: 'left',
+                      borderBottom: '1px solid var(--border)',
+                      padding: '8px 6px',
+                      opacity: sortColumn === 'modelName' ? 1 : 0.9,
+                      whiteSpace: 'nowrap',
+                    }}
+                  >
                     {messages.microphones.table.modelName}
+                    <SortIcon active={sortColumn === 'modelName'} />
                   </th>
-                  <th style={{ textAlign: 'left', borderBottom: '1px solid var(--border)', padding: '8px 6px' }}>
+
+                  <th
+                    onClick={() => toggleSort('micTypeName')}
+                    style={{
+                      cursor: 'pointer',
+                      userSelect: 'none',
+                      textAlign: 'left',
+                      borderBottom: '1px solid var(--border)',
+                      padding: '8px 6px',
+                      opacity: sortColumn === 'micTypeName' ? 1 : 0.9,
+                      whiteSpace: 'nowrap',
+                    }}
+                  >
                     {messages.microphones.table.micTypeName}
+                    <SortIcon active={sortColumn === 'micTypeName'} />
                   </th>
-                  <th style={{ textAlign: 'left', borderBottom: '1px solid var(--border)', padding: '8px 6px' }}>
+
+                  <th
+                    onClick={() => toggleSort('latestAttachmentBase')}
+                    style={{
+                      cursor: 'pointer',
+                      userSelect: 'none',
+                      textAlign: 'left',
+                      borderBottom: '1px solid var(--border)',
+                      padding: '8px 6px',
+                      opacity: sortColumn === 'latestAttachmentBase' ? 1 : 0.9,
+                      whiteSpace: 'nowrap',
+                    }}
+                  >
                     {messages.microphones.table.latestAttachmentBase}
+                    <SortIcon active={sortColumn === 'latestAttachmentBase'} />
                   </th>
+
                   {canWrite ? (
                     <th style={{ textAlign: 'left', borderBottom: '1px solid var(--border)', padding: '8px 6px' }}>
                       {messages.microphones.table.actions}
@@ -712,14 +746,15 @@ export default function MicrophonesPanel({ messages, canWrite }: MicrophonesPane
                 </tr>
               </thead>
               <tbody>
-                {rows.map((row) => (
+                {sortedRows.map((row) => (
                   <tr key={row.id}>
                     <td style={{ borderBottom: '1px solid var(--border)', padding: '8px 6px' }}>{row.identifier}</td>
                     <td style={{ borderBottom: '1px solid var(--border)', padding: '8px 6px' }}>{row.modelName}</td>
                     <td style={{ borderBottom: '1px solid var(--border)', padding: '8px 6px' }}>{row.micTypeName}</td>
                     <td style={{ borderBottom: '1px solid var(--border)', padding: '8px 6px' }}>
-                        {row.latestAttachmentBase ? ( <>{row.latestAttachmentBase}</> ) : null}
+                      {row.latestAttachmentBase ? row.latestAttachmentBase : null}
                     </td>
+
                     {canWrite ? (
                       <td style={{ borderBottom: '1px solid var(--border)', padding: '8px 6px' }}>
                         <div style={{ display: 'flex', gap: 8, flexWrap: 'wrap' }}>
@@ -760,3 +795,4 @@ export default function MicrophonesPanel({ messages, canWrite }: MicrophonesPane
     </div>
   )
 }
+
