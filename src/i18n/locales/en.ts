@@ -106,7 +106,7 @@ const en = {
       microphones: 'Microphones',
       bases: 'Bases',
       locations: 'Locations',
-      movements: 'Movements',
+
     },
     user: {
       title: 'My account',
@@ -147,47 +147,7 @@ const en = {
       deleteFailed: 'Failed to delete location',
     },
   },
-  movements: {
-    title: 'Movements',
-    readOnly: 'Read-only mode: you can view movements and attachments but cannot create, edit, or delete.',
-    userUnknown: 'Unknown user',
-    forms: {
-      movementTitle: 'Movement editor',
-    },
-    fields: {
-      base: 'Base',
-      location: 'Location',
-      selectBase: 'Select a base',
-      selectLocation: 'Select a location',
-    },
-    actions: {
-      create: 'Create movement',
-      update: 'Update movement',
-      cancelEdit: 'Cancel edit',
-      edit: 'Edit',
-      delete: 'Delete',
-      refresh: 'Refresh',
-    },
-    table: {
-      title: 'Latest movements',
-      createdAt: 'Date',
-      base: 'Base',
-      location: 'Location',
-      user: 'User',
-      actions: 'Actions',
-      empty: 'No movements yet.',
-    },
-    feedback: {
-      loaded: 'Movements loaded.',
-      loadFailed: 'Failed to load movements',
-      created: 'Movement created.',
-      createFailed: 'Failed to create movement',
-      updated: 'Movement updated.',
-      updateFailed: 'Failed to update movement',
-      deleted: 'Movement deleted.',
-      deleteFailed: 'Failed to delete movement',
-    },
-  },
+
   attachments: {
     forms: {
       title: 'Attachment editor',

@@ -3,7 +3,7 @@ import AuthPanel from './components/AuthPanel'
 import MicrophonesPanel from './components/MicrophonesPanel'
 import LocationsPanel from './components/LocationsPanel'
 import Menu, { type AppPanel } from './components/Menu'
-import MovementsPanel from './components/MovementsPanel'
+
 import ProfilePanel from './components/ProfilePanel'
 import BasePanel from './components/BasePanel'
 import { MoonIcon, SunIcon } from './components/icons'
@@ -257,7 +257,8 @@ function App() {
       )
     }
 
-    return <MovementsPanel messages={messages} canWrite={isWriter} />
+    return <MicrophonesPanel messages={messages} canWrite={isWriter} />
+
   }
 
   return (

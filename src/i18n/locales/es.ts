@@ -106,7 +106,7 @@ const es = {
       microphones: 'Micrófonos',
       bases: 'Bases',
       locations: 'Ubicaciones',
-      movements: 'Movimientos',
+
     },
     user: {
       title: 'Mi cuenta',
@@ -147,47 +147,7 @@ const es = {
       deleteFailed: 'No se pudo eliminar la ubicación',
     },
   },
-  movements: {
-    title: 'Movimientos',
-    readOnly: 'Modo de solo lectura: puedes ver movimientos y anexos pero no puedes crear, editar ni eliminar.',
-    userUnknown: 'Usuario desconocido',
-    forms: {
-      movementTitle: 'Editor de movimientos',
-    },
-    fields: {
-      base: 'Base',
-      location: 'Ubicación',
-      selectBase: 'Selecciona una base',
-      selectLocation: 'Selecciona una ubicación',
-    },
-    actions: {
-      create: 'Crear movimiento',
-      update: 'Actualizar movimiento',
-      cancelEdit: 'Cancelar edición',
-      edit: 'Editar',
-      delete: 'Eliminar',
-      refresh: 'Actualizar',
-    },
-    table: {
-      title: 'Movimientos más recientes',
-      createdAt: 'Fecha',
-      base: 'Base',
-      location: 'Ubicación',
-      user: 'Usuario',
-      actions: 'Acciones',
-      empty: 'Todavía no hay movimientos.',
-    },
-    feedback: {
-      loaded: 'Movimientos cargados.',
-      loadFailed: 'No se pudieron cargar los movimientos',
-      created: 'Movimiento creado.',
-      createFailed: 'No se pudo crear el movimiento',
-      updated: 'Movimiento actualizado.',
-      updateFailed: 'No se pudo actualizar el movimiento',
-      deleted: 'Movimiento eliminado.',
-      deleteFailed: 'No se pudo eliminar el movimiento',
-    },
-  },
+
   attachments: {
     forms: {
       title: 'Editor de anexos',
