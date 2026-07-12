@@ -725,19 +725,19 @@ export default function MicrophonesPanel({ messages, canWrite }: MicrophonesPane
                         <div style={{ display: 'flex', gap: 8, flexWrap: 'wrap' }}>
                           <button
                             type="button"
-                            onClick={() => startEdit(row)}
-                            disabled={loading}
-                            style={{ padding: '6px 10px', borderRadius: 6, cursor: 'pointer' }}
-                          >
-                            {messages.microphones.actions.edit}
-                          </button>
-                          <button
-                            type="button"
                             onClick={() => attachMicrophone(row)}
                             disabled={loading}
                             style={{ padding: '6px 10px', borderRadius: 6, cursor: 'pointer' }}
                           >
                             {messages.microphones.actions.attach}
+                          </button>
+                          <button
+                            type="button"
+                            onClick={() => startEdit(row)}
+                            disabled={loading}
+                            style={{ padding: '6px 10px', borderRadius: 6, cursor: 'pointer' }}
+                          >
+                            {messages.microphones.actions.edit}
                           </button>
                           <button
                             type="button"
