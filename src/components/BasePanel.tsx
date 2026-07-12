@@ -179,7 +179,7 @@ export default function BasePanel({ messages, canWrite }: BasePanelProps) {
   }
 
   return (
-    <div style={{ maxWidth: 760, margin: '0 auto', padding: 16 }}>
+    <div style={{ maxWidth: 820, margin: '0 auto', padding: 16, textAlign: 'left' }}>
       <h2 style={{ marginTop: 24 }}>{messages.bases.title}</h2>
 
 

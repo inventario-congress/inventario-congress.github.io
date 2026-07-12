@@ -106,6 +106,7 @@ const en = {
     system: {
       title: 'System',
       microphones: 'Microphones',
+      bases: 'Bases',
       locations: 'Locations',
       movements: 'Movements',
     },
