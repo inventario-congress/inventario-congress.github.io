@@ -64,7 +64,6 @@ const es = {
       micTypeName: 'Tipo',
       identifier: 'Identificador',
     },
-
     actions: {
       create: 'Crear micrófono',
       update: 'Actualizar micrófono',
@@ -261,8 +260,17 @@ const es = {
       actions: 'Acciones',
       empty: 'Todavía no hay bases.',
     },
+    feedback: {
+      loaded: 'Bases cargadas.',
+      loadFailed: 'No se pudieron cargar las bases',
+      created: 'Base creada.',
+      createFailed: 'No se pudo crear la base',
+      updated: 'Base actualizada.',
+      updateFailed: 'No se pudo actualizar la base',
+      deleted: 'Base eliminada.',
+      deleteFailed: 'No se pudo eliminar la base',
+    },
   },
 } as const
 
 export default es
-

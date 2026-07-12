@@ -69,9 +69,9 @@ export default function BasePanel({ messages, canWrite }: BasePanelProps) {
         })),
       )
 
-      setStatus(messages.items.feedback.loaded)
+      setStatus(messages.bases.feedback.loaded)
     } catch (e) {
-      const msg = e instanceof Error ? e.message : messages.items.feedback.loadFailed
+      const msg = e instanceof Error ? e.message : messages.bases.feedback.loadFailed
       setError(msg)
     } finally {
       setLoading(false)
@@ -113,17 +113,17 @@ export default function BasePanel({ messages, canWrite }: BasePanelProps) {
       if (editingId === null) {
         const { error: createError } = await supabase.from('base').insert(payload)
         if (createError) throw createError
-        setStatus(messages.items.feedback.created)
+        setStatus(messages.bases.feedback.created)
       } else {
         const { error: updateError } = await supabase.from('base').update(payload).eq('id', editingId)
         if (updateError) throw updateError
-        setStatus(messages.items.feedback.updated)
+        setStatus(messages.bases.feedback.updated)
       }
 
       resetForm()
       await loadBases()
     } catch (e) {
-      const fallback = editingId === null ? messages.items.feedback.createFailed : messages.items.feedback.updateFailed
+      const fallback = editingId === null ? messages.bases.feedback.createFailed : messages.bases.feedback.updateFailed
       const msg = e instanceof Error ? e.message : fallback
       setError(msg)
     } finally {
@@ -168,10 +168,10 @@ export default function BasePanel({ messages, canWrite }: BasePanelProps) {
         cancelEdit()
       }
 
-      setStatus(messages.items.feedback.deleted)
+      setStatus(messages.bases.feedback.deleted)
       await loadBases()
     } catch (e) {
-      const msg = e instanceof Error ? e.message : messages.items.feedback.deleteFailed
+      const msg = e instanceof Error ? e.message : messages.bases.feedback.deleteFailed
       setError(msg)
     } finally {
       setLoading(false)

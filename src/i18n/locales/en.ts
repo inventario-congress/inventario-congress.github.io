@@ -64,7 +64,6 @@ const en = {
       micTypeName: 'Type',
       identifier: 'Identifier',
     },
-
     actions: {
       create: 'Create microphone',
       update: 'Update microphone',
@@ -75,7 +74,6 @@ const en = {
       refresh: 'Refresh',
       signOut: 'Sign out',
     },
-
     table: {
       title: 'Registered microphones',
       modelName: 'Model',
@@ -261,6 +259,16 @@ const en = {
       maxMicCount: 'Max mic count',
       actions: 'Actions',
       empty: 'No bases yet.',
+    },
+    feedback: {
+      loaded: 'Bases loaded.',
+      loadFailed: 'Failed to load bases',
+      created: 'Base created.',
+      createFailed: 'Failed to create base',
+      updated: 'Base updated.',
+      updateFailed: 'Failed to update base',
+      deleted: 'Base deleted.',
+      deleteFailed: 'Failed to delete base',
     },
   },
 } as const
