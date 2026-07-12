@@ -258,14 +258,35 @@ export default function LocationsPanel({ messages, canWrite }: LocationsPanelPro
           <table style={{ width: '100%', borderCollapse: 'collapse' }}>
             <thead>
               <tr>
-                <th style={{ textAlign: 'left', borderBottom: '1px solid var(--border)', padding: '8px 6px' }}>
+                <th
+                  style={{
+                    textAlign: 'left',
+                    borderBottom: '1px solid var(--border)',
+                    background: 'var(--table-header-bg)',
+                    padding: '8px 6px',
+                  }}
+                >
                   {messages.locations.table.name}
                 </th>
-                <th style={{ textAlign: 'left', borderBottom: '1px solid var(--border)', padding: '8px 6px' }}>
+                <th
+                  style={{
+                    textAlign: 'left',
+                    borderBottom: '1px solid var(--border)',
+                    background: 'var(--table-header-bg)',
+                    padding: '8px 6px',
+                  }}
+                >
                   {messages.locations.table.address}
                 </th>
                 {canWrite ? (
-                  <th style={{ textAlign: 'left', borderBottom: '1px solid var(--border)', padding: '8px 6px' }}>
+                  <th
+                    style={{
+                      textAlign: 'left',
+                      borderBottom: '1px solid var(--border)',
+                      background: 'var(--table-header-bg)',
+                      padding: '8px 6px',
+                    }}
+                  >
                     {messages.locations.table.actions}
                   </th>
                 ) : null}

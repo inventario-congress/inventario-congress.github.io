@@ -681,8 +681,8 @@ export default function MicrophonesPanel({ messages, canWrite }: MicrophonesPane
                       userSelect: 'none',
                       textAlign: 'left',
                       borderBottom: '1px solid var(--border)',
+                      background: 'var(--table-header-bg)',
                       padding: '8px 6px',
-                      opacity: sortColumn === 'identifier' ? 1 : 0.9,
                       whiteSpace: 'nowrap',
                     }}
                   >
@@ -697,8 +697,8 @@ export default function MicrophonesPanel({ messages, canWrite }: MicrophonesPane
                       userSelect: 'none',
                       textAlign: 'left',
                       borderBottom: '1px solid var(--border)',
+                      background: 'var(--table-header-bg)',
                       padding: '8px 6px',
-                      opacity: sortColumn === 'modelName' ? 1 : 0.9,
                       whiteSpace: 'nowrap',
                     }}
                   >
@@ -713,8 +713,8 @@ export default function MicrophonesPanel({ messages, canWrite }: MicrophonesPane
                       userSelect: 'none',
                       textAlign: 'left',
                       borderBottom: '1px solid var(--border)',
+                      background: 'var(--table-header-bg)',
                       padding: '8px 6px',
-                      opacity: sortColumn === 'micTypeName' ? 1 : 0.9,
                       whiteSpace: 'nowrap',
                     }}
                   >
@@ -729,8 +729,8 @@ export default function MicrophonesPanel({ messages, canWrite }: MicrophonesPane
                       userSelect: 'none',
                       textAlign: 'left',
                       borderBottom: '1px solid var(--border)',
+                      background: 'var(--table-header-bg)',
                       padding: '8px 6px',
-                      opacity: sortColumn === 'latestAttachmentBase' ? 1 : 0.9,
                       whiteSpace: 'nowrap',
                     }}
                   >
@@ -739,7 +739,14 @@ export default function MicrophonesPanel({ messages, canWrite }: MicrophonesPane
                   </th>
 
                   {canWrite ? (
-                    <th style={{ textAlign: 'left', borderBottom: '1px solid var(--border)', padding: '8px 6px' }}>
+                    <th
+                      style={{
+                        textAlign: 'left',
+                        borderBottom: '1px solid var(--border)',
+                        background: 'var(--table-header-bg)',
+                        padding: '8px 6px',
+                      }}
+                    >
                       {messages.microphones.table.actions}
                     </th>
                   ) : null}

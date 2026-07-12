@@ -565,15 +565,22 @@ export default function BasePanel({ messages, canWrite }: BasePanelProps) {
                       userSelect: 'none',
                       textAlign: 'left',
                       borderBottom: '1px solid var(--border)',
+                      background: 'var(--table-header-bg)',
                       padding: '8px 6px',
-                      opacity: sortColumn === 'identifier' ? 1 : 0.9,
                       whiteSpace: 'nowrap',
                     }}
                   >
                     {messages.bases.table.identifier}
                     <SortIcon active={sortColumn === 'identifier'} />
                   </th>
-                  <th style={{ textAlign: 'left', borderBottom: '1px solid var(--border)', padding: '8px 6px' }}>
+                  <th
+                    style={{
+                      textAlign: 'left',
+                      borderBottom: '1px solid var(--border)',
+                      background: 'var(--table-header-bg)',
+                      padding: '8px 6px',
+                    }}
+                  >
                     {messages.bases.table.maxMicCount}
                   </th>
                   <th
@@ -583,8 +590,8 @@ export default function BasePanel({ messages, canWrite }: BasePanelProps) {
                       userSelect: 'none',
                       textAlign: 'left',
                       borderBottom: '1px solid var(--border)',
+                      background: 'var(--table-header-bg)',
                       padding: '8px 6px',
-                      opacity: sortColumn === 'latestLocationName' ? 1 : 0.9,
                       whiteSpace: 'nowrap',
                     }}
                   >
@@ -593,7 +600,14 @@ export default function BasePanel({ messages, canWrite }: BasePanelProps) {
                   </th>
 
                   {canWrite ? (
-                    <th style={{ textAlign: 'left', borderBottom: '1px solid var(--border)', padding: '8px 6px' }}>
+                    <th
+                      style={{
+                        textAlign: 'left',
+                        borderBottom: '1px solid var(--border)',
+                        background: 'var(--table-header-bg)',
+                        padding: '8px 6px',
+                      }}
+                    >
                       {messages.bases.table.actions}
                     </th>
                   ) : null}
