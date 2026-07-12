@@ -6,6 +6,7 @@ type BaseRow = {
   id: number
   identifier: number
   maxMicCount: number
+  latestLocationName: string | null
 }
 
 type BasePanelProps = {
@@ -61,13 +62,37 @@ export default function BasePanel({ messages, canWrite }: BasePanelProps) {
 
       if (loadError) throw loadError
 
-      setRows(
-        (data ?? []).map((entry) => ({
-          id: entry.id as number,
-          identifier: entry.identifier as number,
-          maxMicCount: entry.max_mic_count as number,
-        })),
-      )
+      const baseRows: BaseRow[] = (data ?? []).map((entry) => ({
+        id: entry.id as number,
+        identifier: entry.identifier as number,
+        maxMicCount: entry.max_mic_count as number,
+        latestLocationName: null,
+      }))
+
+      // Populate latest location name from the latest movement row for each base
+      for (const row of baseRows) {
+        const { data: movements, error: movementError } = await supabase
+          .from('movement')
+          .select('location(name)')
+          .eq('base', row.id)
+          .order('created_at', { ascending: false })
+          .limit(1)
+
+        if (movementError) {
+          console.error('Error fetching latest movement for base', row.id, movementError)
+          continue
+        }
+
+        const latest = movements?.[0] as
+          | {
+              location?: { name?: string | null } | null
+            }
+          | undefined
+
+        row.latestLocationName = latest?.location?.name ?? null
+      }
+
+      setRows(baseRows)
 
       setStatus(messages.bases.feedback.loaded)
     } catch (e) {
@@ -312,6 +337,9 @@ export default function BasePanel({ messages, canWrite }: BasePanelProps) {
                   <th style={{ textAlign: 'left', borderBottom: '1px solid var(--border)', padding: '8px 6px' }}>
                     {messages.bases.table.maxMicCount}
                   </th>
+                  <th style={{ textAlign: 'left', borderBottom: '1px solid var(--border)', padding: '8px 6px' }}>
+                    {messages.bases.table.latestLocation}
+                  </th>
                   {canWrite ? (
                     <th style={{ textAlign: 'left', borderBottom: '1px solid var(--border)', padding: '8px 6px' }}>
                       {messages.bases.table.actions}
@@ -324,6 +352,9 @@ export default function BasePanel({ messages, canWrite }: BasePanelProps) {
                   <tr key={row.id}>
                     <td style={{ borderBottom: '1px solid var(--border)', padding: '8px 6px' }}>{row.identifier}</td>
                     <td style={{ borderBottom: '1px solid var(--border)', padding: '8px 6px' }}>{row.maxMicCount}</td>
+                    <td style={{ borderBottom: '1px solid var(--border)', padding: '8px 6px' }}>
+                      {row.latestLocationName ?? ''}
+                    </td>
                     {canWrite ? (
                       <td style={{ borderBottom: '1px solid var(--border)', padding: '8px 6px' }}>
                         <div style={{ display: 'flex', gap: 8, flexWrap: 'wrap' }}>
