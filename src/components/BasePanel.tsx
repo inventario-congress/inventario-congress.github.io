@@ -1,4 +1,5 @@
 import { useEffect, useState, useCallback } from 'react'
+
 import type { Messages } from '../i18n'
 import { supabase } from '../supabaseClient'
 
@@ -14,6 +15,11 @@ type BasePanelProps = {
   canWrite: boolean
 }
 
+type LocationChoice = {
+  id: number
+  name: string
+}
+
 export default function BasePanel({ messages, canWrite }: BasePanelProps) {
   const [identifier, setIdentifier] = useState('')
   const [maxMicCount, setMaxMicCount] = useState('')
@@ -24,10 +30,71 @@ export default function BasePanel({ messages, canWrite }: BasePanelProps) {
   const [error, setError] = useState<string | null>(null)
   const [status, setStatus] = useState<string | null>(null)
 
+  const [moveDialogOpen, setMoveDialogOpen] = useState(false)
+  const [moveDialogLoading, setMoveDialogLoading] = useState(false)
+  const [moveBaseId, setMoveBaseId] = useState<number | null>(null)
+
+
+  const [moveLocationId, setMoveLocationId] = useState<number | ''>('')
+  const [moveLocationChoices, setMoveLocationChoices] = useState<LocationChoice[]>([])
+
+
+  const resetMoveDialog = useCallback(() => {
+    setMoveDialogOpen(false)
+    setMoveDialogLoading(false)
+    setMoveBaseId(null)
+    setMoveLocationId('')
+
+    setMoveLocationChoices([])
+  }, [])
+
+  const loadMoveChoices = useCallback(async (baseRow: BaseRow) => {
+    if (!supabase) {
+      return
+    }
+
+    setMoveDialogLoading(true)
+
+    try {
+      // Candidate locations are all locations except the one the base was most recently moved to.
+      const latestName = baseRow.latestLocationName
+
+      const { data: locations, error: locationsError } = await supabase
+        .from('location')
+        .select('id, name')
+        .order('id', { ascending: true })
+
+      if (locationsError) throw locationsError
+
+      const mapped: LocationChoice[] = (locations ?? [])
+        .map((l) => ({ id: l.id as number, name: l.name as string }))
+        .filter((l) => (latestName ? l.name !== latestName : true))
+
+      // Ensure no duplicates and sort alphabetically by location name.
+      const seen = new Set<number>()
+      const unique = mapped.filter((l) => {
+        if (seen.has(l.id)) return false
+        seen.add(l.id)
+        return true
+      })
+
+      unique.sort((a, b) => a.name.localeCompare(b.name))
+
+      setMoveLocationChoices(unique)
+
+    } catch (e) {
+      const msg = e instanceof Error ? e.message : messages.bases.feedback.loadFailed
+      setError(msg)
+    } finally {
+      setMoveDialogLoading(false)
+    }
+  }, [messages.bases.feedback.loadFailed])
+
   const loadBases = useCallback(async () => {
     if (!supabase) {
       return
     }
+
 
     setError(null)
     setLoading(true)
@@ -172,10 +239,83 @@ export default function BasePanel({ messages, canWrite }: BasePanelProps) {
     resetForm()
   }
 
+  function openMoveDialog(row: BaseRow) {
+    if (!canWrite) {
+      return
+    }
+
+    setError(null)
+    setStatus(null)
+    setMoveDialogOpen(true)
+    setMoveBaseId(row.id)
+    setMoveLocationId('')
+
+    setMoveLocationChoices([])
+
+    void loadMoveChoices(row)
+  }
+
+  function cancelMoveDialog() {
+    resetMoveDialog()
+  }
+
+  async function confirmMoveBase() {
+    if (!supabase) {
+      return
+    }
+
+    if (!canWrite) {
+      return
+    }
+
+    if (!moveBaseId) {
+      return
+    }
+
+    const locationId = typeof moveLocationId === 'number' ? moveLocationId : Number.parseInt(String(moveLocationId), 10)
+    if (Number.isNaN(locationId)) {
+      return
+    }
+
+    setError(null)
+    setStatus(null)
+    setMoveDialogLoading(true)
+
+    try {
+      const {
+        data: { session },
+      } = await supabase.auth.getSession()
+
+      const userId = session?.user?.id
+      if (!userId) {
+        throw new Error(messages.microphones.feedback.authRequired)
+      }
+
+      const payload = {
+        base: moveBaseId,
+        location: locationId,
+        user: userId,
+      }
+
+      const { error: createError } = await supabase.from('movement').insert(payload)
+      if (createError) throw createError
+
+      setStatus(messages.bases.feedback.updated)
+      resetMoveDialog()
+      await loadBases()
+    } catch (e) {
+      const msg = e instanceof Error ? e.message : messages.bases.feedback.loadFailed
+      setError(msg)
+    } finally {
+      setMoveDialogLoading(false)
+    }
+  }
+
   async function deleteBase(id: number) {
     if (!supabase) {
       return
     }
+
 
     if (!canWrite) {
       return
@@ -360,6 +500,14 @@ export default function BasePanel({ messages, canWrite }: BasePanelProps) {
                         <div style={{ display: 'flex', gap: 8, flexWrap: 'wrap' }}>
                           <button
                             type="button"
+                            onClick={() => openMoveDialog(row)}
+                            disabled={loading}
+                            style={{ padding: '6px 10px', borderRadius: 6, cursor: 'pointer' }}
+                          >
+                            {messages.bases.actions.move}
+                          </button>
+                          <button
+                            type="button"
                             onClick={() => startEdit(row)}
                             disabled={loading}
                             style={{ padding: '6px 10px', borderRadius: 6, cursor: 'pointer' }}
@@ -384,7 +532,84 @@ export default function BasePanel({ messages, canWrite }: BasePanelProps) {
           </div>
         )}
       </div>
+
+      {moveDialogOpen ? (
+        <div
+          role="dialog"
+          aria-modal="true"
+          style={{
+            border: '1px solid var(--border)',
+            borderRadius: 10,
+            padding: 12,
+            marginBottom: 16,
+            background: 'var(--card)',
+            textAlign: 'left',
+          }}
+        >
+          <h4 style={{ margin: '0 0 10px' }}>{messages.bases.dialogs.moveBase.title}</h4>
+
+          {moveBaseId !== null ? (
+            <div style={{ marginBottom: 10, opacity: 0.9 }}>
+              {rows.find((r) => r.id === moveBaseId)?.identifier ?? ''}
+            </div>
+          ) : null}
+
+          <select
+            value={moveLocationId}
+
+            onChange={(e) => {
+              const value = e.target.value
+              setMoveLocationId(value === '' ? '' : Number.parseInt(value, 10))
+            }}
+            disabled={moveDialogLoading || moveLocationChoices.length === 0}
+
+            style={{
+              width: '100%',
+              boxSizing: 'border-box',
+              padding: 10,
+              borderRadius: 6,
+              border: '1px solid var(--border)',
+              marginTop: 10,
+            }}
+          >
+            <option value="">{messages.bases.dialogs.moveBase.searchLabel}</option>
+            {moveLocationChoices.length === 0 ? (
+              <option value="" disabled>
+                {messages.bases.dialogs.moveBase.empty}
+              </option>
+            ) : (
+              moveLocationChoices.map((c) => (
+                <option key={c.id} value={c.id}>
+                  {c.name}
+                </option>
+              ))
+            )}
+
+          </select>
+
+          <div style={{ display: 'flex', gap: 10, flexWrap: 'wrap', marginTop: 12 }}>
+            <button
+              type="button"
+              onClick={confirmMoveBase}
+              disabled={moveDialogLoading || moveLocationId === ''}
+              title={messages.bases.dialogs.moveBase.moveDisabledReason}
+              style={{ padding: '10px 14px', borderRadius: 6, cursor: 'pointer' }}
+            >
+              {messages.bases.actions.move}
+            </button>
+            <button
+              type="button"
+              onClick={cancelMoveDialog}
+              disabled={moveDialogLoading}
+              style={{ padding: '10px 14px', borderRadius: 6, cursor: 'pointer' }}
+            >
+              {messages.bases.actions.cancelMove}
+            </button>
+          </div>
+        </div>
+      ) : null}
     </div>
   )
 }
+
 

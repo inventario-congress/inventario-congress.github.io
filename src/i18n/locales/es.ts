@@ -212,6 +212,18 @@ const es = {
       edit: 'Editar',
       delete: 'Eliminar',
       refresh: 'Actualizar',
+      move: 'Mover',
+      cancelMove: 'Cancelar',
+    },
+    dialogs: {
+      moveBase: {
+        title: 'Mover la base a una ubicación',
+        searchLabel: 'Ubicación',
+        searchPlaceholder: 'Buscar ubicaciones...',
+        moveDisabledReason: 'Selecciona una ubicación para habilitar mover',
+        empty: 'No hay ubicaciones disponibles.',
+      },
+
     },
     table: {
       title: 'Bases registradas',
@@ -235,3 +247,4 @@ const es = {
 } as const
 
 export default es
+

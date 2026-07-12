@@ -212,6 +212,17 @@ const en = {
       edit: 'Edit',
       delete: 'Delete',
       refresh: 'Refresh',
+      move: 'Move',
+      cancelMove: 'Cancel',
+    },
+    dialogs: {
+      moveBase: {
+        title: 'Move base to a location',
+        searchLabel: 'Location',
+        searchPlaceholder: 'Search locations...',
+        moveDisabledReason: 'Select a location to enable move',
+        empty: 'No available locations.',
+      },
     },
     table: {
       title: 'Registered bases',
@@ -235,4 +246,5 @@ const en = {
 } as const
 
 export default en
+
 
