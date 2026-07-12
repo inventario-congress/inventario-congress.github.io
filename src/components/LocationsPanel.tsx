@@ -39,11 +39,13 @@ export default function LocationsPanel({ messages, canWrite }: LocationsPanelPro
       if (loadError) throw loadError
 
       setRows(
-        (data ?? []).map((entry) => ({
-          id: entry.id as number,
-          name: entry.name as string,
-          address: (entry.address as string | null) ?? null,
-        })),
+        (data ?? [])
+          .map((entry) => ({
+            id: entry.id as number,
+            name: entry.name as string,
+            address: (entry.address as string | null) ?? null,
+          }))
+          .sort((a, b) => a.name.localeCompare(b.name)),
       )
       setStatus(messages.locations.feedback.loaded)
     } catch (e) {
