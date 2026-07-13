@@ -80,6 +80,49 @@ const en = {
       actions: 'Actions',
       empty: 'No microphones yet.',
     },
+    dialogs: {
+      editor: {
+        titleCreate: 'Create microphone',
+        titleEdit: 'Update microphone',
+        description: 'Configure microphone identifier and associate model and type.',
+        fields: {
+          identifier: 'Identifier',
+          modelName: 'Model',
+          micTypeName: 'Type',
+        },
+        actions: {
+          cancel: 'Cancel',
+          save: 'Save microphone',
+        },
+        feedback: {
+          loadFailed: 'Failed to load microphone',
+          loadingModels: 'Loading models...',
+          noModels: 'No models available',
+          addNewModel: 'Add new model',
+          loadingMicTypes: 'Loading types...',
+          noMicTypes: 'No types available',
+          submitting: 'Submitting...',
+          createFailed: 'Failed to create microphone',
+          updateFailed: 'Failed to update microphone',
+          authRequired: 'Authentication is required',
+          addNewModelCreateFailed: 'Failed to create model',
+        },
+        addNewModelDialog: {
+          title: 'Add new model',
+          description: 'Enter a name for the new model.',
+          fields: {
+            modelName: 'Model name',
+          },
+          actions: {
+            cancel: 'Cancel',
+            save: 'Add model',
+          },
+          feedback: {
+            submitting: 'Adding...',
+          },
+        },
+      },
+    },
     feedback: {
       loaded: 'Microphones loaded.',
       loadFailed: 'Failed to load microphones',

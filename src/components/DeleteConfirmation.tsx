@@ -50,7 +50,7 @@ export default function DeleteConfirmation({
 
   useEffect(() => {
     if (!open) {
-      setHasInteracted(false)
+      queueMicrotask(() => setHasInteracted(false))
     }
   }, [open])
 
@@ -149,4 +149,3 @@ export default function DeleteConfirmation({
     </div>
   )
 }
-

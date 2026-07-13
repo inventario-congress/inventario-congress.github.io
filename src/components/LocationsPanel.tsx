@@ -26,7 +26,6 @@ export default function LocationsPanel({ messages, canWrite }: LocationsPanelPro
   const [deleteTarget, setDeleteTarget] = useState<{ id: number; name: string } | null>(null)
 
   const [error, setError] = useState<string | null>(null)
-  const [status, setStatus] = useState<string | null>(null)
 
   const loadLocations = useCallback(async () => {
     if (!supabase) {
@@ -53,13 +52,13 @@ export default function LocationsPanel({ messages, canWrite }: LocationsPanelPro
           }))
           .sort((a, b) => a.name.localeCompare(b.name)),
       )
-      setStatus(messages.locations.feedback.loaded)
     } catch (e) {
       setError(e instanceof Error ? e.message : messages.locations.feedback.loadFailed)
     } finally {
       setLoading(false)
     }
-  }, [messages.locations.feedback.loaded, messages.locations.feedback.loadFailed])
+  // 'messages.locations.feedback.loaded' isn't used inside this callback; remove it to satisfy exhaustive-deps.
+  }, [messages.locations.feedback.loadFailed])
 
   useEffect(() => {
     if (!supabase) {
@@ -97,7 +96,6 @@ export default function LocationsPanel({ messages, canWrite }: LocationsPanelPro
 
     setLoading(true)
     setError(null)
-    setStatus(null)
 
     try {
       if (editingId === null) {
@@ -107,7 +105,6 @@ export default function LocationsPanel({ messages, canWrite }: LocationsPanelPro
         })
 
         if (createError) throw createError
-        setStatus(messages.locations.feedback.created)
       } else {
         const { error: updateError } = await supabase
           .from('location')
@@ -115,7 +112,6 @@ export default function LocationsPanel({ messages, canWrite }: LocationsPanelPro
           .eq('id', editingId)
 
         if (updateError) throw updateError
-        setStatus(messages.locations.feedback.updated)
       }
 
       setEditingId(null)
@@ -139,7 +135,6 @@ export default function LocationsPanel({ messages, canWrite }: LocationsPanelPro
     setName(row.name)
     setAddress(row.address ?? '')
     setError(null)
-    setStatus(null)
   }
 
   function cancelEdit() {
@@ -155,7 +150,6 @@ export default function LocationsPanel({ messages, canWrite }: LocationsPanelPro
 
     setLoading(true)
     setError(null)
-    setStatus(null)
 
     try {
       const { error: deleteError } = await supabase.from('location').delete().eq('id', id)
@@ -165,7 +159,6 @@ export default function LocationsPanel({ messages, canWrite }: LocationsPanelPro
         cancelEdit()
       }
 
-      setStatus(messages.locations.feedback.deleted)
       await loadLocations()
     } catch (e) {
       setError(e instanceof Error ? e.message : messages.locations.feedback.deleteFailed)
