@@ -20,6 +20,7 @@ type BaseEditorProps = {
 
 
 export default function BaseEditor({ messages, canWrite, isOpen, onClose, onSaved, baseId }: BaseEditorProps) {
+  const isEditMode = typeof baseId === 'number' && baseId > 0
   const strings = messages.bases
   const editorStrings = (strings as unknown as { dialogs: { editor?: Record<string, string> } }).dialogs.editor ?? {
     title: strings.actions.create,
@@ -67,28 +68,80 @@ export default function BaseEditor({ messages, canWrite, isOpen, onClose, onSave
     setError(null)
 
     try {
-      const { data, error: modelsError } = await supabase
-        .from('model')
-        .select('id, name')
-        .order('name', { ascending: true })
+      const [modelsRes, assocRes] = await Promise.all([
+        supabase
+          .from('model')
+          .select('id, name')
+          .order('name', { ascending: true }),
+        isEditMode
+          ? supabase.from('base_mic_models').select('model').eq('base', baseId)
+          : Promise.resolve({ data: [], error: null as unknown }),
+      ])
 
+      const { data: modelsData, error: modelsError } = modelsRes
       if (modelsError) throw modelsError
 
-      const mapped: ModelChoice[] = (data ?? []).map((m) => ({
+      const { data: assocData, error: assocError } = assocRes as {
+        data: Array<{ model: bigint | number }> | null
+        error: unknown
+      }
+      if (assocError) throw assocError
+
+      const selectedIds = new Set<number>(
+        Array.from(assocData ?? []).map((r) => Number(r.model)).filter((n) => !Number.isNaN(n)),
+      )
+
+      const mapped: ModelChoice[] = (modelsData ?? []).map((m) => ({
         id: m.id as number,
         name: m.name as string,
-        checked: false,
+        checked: selectedIds.has(m.id as number),
       }))
 
       setModelChoices(mapped)
-      setSelectedModelIds(new Set())
+      setSelectedModelIds(selectedIds)
     } catch (e) {
       const msg = e instanceof Error ? e.message : strings.feedback.loadFailed
       setError(msg)
     } finally {
       setModelsLoading(false)
     }
-  }, [strings.feedback.loadFailed])
+  }, [baseId, isEditMode, strings.feedback.loadFailed])
+
+  useEffect(() => {
+    if (!isOpen) return
+    if (!canWrite) return
+
+    if (!isEditMode || !baseId) {
+      setIdentifier('')
+      setMaxMicCount('')
+      return
+    }
+
+    void (async () => {
+      setError(null)
+      setLoading(true)
+      try {
+        const sb = supabase
+        if (!sb) return
+
+        const { data: baseData, error: baseError } = await sb
+          .from('base')
+          .select('identifier, max_mic_count')
+          .eq('id', baseId)
+          .single()
+
+        if (baseError) throw baseError
+
+        setIdentifier(String((baseData?.identifier as number | null) ?? ''))
+        setMaxMicCount(String((baseData?.max_mic_count as number | null) ?? ''))
+      } catch (e) {
+        const msg = e instanceof Error ? e.message : strings.feedback.loadFailed
+        setError(msg)
+      } finally {
+        setLoading(false)
+      }
+    })()
+  }, [isEditMode, baseId, isOpen, canWrite, supabase, strings.feedback.loadFailed])
 
   useEffect(() => {
     if (!isOpen) return
@@ -110,18 +163,18 @@ export default function BaseEditor({ messages, canWrite, isOpen, onClose, onSave
     return false
   }, [canWrite, identifier, maxMicCount, loading, modelsLoading, selectedModelIds, supabase])
 
+  // baseId is used for edit mode
   void baseId
 
   async function handleSubmit() {
     if (!supabase) return
     if (!canWrite) return
 
-
-
     const parsedIdentifier = Number.parseInt(identifier, 10)
     const parsedMaxMicCount = Number.parseInt(maxMicCount, 10)
 
     if (Number.isNaN(parsedIdentifier) || Number.isNaN(parsedMaxMicCount)) return
+
 
 
     setError(null)
@@ -137,26 +190,51 @@ export default function BaseEditor({ messages, canWrite, isOpen, onClose, onSave
         throw new Error(messages.microphones.feedback.authRequired)
       }
 
-      // 1) Insert base
-      const { data: createdBases, error: createBaseError } = await supabase
-        .from('base')
-        .insert({ identifier: parsedIdentifier, max_mic_count: parsedMaxMicCount })
-        .select('id')
+      let targetBaseId: number | null = null
 
-      if (createBaseError) throw createBaseError
+      if (isEditMode && baseId) {
+        // Update base
+        const { error: updateBaseError } = await supabase
+          .from('base')
+          .update({ identifier: parsedIdentifier, max_mic_count: parsedMaxMicCount })
+          .eq('id', baseId)
 
-      const createdBaseId = (createdBases?.[0]?.id as number | undefined) ?? null
-      if (!createdBaseId) throw new Error(strings.feedback.createFailed)
+        if (updateBaseError) throw updateBaseError
+        targetBaseId = baseId
+      } else {
+        // Insert base
+        const { data: createdBases, error: createBaseError } = await supabase
+          .from('base')
+          .insert({ identifier: parsedIdentifier, max_mic_count: parsedMaxMicCount })
+          .select('id')
 
-      // 2) Insert base_mic_models associations
+        if (createBaseError) throw createBaseError
+
+        const createdBaseId = (createdBases?.[0]?.id as number | undefined) ?? null
+        if (!createdBaseId) throw new Error(strings.feedback.createFailed)
+        targetBaseId = createdBaseId
+      }
+
+      if (!targetBaseId) throw new Error(strings.feedback.createFailed)
+
+      // Replace base_mic_models associations
+      const { error: deleteAssocError } = await supabase
+        .from('base_mic_models')
+        .delete()
+        .eq('base', targetBaseId)
+
+      if (deleteAssocError) throw deleteAssocError
+
       const assocRows = Array.from(selectedModelIds).map((modelId) => ({
-        base: createdBaseId,
+        base: targetBaseId,
         model: modelId,
-        // base_mic_models has no user column in schema, so we only insert base/model.
       }))
 
-      const { error: assocError } = await supabase.from('base_mic_models').insert(assocRows)
-      if (assocError) throw assocError
+      if (assocRows.length > 0) {
+        const { error: assocError } = await supabase.from('base_mic_models').insert(assocRows)
+        if (assocError) throw assocError
+      }
+
 
       setLoading(false)
       onSaved?.()

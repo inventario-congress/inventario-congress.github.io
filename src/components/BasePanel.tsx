@@ -45,6 +45,10 @@ type LocationChoice = {
 
 export default function BasePanel({ messages, canWrite }: BasePanelProps) {
   const [baseEditorOpen, setBaseEditorOpen] = useState(false)
+  const [editingBaseId, setEditingBaseId] = useState<number | null>(null)
+
+
+
 
 
 
@@ -371,24 +375,35 @@ export default function BasePanel({ messages, canWrite }: BasePanelProps) {
         messages={messages}
         canWrite={canWrite}
         isOpen={baseEditorOpen}
-        onClose={() => setBaseEditorOpen(false)}
+        baseId={editingBaseId}
+        onClose={() => {
+          setBaseEditorOpen(false)
+          setEditingBaseId(null)
+        }}
         onSaved={async () => {
           setError(null)
           setStatus(null)
+          setEditingBaseId(null)
+          setBaseEditorOpen(false)
           await loadBases()
         }}
 
       />
+
       <div style={{ display: 'flex', alignItems: 'flex-start', justifyContent: 'space-between', gap: 12, marginTop: 24 }}>
         <h2 style={{ margin: 0 }}>{messages.bases.title}</h2>
 
         {canWrite ? (
           <button
             type="button"
-            onClick={() => setBaseEditorOpen(true)}
+            onClick={() => {
+              setEditingBaseId(null)
+              setBaseEditorOpen(true)
+            }}
 
             aria-label={messages.bases.actions.create}
             title={messages.bases.actions.create}
+
             style={{
               width: 44,
               height: 44,
@@ -517,6 +532,18 @@ export default function BasePanel({ messages, canWrite }: BasePanelProps) {
                         <div style={{ display: 'flex', gap: 8, flexWrap: 'wrap' }}>
                           <button
                             type="button"
+                            onClick={() => {
+                              setEditingBaseId(row.id)
+                              setBaseEditorOpen(true)
+                            }}
+                            disabled={loading}
+                            style={{ padding: '6px 10px', borderRadius: 6, cursor: 'pointer' }}
+                          >
+                            {messages.bases.actions.edit}
+                          </button>
+
+                          <button
+                            type="button"
                             onClick={() => openMoveDialog(row)}
                             disabled={loading}
                             style={{ padding: '6px 10px', borderRadius: 6, cursor: 'pointer' }}
@@ -532,6 +559,7 @@ export default function BasePanel({ messages, canWrite }: BasePanelProps) {
                           >
                             {messages.bases.actions.delete}
                           </button>
+
                         </div>
                       </td>
                     ) : null}
