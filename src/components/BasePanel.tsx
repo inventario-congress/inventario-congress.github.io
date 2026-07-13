@@ -236,7 +236,8 @@ export default function BasePanel({ messages, canWrite }: BasePanelProps) {
     } finally {
       setLoading(false)
     }
-  }, [messages.bases.feedback.loaded, messages.bases.feedback.loadFailed])
+  // 'messages.bases.feedback.loaded' isn't used inside this callback; remove it to satisfy exhaustive-deps.
+  }, [messages.bases.feedback.loadFailed])
 
   useEffect(() => {
     if (!supabase) {

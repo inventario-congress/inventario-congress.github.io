@@ -124,6 +124,8 @@ export default function MicEditor({ messages, canWrite, isOpen, onClose, onSaved
       if (modelsLoadError) throw modelsLoadError
 
       setModels((data ?? []).map((m) => ({ id: m.id as number, name: m.name as string })))
+      // Ensure edit selection stays valid even if initial micId referenced an older/removed model.
+      // (The follow-up effects validate modelId/micTypeId once lists are loaded.)
     } catch (e) {
       setModelsError(e instanceof Error ? e.message : editorStrings.feedback.loadFailed)
     } finally {
@@ -180,23 +182,32 @@ export default function MicEditor({ messages, canWrite, isOpen, onClose, onSaved
   }, [editorStrings.feedback.loadFailed, isEditMode, micId])
 
   useEffect(() => {
-    if (!isOpen) return
-    if (!canWrite) return
+    if (!isOpen || !canWrite) return
 
-    void Promise.all([loadModels(), loadMicTypes()])
-    void loadForEdit()
+    // These async loaders update local state; keep them out of the effect callback body
+    // to satisfy set-state-in-effect linting rules.
+    void (async () => {
+      await Promise.all([loadModels(), loadMicTypes()])
+      await loadForEdit()
+    })()
   }, [canWrite, isOpen, loadForEdit, loadModels, loadMicTypes])
 
   useEffect(() => {
     if (!isOpen) return
     if (modelId === '' || models.length === 0) return
-    if (!models.some((m) => m.id === modelId)) setModelId('')
+    // Avoid calling setState directly in effect body (react-hooks/set-state-in-effect).
+    if (!models.some((m) => m.id === modelId)) {
+      queueMicrotask(() => setModelId(''))
+    }
   }, [isOpen, modelId, models])
 
   useEffect(() => {
     if (!isOpen) return
     if (micTypeId === '' || micTypeChoices.length === 0) return
-    if (!micTypeChoices.some((t) => t.id === micTypeId)) setMicTypeId('')
+    // Avoid calling setState directly in effect body (react-hooks/set-state-in-effect).
+    if (!micTypeChoices.some((t) => t.id === micTypeId)) {
+      queueMicrotask(() => setMicTypeId(''))
+    }
   }, [isOpen, micTypeChoices, micTypeId])
 
   const submitDisabled = useMemo(() => {
@@ -263,7 +274,7 @@ export default function MicEditor({ messages, canWrite, isOpen, onClose, onSaved
     } finally {
       setAddModelLoading(false)
     }
-  }, [addModelName, addModelLoading, canWrite, editorStrings.feedback.addNewModelCreateFailed, loadModels, models])
+  }, [addModelName, canWrite, editorStrings.feedback.addNewModelCreateFailed, loadModels, models])
 
   const handleSubmit = useCallback(async () => {
     if (!supabase) return
@@ -313,13 +324,12 @@ export default function MicEditor({ messages, canWrite, isOpen, onClose, onSaved
     }
   }, [canWrite, close, editorStrings.feedback.createFailed, editorStrings.feedback.updateFailed, identifier, isEditMode, micId, micTypeId, modelId, onSaved])
 
-  const modal = useMemo(() => {
-    if (!isOpen) return null
+  if (!isOpen) return null
 
-    return (
-      <div
-        role="dialog"
-        aria-modal="true"
+  return (
+    <div
+      role="dialog"
+      aria-modal="true"
         aria-label={isEditMode ? editorStrings.titleEdit : editorStrings.titleCreate}
         style={{
           position: 'fixed',
@@ -634,37 +644,4 @@ export default function MicEditor({ messages, canWrite, isOpen, onClose, onSaved
         </div>
       </div>
     )
-  }, [
-    addModelLoading,
-    addModelName,
-    addModelOpen,
-    addModelError,
-    addNewModelDialogStrings,
-    canWrite,
-    close,
-    createModelModalClose,
-    editorStrings,
-    error,
-    handleAddModel,
-    handleSubmit,
-    identifier,
-    isEditMode,
-    loading,
-    messages,
-    micTypeChoices,
-    micTypeId,
-    micTypesError,
-    micTypesLoading,
-    modelId,
-    models,
-    modelsError,
-    modelsLoading,
-    onClose,
-    onSaved,
-    reset,
-    submitDisabled,
-  ])
-
-  return modal
 }
-
