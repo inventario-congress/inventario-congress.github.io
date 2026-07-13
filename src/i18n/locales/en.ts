@@ -70,11 +70,9 @@ const en = {
       edit: 'Edit',
       delete: 'Delete',
       attach: 'Attach',
-      refresh: 'Refresh',
       signOut: 'Sign out',
     },
     table: {
-      title: 'Registered microphones',
       modelName: 'Model',
       identifier: 'Identifier',
       micTypeName: 'Type',
@@ -134,10 +132,8 @@ const en = {
       cancelEdit: 'Cancel edit',
       edit: 'Edit',
       delete: 'Delete',
-      refresh: 'Refresh',
     },
     table: {
-      title: 'Registered locations',
       name: 'Name',
       address: 'Address',
       actions: 'Actions',
@@ -243,7 +239,6 @@ const en = {
       cancelEdit: 'Cancel',
       edit: 'Edit',
       delete: 'Delete',
-      refresh: 'Refresh',
       move: 'Move',
       cancelMove: 'Cancel',
     },
@@ -280,7 +275,6 @@ const en = {
       },
     },
     table: {
-      title: 'Registered bases',
       identifier: 'Identifier',
       maxMicCount: 'Max mic count',
       micModelNames: 'Mic models',

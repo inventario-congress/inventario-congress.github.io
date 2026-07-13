@@ -70,11 +70,9 @@ const es = {
       edit: 'Editar',
       delete: 'Eliminar',
       attach: 'Anexar',
-      refresh: 'Actualizar',
       signOut: 'Cerrar sesión',
     },
     table: {
-      title: 'Micrófonos registrados',
       modelName: 'Modelo',
       identifier: 'Identificador',
       micTypeName: 'Tipo',
@@ -134,10 +132,8 @@ const es = {
       cancelEdit: 'Cancelar edición',
       edit: 'Editar',
       delete: 'Eliminar',
-      refresh: 'Actualizar',
     },
     table: {
-      title: 'Ubicaciones registradas',
       name: 'Nombre',
       address: 'Dirección',
       actions: 'Acciones',
@@ -243,7 +239,6 @@ const es = {
       cancelEdit: 'Cancelar',
       edit: 'Editar',
       delete: 'Eliminar',
-      refresh: 'Actualizar',
       move: 'Mover',
       cancelMove: 'Cancelar',
     },
@@ -280,7 +275,6 @@ const es = {
       },
     },
     table: {
-      title: 'Bases registradas',
       identifier: 'Identificador',
       maxMicCount: 'Cantidad máxima de micrófonos',
       micModelNames: 'Modelos de micrófono',

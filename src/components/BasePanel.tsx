@@ -425,7 +425,6 @@ export default function BasePanel({ messages, canWrite }: BasePanelProps) {
           setBaseEditorOpen(false)
           await loadBases()
         }}
-
       />
 
       <div style={{ display: 'flex', alignItems: 'flex-start', justifyContent: 'space-between', gap: 12, marginTop: 24 }}>
@@ -463,35 +462,13 @@ export default function BasePanel({ messages, canWrite }: BasePanelProps) {
         ) : null}
       </div>
 
-      {!canWrite ? (
-        <div style={{ marginTop: 12, textAlign: 'left' }}>{messages.bases.readOnly}</div>
-      ) : (
-        <div style={{ display: 'flex', gap: 10, flexWrap: 'wrap', marginTop: 10 }}>
-          <button
-            type="button"
-            onClick={loadBases}
-            disabled={loading}
-            style={{ padding: '10px 14px', borderRadius: 6, cursor: 'pointer' }}
-          >
-            {messages.bases.actions.refresh}
-          </button>
-        </div>
-      )}
-
       {error ? (
         <div style={{ marginTop: 12, color: 'crimson', textAlign: 'left' }}>
           <strong>{messages.auth.feedback.error}</strong> {error}
         </div>
       ) : null}
 
-      {status ? (
-        <div style={{ marginTop: 12, color: 'green', textAlign: 'left' }}>
-          <strong>{messages.auth.feedback.status}</strong> {status}
-        </div>
-      ) : null}
-
       <div style={{ marginTop: 24, textAlign: 'left' }}>
-          <h3 style={{ margin: '0 0 10px' }}>{messages.bases.table.title}</h3>
 
         {rows.length === 0 ? (
           <div>{messages.bases.table.empty}</div>
@@ -587,6 +564,15 @@ export default function BasePanel({ messages, canWrite }: BasePanelProps) {
                         <div style={{ display: 'flex', gap: 8, flexWrap: 'wrap' }}>
                           <button
                             type="button"
+                            onClick={() => openMoveDialog(row)}
+                            disabled={loading}
+                            style={{ padding: '6px 10px', borderRadius: 6, cursor: 'pointer' }}
+                          >
+                            {messages.bases.actions.move}
+                          </button>
+
+                          <button
+                            type="button"
                             onClick={() => {
                               setEditingBaseId(row.id)
                               setBaseEditorOpen(true)
@@ -595,15 +581,6 @@ export default function BasePanel({ messages, canWrite }: BasePanelProps) {
                             style={{ padding: '6px 10px', borderRadius: 6, cursor: 'pointer' }}
                           >
                             {messages.bases.actions.edit}
-                          </button>
-
-                          <button
-                            type="button"
-                            onClick={() => openMoveDialog(row)}
-                            disabled={loading}
-                            style={{ padding: '6px 10px', borderRadius: 6, cursor: 'pointer' }}
-                          >
-                            {messages.bases.actions.move}
                           </button>
 
                           <button
@@ -740,5 +717,3 @@ export default function BasePanel({ messages, canWrite }: BasePanelProps) {
     </div>
   )
 }
-
-
