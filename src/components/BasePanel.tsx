@@ -59,7 +59,6 @@ export default function BasePanel({ messages, canWrite }: BasePanelProps) {
   const [loading, setLoading] = useState(false)
   const [rows, setRows] = useState<BaseRow[]>([])
   const [error, setError] = useState<string | null>(null)
-  const [status, setStatus] = useState<string | null>(null)
 
   const [moveDialogOpen, setMoveDialogOpen] = useState(false)
   const [moveDialogLoading, setMoveDialogLoading] = useState(false)
@@ -231,8 +230,6 @@ export default function BasePanel({ messages, canWrite }: BasePanelProps) {
 
 
       setRows(baseRows)
-
-      setStatus(messages.bases.feedback.loaded)
     } catch (e) {
       const msg = e instanceof Error ? e.message : messages.bases.feedback.loadFailed
       setError(msg)
@@ -271,7 +268,6 @@ export default function BasePanel({ messages, canWrite }: BasePanelProps) {
     }
 
     setError(null)
-    setStatus(null)
     setMoveDialogOpen(true)
     setMoveBaseId(row.id)
     setMoveLocationId('')
@@ -304,7 +300,6 @@ export default function BasePanel({ messages, canWrite }: BasePanelProps) {
     }
 
     setError(null)
-    setStatus(null)
     setMoveDialogLoading(true)
 
     try {
@@ -326,7 +321,6 @@ export default function BasePanel({ messages, canWrite }: BasePanelProps) {
       const { error: createError } = await supabase.from('movement').insert(payload)
       if (createError) throw createError
 
-      setStatus(messages.bases.feedback.updated)
       resetMoveDialog()
       await loadBases()
     } catch (e) {
@@ -349,7 +343,6 @@ export default function BasePanel({ messages, canWrite }: BasePanelProps) {
 
     setLoading(true)
     setError(null)
-    setStatus(null)
 
     try {
       const { error: deleteError } = await supabase.from('base').delete().eq('id', id)
@@ -357,7 +350,6 @@ export default function BasePanel({ messages, canWrite }: BasePanelProps) {
 
 
 
-      setStatus(messages.bases.feedback.deleted)
       await loadBases()
     } catch (e) {
       const msg = e instanceof Error ? e.message : messages.bases.feedback.deleteFailed
@@ -420,7 +412,6 @@ export default function BasePanel({ messages, canWrite }: BasePanelProps) {
         }}
         onSaved={async () => {
           setError(null)
-          setStatus(null)
           setEditingBaseId(null)
           setBaseEditorOpen(false)
           await loadBases()
