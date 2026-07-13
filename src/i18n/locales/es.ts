@@ -228,6 +228,7 @@ const es = {
     fields: {
       identifier: 'Identificador de la base',
       maxMicCount: 'Cantidad máxima de micrófonos',
+      models: 'Modelos',
     },
     actions: {
       create: 'Crear base',
@@ -247,13 +248,35 @@ const es = {
         moveDisabledReason: 'Selecciona una ubicación para habilitar mover',
         empty: 'No hay ubicaciones disponibles.',
       },
-
+      editor: {
+        title: 'Crear base ',
+        description: 'Configura la base y asocia los modelos de micrófono.',
+        fields: {
+          identifier: 'Identificador de la base',
+          maxMicCount: 'Cantidad máxima de micrófonos',
+          models: 'Modelos',
+        },
+        actions: {
+          cancel: 'Cancelar',
+          save: 'Guardar base',
+        },
+        feedback: {
+          saved: 'Base guardada correctamente.',
+          saveFailed: 'No se pudo guardar la base.',
+          loading: 'Guardando...',
+          modelSelectorNone: 'No se seleccionaron modelos',
+          modelSelectorSelected: 'modelos seleccionados',
+          loadingModels: 'Cargando modelos...',
+          noModels: 'No hay modelos disponibles',
+          submitting: 'Enviando...',
+        },
+      },
     },
     table: {
       title: 'Bases registradas',
       identifier: 'Identificador',
       maxMicCount: 'Cantidad máxima de micrófonos',
-      latestLocation: 'Ubicación más reciente',
+      latestLocation: 'Ubicación',
       actions: 'Acciones',
       empty: 'Todavía no hay bases.',
     },
