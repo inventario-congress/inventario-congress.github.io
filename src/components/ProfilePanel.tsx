@@ -1,4 +1,5 @@
-import { useEffect, useMemo, useState, type FormEvent } from 'react'
+import { useCallback, useEffect, useMemo, useState, type FormEvent } from 'react'
+
 import type { Messages } from '../i18n'
 import { isSupabaseConfigured, supabase } from '../supabaseClient'
 
@@ -25,10 +26,8 @@ export default function ProfilePanel({ messages, email, name, lastName }: Profil
   const canAttemptChange = isSupabaseConfigured && hasSession && !saving
 
   useEffect(() => {
-    if (!supabase) {
-      setHasSession(false)
-      return
-    }
+    if (!supabase) return
+
 
     let active = true
 
@@ -57,12 +56,14 @@ export default function ProfilePanel({ messages, email, name, lastName }: Profil
     }
   }, [])
 
-  const resetForm = () => {
+  const resetForm = useCallback(() => {
     setNewPassword('')
     setConfirmPassword('')
     setError(null)
     setStatus(null)
-  }
+  }, [])
+
+
 
   const openModal = () => {
     resetForm()
@@ -73,46 +74,60 @@ export default function ProfilePanel({ messages, email, name, lastName }: Profil
     setIsModalOpen(false)
   }
 
-  async function submitChangePassword(event: FormEvent<HTMLFormElement>) {
-    event.preventDefault()
-    setError(null)
-    setStatus(null)
+  const submitChangePassword = useCallback(
+    async (event: FormEvent<HTMLFormElement>) => {
+      event.preventDefault()
+      setError(null)
+      setStatus(null)
 
-    if (!supabase) {
-      setError(strings.feedback.notAuthenticated)
-      return
-    }
+      if (!supabase) {
+        setError(strings.feedback.notAuthenticated)
+        return
+      }
 
-    if (!hasSession) {
-      setError(strings.feedback.notAuthenticated)
-      return
-    }
+      if (!hasSession) {
+        setError(strings.feedback.notAuthenticated)
+        return
+      }
 
-    if (!newPassword || !confirmPassword) {
-      setError(strings.feedback.saveFailed)
-      return
-    }
+      if (!newPassword || !confirmPassword) {
+        setError(strings.feedback.saveFailed)
+        return
+      }
 
-    if (newPassword !== confirmPassword) {
-      setError(strings.feedback.passwordMismatch)
-      return
-    }
+      if (newPassword !== confirmPassword) {
+        setError(strings.feedback.passwordMismatch)
+        return
+      }
 
-    setSaving(true)
-    try {
-      const { error } = await supabase.auth.updateUser({ password: newPassword })
-      if (error) throw error
+      setSaving(true)
+      try {
+        const { error } = await supabase.auth.updateUser({ password: newPassword })
+        if (error) throw error
 
-      setStatus(strings.feedback.saved)
-      setIsModalOpen(false)
-      resetForm()
-    } catch (e) {
-      const msg = e instanceof Error ? e.message : strings.feedback.saveFailed
-      setError(msg)
-    } finally {
-      setSaving(false)
-    }
-  }
+        setStatus(strings.feedback.saved)
+        setIsModalOpen(false)
+        resetForm()
+      } catch (e) {
+        const msg = e instanceof Error ? e.message : strings.feedback.saveFailed
+        setError(msg)
+      } finally {
+        setSaving(false)
+      }
+    },
+    [
+      confirmPassword,
+      hasSession,
+      newPassword,
+      resetForm,
+      setError,
+      setIsModalOpen,
+      setSaving,
+      setStatus,
+      strings,
+    ]
+  )
+
 
   const modal = useMemo(() => {
     if (!isModalOpen) return null
@@ -259,6 +274,7 @@ export default function ProfilePanel({ messages, email, name, lastName }: Profil
     canAttemptChange,
     error,
     status,
+    submitChangePassword,
   ])
 
   return (

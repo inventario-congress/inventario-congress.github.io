@@ -16,6 +16,26 @@ type BasePanelProps = {
   canWrite: boolean
 }
 
+function SortIcon({ active, sortDirection }: { active: boolean; sortDirection: 'asc' | 'desc' }) {
+  return (
+    <span
+      aria-hidden="true"
+      style={{
+        display: 'inline-block',
+        width: 14,
+        textAlign: 'center',
+        marginLeft: 6,
+        transform: active && sortDirection === 'asc' ? 'rotate(180deg)' : 'rotate(0deg)',
+        transition: 'transform 120ms ease',
+        visibility: active ? 'visible' : 'hidden',
+      }}
+    >
+      ▼
+    </span>
+  )
+}
+
+
 type LocationChoice = {
   id: number
   name: string
@@ -410,24 +430,7 @@ export default function BasePanel({ messages, canWrite }: BasePanelProps) {
     }
   }
 
-  function SortIcon({ active }: { active: boolean }) {
-    return (
-      <span
-        aria-hidden="true"
-        style={{
-          display: 'inline-block',
-          width: 14,
-          textAlign: 'center',
-          marginLeft: 6,
-          transform: active && sortDirection === 'asc' ? 'rotate(180deg)' : 'rotate(0deg)',
-          transition: 'transform 120ms ease',
-          visibility: active ? 'visible' : 'hidden',
-        }}
-      >
-        ▼
-      </span>
-    )
-  }
+
 
   return (
     <div style={{ maxWidth: 820, margin: '0 auto', padding: 16, textAlign: 'left' }}>
@@ -571,7 +574,7 @@ export default function BasePanel({ messages, canWrite }: BasePanelProps) {
                     }}
                   >
                     {messages.bases.table.identifier}
-                    <SortIcon active={sortColumn === 'identifier'} />
+                    <SortIcon active={sortColumn === 'identifier'} sortDirection={sortDirection} />
                   </th>
                   <th
                     style={{
@@ -596,7 +599,7 @@ export default function BasePanel({ messages, canWrite }: BasePanelProps) {
                     }}
                   >
                     {messages.bases.table.latestLocation}
-                    <SortIcon active={sortColumn === 'latestLocationName'} />
+                    <SortIcon active={sortColumn === 'latestLocationName'} sortDirection={sortDirection} />
                   </th>
 
                   {canWrite ? (

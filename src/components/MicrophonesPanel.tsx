@@ -21,7 +21,27 @@ type MicrophonesPanelProps = {
   canWrite: boolean
 }
 
+function SortIcon({ active, sortDirection }: { active: boolean; sortDirection: 'asc' | 'desc' }) {
+  return (
+    <span
+      aria-hidden="true"
+      style={{
+        display: 'inline-block',
+        width: 14,
+        textAlign: 'center',
+        marginLeft: 6,
+        transform: active && sortDirection === 'asc' ? 'rotate(180deg)' : 'rotate(0deg)',
+        transition: 'transform 120ms ease',
+        visibility: active ? 'visible' : 'hidden',
+      }}
+    >
+      ▼
+    </span>
+  )
+}
+
 export default function MicrophonesPanel({ messages, canWrite }: MicrophonesPanelProps) {
+
   const [modelName, setModelName] = useState('')
   const [micTypeName, setMicTypeName] = useState('')
   const [identifier, setIdentifier] = useState('')
@@ -448,26 +468,9 @@ export default function MicrophonesPanel({ messages, canWrite }: MicrophonesPane
     }
   }
 
-  function SortIcon({ active }: { active: boolean }) {
-    return (
-      <span
-        aria-hidden="true"
-        style={{
-          display: 'inline-block',
-          width: 14,
-          textAlign: 'center',
-          marginLeft: 6,
-          transform: active && sortDirection === 'asc' ? 'rotate(180deg)' : 'rotate(0deg)',
-          transition: 'transform 120ms ease',
-          visibility: active ? 'visible' : 'hidden',
-        }}
-      >
-        ▼
-      </span>
-    )
-  }
 
   return (
+
     <div style={{ maxWidth: 820, margin: '0 auto', padding: 16, textAlign: 'left' }}>
       <h2 style={{ marginTop: 24 }}>{messages.microphones.title}</h2>
 
@@ -687,7 +690,7 @@ export default function MicrophonesPanel({ messages, canWrite }: MicrophonesPane
                     }}
                   >
                     {messages.microphones.table.identifier}
-                    <SortIcon active={sortColumn === 'identifier'} />
+                    <SortIcon active={sortColumn === 'identifier'} sortDirection={sortDirection} />
                   </th>
 
                   <th
@@ -703,7 +706,7 @@ export default function MicrophonesPanel({ messages, canWrite }: MicrophonesPane
                     }}
                   >
                     {messages.microphones.table.modelName}
-                    <SortIcon active={sortColumn === 'modelName'} />
+                    <SortIcon active={sortColumn === 'modelName'} sortDirection={sortDirection} />
                   </th>
 
                   <th
@@ -719,7 +722,7 @@ export default function MicrophonesPanel({ messages, canWrite }: MicrophonesPane
                     }}
                   >
                     {messages.microphones.table.micTypeName}
-                    <SortIcon active={sortColumn === 'micTypeName'} />
+                    <SortIcon active={sortColumn === 'micTypeName'} sortDirection={sortDirection} />
                   </th>
 
                   <th
@@ -735,7 +738,7 @@ export default function MicrophonesPanel({ messages, canWrite }: MicrophonesPane
                     }}
                   >
                     {messages.microphones.table.latestAttachmentBase}
-                    <SortIcon active={sortColumn === 'latestAttachmentBase'} />
+                    <SortIcon active={sortColumn === 'latestAttachmentBase'} sortDirection={sortDirection} />
                   </th>
 
                   {canWrite ? (
