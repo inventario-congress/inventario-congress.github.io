@@ -70,11 +70,9 @@ const en = {
       edit: 'Edit',
       delete: 'Delete',
       attach: 'Attach',
-      refresh: 'Refresh',
       signOut: 'Sign out',
     },
     table: {
-      title: 'Registered microphones',
       modelName: 'Model',
       identifier: 'Identifier',
       micTypeName: 'Type',

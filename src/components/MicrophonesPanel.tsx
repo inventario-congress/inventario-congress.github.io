@@ -638,15 +638,7 @@ export default function MicrophonesPanel({ messages, canWrite }: MicrophonesPane
         </div>
       ) : null}
 
-      {status ? (
-        <div style={{ marginTop: 12, color: 'green', textAlign: 'left' }}>
-          <strong>{messages.auth.feedback.status}</strong> {status}
-        </div>
-      ) : null}
-
       <div style={{ marginTop: 24, textAlign: 'left' }}>
-        <h3 style={{ margin: '0 0 10px' }}>{messages.microphones.table.title}</h3>
-
         {attachDialogOpen ? (
           <div
             role="dialog"
