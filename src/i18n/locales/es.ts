@@ -276,7 +276,7 @@ const es = {
       title: 'Bases registradas',
       identifier: 'Identificador',
       maxMicCount: 'Cantidad máxima de micrófonos',
-      latestLocation: 'Ubicación más reciente',
+      latestLocation: 'Ubicación',
       actions: 'Acciones',
       empty: 'Todavía no hay bases.',
     },

@@ -276,7 +276,7 @@ const en = {
       title: 'Registered bases',
       identifier: 'Identifier',
       maxMicCount: 'Max mic count',
-      latestLocation: 'Latest location',
+      latestLocation: 'Location',
       actions: 'Actions',
       empty: 'No bases yet.',
     },
