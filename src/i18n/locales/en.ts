@@ -114,6 +114,14 @@ const en = {
       signOut: 'Sign out',
     },
   },
+  deleteConfirmation: {
+    title: 'Confirm deletion',
+    messagePrefix: 'You are about to delete the following',
+    actions: {
+      confirm: 'Delete',
+      cancel: 'Cancel',
+    },
+  },
   locations: {
     title: 'Locations',
     readOnly: 'Read-only mode: you can view locations but cannot create, edit, or delete.',

@@ -1,6 +1,8 @@
 import { useCallback, useEffect, useMemo, useState } from 'react'
 import type { Messages } from '../i18n'
 import { supabase } from '../supabaseClient'
+import DeleteConfirmation from './DeleteConfirmation'
+
 
 type MicrophoneRow = {
   id: number
@@ -94,6 +96,14 @@ export default function MicrophonesPanel({ messages, canWrite }: MicrophonesPane
   const [attachBaseChoices, setAttachBaseChoices] = useState<Array<{ id: number; label: string }>>([])
   const [attachBaseId, setAttachBaseId] = useState('')
   const [attachForMicrophone, setAttachForMicrophone] = useState<MicrophoneRow | null>(null)
+
+  const [deleteDialogOpen, setDeleteDialogOpen] = useState(false)
+  const [deleteTarget, setDeleteTarget] = useState<{
+    id: number
+    identifier: number
+    name: string
+  } | null>(null)
+
 
   const sortedRows = useMemo(() => {
     const copy = [...rows]
@@ -471,8 +481,41 @@ export default function MicrophonesPanel({ messages, canWrite }: MicrophonesPane
 
   return (
 
-    <div style={{ maxWidth: 820, margin: '0 auto', padding: 16, textAlign: 'left' }}>
+      <div style={{ maxWidth: 820, margin: '0 auto', padding: 16, textAlign: 'left' }}>
       <h2 style={{ marginTop: 24 }}>{messages.microphones.title}</h2>
+
+      <DeleteConfirmation
+        open={deleteDialogOpen}
+        title={messages.deleteConfirmation.title}
+        messagePrefix={messages.deleteConfirmation.messagePrefix}
+        entities={
+          deleteTarget
+            ? [
+                {
+                  id: deleteTarget.id,
+                  identifier: deleteTarget.identifier,
+                  // Use the model name as secondary label: "identifier (model)"
+                  secondary: deleteTarget.name,
+                },
+              ]
+            : []
+        }
+        confirmLabel={messages.deleteConfirmation.actions.confirm}
+        cancelLabel={messages.deleteConfirmation.actions.cancel}
+        loading={loading}
+        onCancel={() => {
+          setDeleteDialogOpen(false)
+          setDeleteTarget(null)
+        }}
+        onConfirm={async () => {
+          if (!deleteTarget) return
+          const id = deleteTarget.id
+          setDeleteDialogOpen(false)
+          setDeleteTarget(null)
+          await deleteMicrophone(id)
+        }}
+      />
+
 
       {canWrite ? (
         <div style={{ display: 'grid', gap: 10, marginTop: 12 }}>
@@ -786,12 +829,16 @@ export default function MicrophonesPanel({ messages, canWrite }: MicrophonesPane
                           </button>
                           <button
                             type="button"
-                            onClick={() => deleteMicrophone(row.id)}
+                            onClick={() => {
+                              setDeleteTarget({ id: row.id, identifier: row.identifier, name: row.modelName })
+                              setDeleteDialogOpen(true)
+                            }}
                             disabled={loading}
                             style={{ padding: '6px 10px', borderRadius: 6, cursor: 'pointer' }}
                           >
                             {messages.microphones.actions.delete}
                           </button>
+
                         </div>
                       </td>
                     ) : null}

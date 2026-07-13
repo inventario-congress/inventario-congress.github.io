@@ -114,6 +114,14 @@ const es = {
       signOut: 'Cerrar sesión',
     },
   },
+  deleteConfirmation: {
+    title: 'Confirmar eliminación',
+    messagePrefix: 'Estás por eliminar lo siguiente',
+    actions: {
+      confirm: 'Eliminar',
+      cancel: 'Cancelar',
+    },
+  },
   locations: {
     title: 'Ubicaciones',
     readOnly: 'Modo de solo lectura: puedes ver ubicaciones pero no puedes crear, editar ni eliminar.',
