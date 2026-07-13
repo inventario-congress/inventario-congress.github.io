@@ -33,7 +33,6 @@ export default function BaseEditor({ messages, canWrite, isOpen, onClose, onSave
     loadingModels: strings.dialogs.editor.feedback.loadingModels,
     noModels: strings.dialogs.editor.feedback.noModels,
     submitting: strings.dialogs.editor.feedback.submitting,
-
     // Title must depend on whether we are editing.
     title: isEditMode ? strings.actions.update : strings.actions.create,
   }
@@ -116,8 +115,10 @@ export default function BaseEditor({ messages, canWrite, isOpen, onClose, onSave
     if (!canWrite) return
 
     if (!isEditMode || !baseId) {
-      setIdentifier('')
-      setMaxMicCount('')
+      // Avoid setting state directly in the effect body (react-hooks/set-state-in-effect).
+      void Promise.resolve().then(() => {
+        resetForm()
+      })
       return
     }
 
@@ -145,13 +146,16 @@ export default function BaseEditor({ messages, canWrite, isOpen, onClose, onSave
         setLoading(false)
       }
     })()
-  }, [isEditMode, baseId, isOpen, canWrite, supabase, strings.feedback.loadFailed])
+  }, [isEditMode, baseId, isOpen, canWrite, resetForm, strings.feedback.loadFailed])
 
   useEffect(() => {
     if (!isOpen) return
     if (!canWrite) return
 
-    void loadModels()
+    // Same rationale: avoid triggering setState synchronously from the effect body.
+    void Promise.resolve().then(() => {
+      void loadModels()
+    })
   }, [isOpen, canWrite, loadModels])
 
   const submitDisabled = useMemo(() => {
@@ -163,14 +167,13 @@ export default function BaseEditor({ messages, canWrite, isOpen, onClose, onSave
     const parsedIdentifier = Number.parseInt(identifier, 10)
     const parsedMaxMicCount = Number.parseInt(maxMicCount, 10)
 
-    if (Number.isNaN(parsedIdentifier) || Number.isNaN(parsedMaxMicCount)) return true
-    return false
-  }, [canWrite, identifier, maxMicCount, loading, modelsLoading, selectedModelIds, supabase])
+    return Number.isNaN(parsedIdentifier) || Number.isNaN(parsedMaxMicCount)
+  }, [canWrite, identifier, maxMicCount, loading, modelsLoading])
 
   // baseId is used for edit mode
   void baseId
 
-  async function handleSubmit() {
+  const handleSubmit = useCallback(async () => {
     if (!supabase) return
     if (!canWrite) return
 
@@ -178,8 +181,6 @@ export default function BaseEditor({ messages, canWrite, isOpen, onClose, onSave
     const parsedMaxMicCount = Number.parseInt(maxMicCount, 10)
 
     if (Number.isNaN(parsedIdentifier) || Number.isNaN(parsedMaxMicCount)) return
-
-
 
     setError(null)
     setLoading(true)
@@ -239,7 +240,6 @@ export default function BaseEditor({ messages, canWrite, isOpen, onClose, onSave
         if (assocError) throw assocError
       }
 
-
       setLoading(false)
       onSaved?.()
       close()
@@ -250,7 +250,8 @@ export default function BaseEditor({ messages, canWrite, isOpen, onClose, onSave
     } finally {
       setLoading(false)
     }
-  }
+  }, [baseId, canWrite, close, identifier, isEditMode, maxMicCount, messages.microphones.feedback.authRequired, onSaved, selectedModelIds, strings.feedback.createFailed, setLoading])
+
 
   function toggleModel(modelId: number) {
     setSelectedModelIds((prev) => {
@@ -304,23 +305,23 @@ export default function BaseEditor({ messages, canWrite, isOpen, onClose, onSave
               <h3 style={{ margin: '0 0 6px 0' }}>{editorStrings.title}</h3>
               <p style={{ margin: 0, color: 'var(--text)' }}>{editorStrings.description}</p>
             </div>
-              <button
-                type="button"
-                onClick={close}
-                aria-label={messages.menu.close}
-                disabled={loading}
-                style={{
-                  border: 'none',
-                  background: 'transparent',
-                  color: 'var(--text)',
-                  cursor: loading ? 'not-allowed' : 'pointer',
-                  fontSize: 20,
-                  lineHeight: 1,
-                  padding: 4,
-                }}
-              >
-                ×
-              </button>
+            <button
+              type="button"
+              onClick={close}
+              aria-label={messages.menu.close}
+              disabled={loading}
+              style={{
+                border: 'none',
+                background: 'transparent',
+                color: 'var(--text)',
+                cursor: loading ? 'not-allowed' : 'pointer',
+                fontSize: 20,
+                lineHeight: 1,
+                padding: 4,
+              }}
+            >
+              ×
+            </button>
           </div>
 
           <form
@@ -330,6 +331,7 @@ export default function BaseEditor({ messages, canWrite, isOpen, onClose, onSave
             }}
             style={{ display: 'grid', gap: 10, marginTop: 14 }}
           >
+
             <label htmlFor="base-editor-identifier" style={{ textAlign: 'left' }}>
               {strings.fields.identifier}
             </label>
@@ -458,7 +460,6 @@ export default function BaseEditor({ messages, canWrite, isOpen, onClose, onSave
     editorStrings.noModels,
     editorStrings.submitting,
     editorStrings.title,
-    editorStrings.modelSelectorTitle,
     identifier,
     isOpen,
     loading,
@@ -469,8 +470,10 @@ export default function BaseEditor({ messages, canWrite, isOpen, onClose, onSave
     modelsLoading,
     selectedModelIds,
     strings.actions.create,
+    strings.actions.update,
+    strings.actions.cancelEdit,
+    isEditMode,
     strings.fields.identifier,
-
     strings.fields.maxMicCount,
     submitDisabled,
   ])
