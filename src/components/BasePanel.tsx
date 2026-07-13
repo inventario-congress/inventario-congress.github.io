@@ -11,7 +11,9 @@ type BaseRow = {
   identifier: number
   maxMicCount: number
   latestLocationName: string | null
+  micModelNames: string // comma-delimited, already sorted; never null
 }
+
 
 type BasePanelProps = {
   messages: Messages
@@ -65,7 +67,8 @@ export default function BasePanel({ messages, canWrite }: BasePanelProps) {
   const [moveLocationId, setMoveLocationId] = useState<number | ''>('')
   const [moveLocationChoices, setMoveLocationChoices] = useState<LocationChoice[]>([])
 
-  type SortColumn = 'identifier' | 'latestLocationName'
+  type SortColumn = 'identifier' | 'latestLocationName' | 'micModelNames'
+
   type SortDirection = 'asc' | 'desc'
 
   const SORT_STORAGE_KEY = 'inventario_congress:bases:sort'
@@ -76,7 +79,8 @@ export default function BasePanel({ messages, canWrite }: BasePanelProps) {
       if (!raw) return 'identifier'
       const parsed = JSON.parse(raw) as { sortColumn?: unknown; sortDirection?: unknown }
       const candidate = parsed.sortColumn
-      if (candidate === 'identifier' || candidate === 'latestLocationName') return candidate
+      if (candidate === 'identifier' || candidate === 'latestLocationName' || candidate === 'micModelNames') return candidate
+
     } catch {
       // ignore
     }
@@ -154,14 +158,17 @@ export default function BasePanel({ messages, canWrite }: BasePanelProps) {
       return
     }
 
+    const dash = '—'
 
     setError(null)
     setLoading(true)
+
 
     try {
       const { data, error: loadError } = await supabase
         .from('base')
         .select('id, identifier, max_mic_count')
+
         .order('id', { ascending: false })
 
       if (loadError) throw loadError
@@ -171,10 +178,13 @@ export default function BasePanel({ messages, canWrite }: BasePanelProps) {
         identifier: entry.identifier as number,
         maxMicCount: entry.max_mic_count as number,
         latestLocationName: null,
+        micModelNames: dash,
       }))
 
-      // Populate latest location name from the latest movement row for each base
+
+      // Populate latest location name and mic model associations from related tables for each base.
       for (const row of baseRows) {
+        // Latest location
         const { data: movements, error: movementError } = await supabase
           .from('movement')
           .select('location(name)')
@@ -184,17 +194,35 @@ export default function BasePanel({ messages, canWrite }: BasePanelProps) {
 
         if (movementError) {
           console.error('Error fetching latest movement for base', row.id, movementError)
-          continue
+        } else {
+          const latest = movements?.[0] as
+            | {
+                location?: { name?: string | null } | null
+              }
+            | undefined
+
+          row.latestLocationName = latest?.location?.name ?? null
         }
 
-        const latest = movements?.[0] as
-          | {
-              location?: { name?: string | null } | null
-            }
-          | undefined
+        // Mic model associations (comma-delimited; names sorted alphabetically)
+        const { data: micModels, error: micModelsError } = await supabase
+          .from('base_mic_models')
+          .select('model(name)')
+          .eq('base', row.id)
 
-        row.latestLocationName = latest?.location?.name ?? null
+        if (micModelsError) {
+          console.error('Error fetching mic models for base', row.id, micModelsError)
+          row.micModelNames = dash
+        } else {
+          const names = (micModels ?? [])
+            .map((r) => (r as { model?: { name?: string | null } | null }).model?.name ?? null)
+            .filter((n): n is string => typeof n === 'string' && n.length > 0)
+
+          names.sort((a, b) => a.localeCompare(b))
+          row.micModelNames = names.length > 0 ? names.join(', ') : dash
+        }
       }
+
 
       setRows(baseRows)
 
@@ -346,8 +374,12 @@ export default function BasePanel({ messages, canWrite }: BasePanelProps) {
           const bv = b.latestLocationName ?? ''
           return av.localeCompare(bv) * dirMul
         }
+        case 'micModelNames': {
+          return a.micModelNames.localeCompare(b.micModelNames) * dirMul
+        }
         default:
           return 0
+
       }
     })
 
@@ -488,6 +520,23 @@ export default function BasePanel({ messages, canWrite }: BasePanelProps) {
                     {messages.bases.table.maxMicCount}
                   </th>
                   <th
+                    onClick={() => toggleSort('micModelNames')}
+                    style={{
+                      cursor: 'pointer',
+                      userSelect: 'none',
+                      textAlign: 'left',
+                      borderBottom: '1px solid var(--border)',
+                      background: 'var(--table-header-bg)',
+                      padding: '8px 6px',
+                      whiteSpace: 'nowrap',
+                    }}
+                  >
+                    {messages.bases.table.micModelNames}
+                    <SortIcon active={sortColumn === 'micModelNames'} sortDirection={sortDirection} />
+                  </th>
+
+
+                  <th
                     onClick={() => toggleSort('latestLocationName')}
                     style={{
                       cursor: 'pointer',
@@ -524,10 +573,10 @@ export default function BasePanel({ messages, canWrite }: BasePanelProps) {
                   <tr key={row.id}>
                     <td style={{ borderBottom: '1px solid var(--border)', padding: '8px 6px' }}>{row.identifier}</td>
                     <td style={{ borderBottom: '1px solid var(--border)', padding: '8px 6px' }}>{row.maxMicCount}</td>
-                    <td style={{ borderBottom: '1px solid var(--border)', padding: '8px 6px' }}>
-                      {row.latestLocationName ?? ''}
-                    </td>
+                    <td style={{ borderBottom: '1px solid var(--border)', padding: '8px 6px' }}>{row.micModelNames}</td>
+                    <td style={{ borderBottom: '1px solid var(--border)', padding: '8px 6px' }}>{row.latestLocationName ?? ''}</td>
                     {canWrite ? (
+
                       <td style={{ borderBottom: '1px solid var(--border)', padding: '8px 6px' }}>
                         <div style={{ display: 'flex', gap: 8, flexWrap: 'wrap' }}>
                           <button

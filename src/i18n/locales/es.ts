@@ -276,6 +276,7 @@ const es = {
       title: 'Bases registradas',
       identifier: 'Identificador',
       maxMicCount: 'Cantidad máxima de micrófonos',
+      micModelNames: 'Modelos de micrófono',
       latestLocation: 'Ubicación',
       actions: 'Acciones',
       empty: 'Todavía no hay bases.',
