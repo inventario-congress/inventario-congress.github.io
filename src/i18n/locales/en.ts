@@ -243,7 +243,6 @@ const en = {
       cancelEdit: 'Cancel',
       edit: 'Edit',
       delete: 'Delete',
-      refresh: 'Refresh',
       move: 'Move',
       cancelMove: 'Cancel',
     },
@@ -280,7 +279,6 @@ const en = {
       },
     },
     table: {
-      title: 'Registered bases',
       identifier: 'Identifier',
       maxMicCount: 'Max mic count',
       micModelNames: 'Mic models',

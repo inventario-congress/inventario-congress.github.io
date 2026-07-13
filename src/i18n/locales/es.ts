@@ -243,7 +243,6 @@ const es = {
       cancelEdit: 'Cancelar',
       edit: 'Editar',
       delete: 'Eliminar',
-      refresh: 'Actualizar',
       move: 'Mover',
       cancelMove: 'Cancelar',
     },
@@ -280,7 +279,6 @@ const es = {
       },
     },
     table: {
-      title: 'Bases registradas',
       identifier: 'Identificador',
       maxMicCount: 'Cantidad máxima de micrófonos',
       micModelNames: 'Modelos de micrófono',
