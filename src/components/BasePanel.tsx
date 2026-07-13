@@ -1,8 +1,10 @@
 import { useEffect, useMemo, useState, useCallback } from 'react'
 
-
 import type { Messages } from '../i18n'
 import { supabase } from '../supabaseClient'
+import BaseEditor from './BaseEditor'
+
+
 
 type BaseRow = {
   id: number
@@ -42,9 +44,9 @@ type LocationChoice = {
 }
 
 export default function BasePanel({ messages, canWrite }: BasePanelProps) {
-  const [identifier, setIdentifier] = useState('')
-  const [maxMicCount, setMaxMicCount] = useState('')
-  const [editingId, setEditingId] = useState<number | null>(null)
+  const [baseEditorOpen, setBaseEditorOpen] = useState(false)
+
+
 
   const [loading, setLoading] = useState(false)
   const [rows, setRows] = useState<BaseRow[]>([])
@@ -223,74 +225,7 @@ export default function BasePanel({ messages, canWrite }: BasePanelProps) {
     }
   }, [loadBases])
 
-  function resetForm() {
-    setIdentifier('')
-    setMaxMicCount('')
-    setEditingId(null)
-  }
 
-  async function handleSubmit() {
-    if (!supabase) {
-      return
-    }
-
-    if (!canWrite) {
-      return
-    }
-
-    const parsedIdentifier = Number.parseInt(identifier, 10)
-    const parsedMaxMicCount = Number.parseInt(maxMicCount, 10)
-
-    if (Number.isNaN(parsedIdentifier) || Number.isNaN(parsedMaxMicCount)) {
-      return
-    }
-
-    setError(null)
-    setStatus(null)
-    setLoading(true)
-
-    try {
-      const payload = {
-        identifier: parsedIdentifier,
-        max_mic_count: parsedMaxMicCount,
-      }
-
-      if (editingId === null) {
-        const { error: createError } = await supabase.from('base').insert(payload)
-        if (createError) throw createError
-        setStatus(messages.bases.feedback.created)
-      } else {
-        const { error: updateError } = await supabase.from('base').update(payload).eq('id', editingId)
-        if (updateError) throw updateError
-        setStatus(messages.bases.feedback.updated)
-      }
-
-      resetForm()
-      await loadBases()
-    } catch (e) {
-      const fallback = editingId === null ? messages.bases.feedback.createFailed : messages.bases.feedback.updateFailed
-      const msg = e instanceof Error ? e.message : fallback
-      setError(msg)
-    } finally {
-      setLoading(false)
-    }
-  }
-
-  function startEdit(row: BaseRow) {
-    if (!canWrite) {
-      return
-    }
-
-    setEditingId(row.id)
-    setIdentifier(String(row.identifier))
-    setMaxMicCount(String(row.maxMicCount))
-    setError(null)
-    setStatus(null)
-  }
-
-  function cancelEdit() {
-    resetForm()
-  }
 
   function openMoveDialog(row: BaseRow) {
     if (!canWrite) {
@@ -382,9 +317,7 @@ export default function BasePanel({ messages, canWrite }: BasePanelProps) {
       const { error: deleteError } = await supabase.from('base').delete().eq('id', id)
       if (deleteError) throw deleteError
 
-      if (editingId === id) {
-        cancelEdit()
-      }
+
 
       setStatus(messages.bases.feedback.deleted)
       await loadBases()
@@ -434,98 +367,52 @@ export default function BasePanel({ messages, canWrite }: BasePanelProps) {
 
   return (
     <div style={{ maxWidth: 820, margin: '0 auto', padding: 16, textAlign: 'left' }}>
-      <h2 style={{ marginTop: 24 }}>{messages.bases.title}</h2>
+      <BaseEditor
+        messages={messages}
+        canWrite={canWrite}
+        isOpen={baseEditorOpen}
+        onClose={() => setBaseEditorOpen(false)}
+        onSaved={async () => {
+          setError(null)
+          setStatus(null)
+          await loadBases()
+        }}
 
+      />
+      <div style={{ display: 'flex', alignItems: 'flex-start', justifyContent: 'space-between', gap: 12, marginTop: 24 }}>
+        <h2 style={{ margin: 0 }}>{messages.bases.title}</h2>
 
+        {canWrite ? (
+          <button
+            type="button"
+            onClick={() => setBaseEditorOpen(true)}
 
-      {canWrite ? (
-        <div style={{ display: 'grid', gap: 10, marginTop: 12 }}>
-          <label htmlFor="base-identifier" style={{ textAlign: 'left' }}>
-            {messages.bases.fields.identifier}
-          </label>
-
-          <input
-            id="base-identifier"
-            value={identifier}
-            onChange={(event) => setIdentifier(event.target.value)}
-            type="number"
-            required
-            placeholder={messages.bases.fields.identifier}
-
+            aria-label={messages.bases.actions.create}
+            title={messages.bases.actions.create}
             style={{
-              width: '100%',
-              boxSizing: 'border-box',
-              padding: 10,
-              borderRadius: 6,
+              width: 44,
+              height: 44,
+              borderRadius: 12,
               border: '1px solid var(--border)',
+              background: 'var(--card)',
+              cursor: 'pointer',
+              display: 'inline-flex',
+              alignItems: 'center',
+              justifyContent: 'center',
+              fontSize: 28,
+              lineHeight: 1,
+              padding: 0,
             }}
-          />
-
-          <label htmlFor="base-max-mic-count" style={{ textAlign: 'left' }}>
-            {messages.bases.fields.maxMicCount}
-          </label>
-
-          <input
-            id="base-max-mic-count"
-            value={maxMicCount}
-            onChange={(event) => setMaxMicCount(event.target.value)}
-            type="number"
-            required
-            placeholder={messages.bases.fields.maxMicCount}
-
-            style={{
-              width: '100%',
-              boxSizing: 'border-box',
-              padding: 10,
-              borderRadius: 6,
-              border: '1px solid var(--border)',
-            }}
-          />
-
-          <div style={{ display: 'flex', gap: 10, flexWrap: 'wrap' }}>
-            <button
-
-              type="button"
-              onClick={handleSubmit}
-              disabled={loading || !identifier.trim() || !maxMicCount.trim()}
-              style={{ padding: '10px 14px', borderRadius: 6, cursor: 'pointer' }}
-            >
-            {editingId === null ? messages.bases.actions.create : messages.bases.actions.update}
-            </button>
-
-
-
-            {editingId !== null ? (
-              <button
-                type="button"
-                onClick={cancelEdit}
-                disabled={loading}
-                style={{ padding: '10px 14px', borderRadius: 6, cursor: 'pointer' }}
-              >
-                {messages.bases.actions.cancelEdit}
-
-              </button>
-            ) : null}
-
-            <button
-              type="button"
-              onClick={loadBases}
-              disabled={loading}
-              style={{ padding: '10px 14px', borderRadius: 6, cursor: 'pointer' }}
-            >
-              {messages.bases.actions.refresh}
-            </button>
-
-          </div>
-        </div>
-      ) : (
-        <div style={{ marginTop: 12, textAlign: 'left' }}>
-          {messages.bases.readOnly}
-
-        </div>
-      )}
+            disabled={loading}
+          >
+            +
+          </button>
+        ) : null}
+      </div>
 
       {!canWrite ? (
+        <div style={{ marginTop: 12, textAlign: 'left' }}>{messages.bases.readOnly}</div>
+      ) : (
         <div style={{ display: 'flex', gap: 10, flexWrap: 'wrap', marginTop: 10 }}>
           <button
             type="button"
@@ -534,10 +421,9 @@ export default function BasePanel({ messages, canWrite }: BasePanelProps) {
             style={{ padding: '10px 14px', borderRadius: 6, cursor: 'pointer' }}
           >
             {messages.bases.actions.refresh}
-
           </button>
         </div>
-      ) : null}
+      )}
 
       {error ? (
         <div style={{ marginTop: 12, color: 'crimson', textAlign: 'left' }}>
@@ -637,14 +523,7 @@ export default function BasePanel({ messages, canWrite }: BasePanelProps) {
                           >
                             {messages.bases.actions.move}
                           </button>
-                          <button
-                            type="button"
-                            onClick={() => startEdit(row)}
-                            disabled={loading}
-                            style={{ padding: '6px 10px', borderRadius: 6, cursor: 'pointer' }}
-                          >
-                            {messages.bases.actions.edit}
-                          </button>
+
                           <button
                             type="button"
                             onClick={() => deleteBase(row.id)}

@@ -228,6 +228,7 @@ const en = {
     fields: {
       identifier: 'Base identifier',
       maxMicCount: 'Max mic count',
+      models: 'Models',
     },
     actions: {
       create: 'Create base',
@@ -246,6 +247,29 @@ const en = {
         searchPlaceholder: 'Search locations...',
         moveDisabledReason: 'Select a location to enable move',
         empty: 'No available locations.',
+      },
+      editor: {
+        title: 'Create base',
+        description: 'Configure base and associate microphone models.',
+        fields: {
+          identifier: 'Base identifier',
+          maxMicCount: 'Max mic count',
+          models: 'Models',
+        },
+        actions: {
+          cancel: 'Cancel',
+          save: 'Save base',
+        },
+        feedback: {
+          saved: 'Base saved successfully.',
+          saveFailed: 'Failed to save base.',
+          loading: 'Saving...',
+          modelSelectorNone: 'No models selected',
+          modelSelectorSelected: 'models selected',
+          loadingModels: 'Loading models...',
+          noModels: 'No models available',
+          submitting: 'Submitting...',
+        },
       },
     },
     table: {
