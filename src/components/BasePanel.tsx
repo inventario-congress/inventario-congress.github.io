@@ -67,7 +67,8 @@ export default function BasePanel({ messages, canWrite }: BasePanelProps) {
   const [moveLocationId, setMoveLocationId] = useState<number | ''>('')
   const [moveLocationChoices, setMoveLocationChoices] = useState<LocationChoice[]>([])
 
-  type SortColumn = 'identifier' | 'latestLocationName'
+  type SortColumn = 'identifier' | 'latestLocationName' | 'micModelNames'
+
   type SortDirection = 'asc' | 'desc'
 
   const SORT_STORAGE_KEY = 'inventario_congress:bases:sort'
@@ -78,7 +79,8 @@ export default function BasePanel({ messages, canWrite }: BasePanelProps) {
       if (!raw) return 'identifier'
       const parsed = JSON.parse(raw) as { sortColumn?: unknown; sortDirection?: unknown }
       const candidate = parsed.sortColumn
-      if (candidate === 'identifier' || candidate === 'latestLocationName') return candidate
+      if (candidate === 'identifier' || candidate === 'latestLocationName' || candidate === 'micModelNames') return candidate
+
     } catch {
       // ignore
     }
@@ -372,8 +374,12 @@ export default function BasePanel({ messages, canWrite }: BasePanelProps) {
           const bv = b.latestLocationName ?? ''
           return av.localeCompare(bv) * dirMul
         }
+        case 'micModelNames': {
+          return a.micModelNames.localeCompare(b.micModelNames) * dirMul
+        }
         default:
           return 0
+
       }
     })
 
@@ -514,15 +520,21 @@ export default function BasePanel({ messages, canWrite }: BasePanelProps) {
                     {messages.bases.table.maxMicCount}
                   </th>
                   <th
+                    onClick={() => toggleSort('micModelNames')}
                     style={{
+                      cursor: 'pointer',
+                      userSelect: 'none',
                       textAlign: 'left',
                       borderBottom: '1px solid var(--border)',
                       background: 'var(--table-header-bg)',
                       padding: '8px 6px',
+                      whiteSpace: 'nowrap',
                     }}
                   >
                     {messages.bases.table.micModelNames}
+                    <SortIcon active={sortColumn === 'micModelNames'} sortDirection={sortDirection} />
                   </th>
+
 
                   <th
                     onClick={() => toggleSort('latestLocationName')}
