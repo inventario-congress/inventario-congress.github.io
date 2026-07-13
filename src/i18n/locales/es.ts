@@ -132,10 +132,8 @@ const es = {
       cancelEdit: 'Cancelar edición',
       edit: 'Editar',
       delete: 'Eliminar',
-      refresh: 'Actualizar',
     },
     table: {
-      title: 'Ubicaciones registradas',
       name: 'Nombre',
       address: 'Dirección',
       actions: 'Acciones',

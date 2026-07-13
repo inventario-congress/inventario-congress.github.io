@@ -132,10 +132,8 @@ const en = {
       cancelEdit: 'Cancel edit',
       edit: 'Edit',
       delete: 'Delete',
-      refresh: 'Refresh',
     },
     table: {
-      title: 'Registered locations',
       name: 'Name',
       address: 'Address',
       actions: 'Actions',

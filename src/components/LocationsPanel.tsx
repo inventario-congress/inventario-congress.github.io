@@ -252,28 +252,9 @@ export default function LocationsPanel({ messages, canWrite }: LocationsPanelPro
                 {messages.locations.actions.cancelEdit}
               </button>
             ) : null}
-            <button
-              type="button"
-              onClick={loadLocations}
-              disabled={loading}
-              style={{ padding: '10px 14px', borderRadius: 6, cursor: 'pointer' }}
-            >
-              {messages.locations.actions.refresh}
-            </button>
           </div>
         </div>
-      ) : (
-        <div style={{ marginBottom: 12 }}>
-          <button
-            type="button"
-            onClick={loadLocations}
-            disabled={loading}
-            style={{ padding: '10px 14px', borderRadius: 6, cursor: 'pointer' }}
-          >
-            {messages.locations.actions.refresh}
-          </button>
-        </div>
-      )}
+      ) : null }
 
       {error ? (
         <div style={{ color: 'crimson', marginBottom: 10 }}>
@@ -281,13 +262,6 @@ export default function LocationsPanel({ messages, canWrite }: LocationsPanelPro
         </div>
       ) : null}
 
-      {status ? (
-        <div style={{ color: 'green', marginBottom: 10 }}>
-          <strong>{messages.auth.feedback.status}</strong> {status}
-        </div>
-      ) : null}
-
-      <h3 style={{ marginBottom: 8 }}>{messages.locations.table.title}</h3>
       {rows.length === 0 ? (
         <div>{messages.locations.table.empty}</div>
       ) : (

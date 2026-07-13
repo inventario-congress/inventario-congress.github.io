@@ -604,33 +604,11 @@ export default function MicrophonesPanel({ messages, canWrite }: MicrophonesPane
                 {messages.microphones.actions.cancelEdit}
               </button>
             ) : null}
-
-            <button
-              type="button"
-              onClick={loadMicrophones}
-              disabled={loading}
-              style={{ padding: '10px 14px', borderRadius: 6, cursor: 'pointer' }}
-            >
-              {messages.microphones.actions.refresh}
-            </button>
           </div>
         </div>
       ) : (
         <div style={{ marginTop: 12, textAlign: 'left' }}>{messages.microphones.readOnly}</div>
       )}
-
-      {!canWrite ? (
-        <div style={{ display: 'flex', gap: 10, flexWrap: 'wrap', marginTop: 10 }}>
-          <button
-            type="button"
-            onClick={loadMicrophones}
-            disabled={loading}
-            style={{ padding: '10px 14px', borderRadius: 6, cursor: 'pointer' }}
-          >
-            {messages.microphones.actions.refresh}
-          </button>
-        </div>
-      ) : null}
 
       {error ? (
         <div style={{ marginTop: 12, color: 'crimson', textAlign: 'left' }}>
