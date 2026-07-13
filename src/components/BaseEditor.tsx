@@ -22,8 +22,10 @@ type BaseEditorProps = {
 export default function BaseEditor({ messages, canWrite, isOpen, onClose, onSaved, baseId }: BaseEditorProps) {
   const isEditMode = typeof baseId === 'number' && baseId > 0
   const strings = messages.bases
-  const editorStrings = (strings as unknown as { dialogs: { editor?: Record<string, string> } }).dialogs.editor ?? {
-    title: strings.actions.create,
+  const editorStrings = {
+    // Always derive editor strings from the nested i18n structure.
+    // This prevents accidental use of the nested object (which would make keys like
+    // modelSelectorNone/modelSelectorSelected resolve to undefined).
     description: strings.dialogs.editor.description,
     modelSelectorTitle: strings.dialogs.editor.fields.models,
     modelSelectorNone: strings.dialogs.editor.feedback.modelSelectorNone,
@@ -31,8 +33,10 @@ export default function BaseEditor({ messages, canWrite, isOpen, onClose, onSave
     loadingModels: strings.dialogs.editor.feedback.loadingModels,
     noModels: strings.dialogs.editor.feedback.noModels,
     submitting: strings.dialogs.editor.feedback.submitting,
-  }
 
+    // Title must depend on whether we are editing.
+    title: isEditMode ? strings.actions.update : strings.actions.create,
+  }
 
 
   const [loading, setLoading] = useState(false)
@@ -268,7 +272,7 @@ export default function BaseEditor({ messages, canWrite, isOpen, onClose, onSave
       <div
         role="dialog"
         aria-modal="true"
-        aria-label={strings.title}
+        aria-label={editorStrings.title}
         style={{
           position: 'fixed',
           inset: 0,
@@ -329,6 +333,7 @@ export default function BaseEditor({ messages, canWrite, isOpen, onClose, onSave
             <label htmlFor="base-editor-identifier" style={{ textAlign: 'left' }}>
               {strings.fields.identifier}
             </label>
+
             <input
               id="base-editor-identifier"
               value={identifier}
@@ -336,6 +341,7 @@ export default function BaseEditor({ messages, canWrite, isOpen, onClose, onSave
               type="number"
               required
               placeholder={strings.fields.identifier}
+
               style={{
                 width: '100%',
                 boxSizing: 'border-box',
@@ -348,6 +354,7 @@ export default function BaseEditor({ messages, canWrite, isOpen, onClose, onSave
             <label htmlFor="base-editor-max-mic-count" style={{ textAlign: 'left' }}>
               {strings.fields.maxMicCount}
             </label>
+
             <input
               id="base-editor-max-mic-count"
               value={maxMicCount}
@@ -355,6 +362,7 @@ export default function BaseEditor({ messages, canWrite, isOpen, onClose, onSave
               type="number"
               required
               placeholder={strings.fields.maxMicCount}
+
               style={{
                 width: '100%',
                 boxSizing: 'border-box',
@@ -431,7 +439,7 @@ export default function BaseEditor({ messages, canWrite, isOpen, onClose, onSave
                 {strings.actions.cancelEdit}
               </button>
               <button type="submit" disabled={submitDisabled} style={{ padding: '10px 14px', borderRadius: 6, cursor: 'pointer' }}>
-                {loading ? editorStrings.submitting : strings.actions.create}
+                {loading ? editorStrings.submitting : isEditMode ? strings.actions.update : strings.actions.create}
               </button>
             </div>
           </form>
@@ -462,6 +470,7 @@ export default function BaseEditor({ messages, canWrite, isOpen, onClose, onSave
     selectedModelIds,
     strings.actions.create,
     strings.fields.identifier,
+
     strings.fields.maxMicCount,
     submitDisabled,
   ])
