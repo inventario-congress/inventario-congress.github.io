@@ -79,6 +79,36 @@ export default function MicEditor({ messages, canWrite, isOpen, onClose, onSaved
     onClose()
   }, [addModelLoading, loading, onClose, reset])
 
+
+  const cleanupNewModels = useCallback(async () => {
+    if (!supabase) return
+    if (newModelIds.length === 0) return
+
+    try {
+      // Best-effort cleanup: delete models that were created from the nested modal,
+      // in case the mic editor was canceled.
+      const sb = supabase
+      const deletePromises = newModelIds.map((id) => sb!.from('model').delete().eq('id', id))
+
+
+      const results = await Promise.all(deletePromises)
+
+      const firstError = results.find((r) => r.error)?.error
+      if (firstError) throw firstError
+    } catch {
+      // Intentionally ignore cleanup failures.
+      // If the model is referenced elsewhere or deletion is blocked by FK constraints,
+      // we still allow the mic editor cancel flow to complete.
+    }
+  }, [newModelIds])
+
+  const closeAndCleanup = useCallback(async () => {
+    if (loading || addModelLoading) return
+    await cleanupNewModels()
+    close()
+  }, [addModelLoading, cleanupNewModels, close, loading])
+
+
   const loadModels = useCallback(async () => {
     if (!supabase) return
 
@@ -302,7 +332,7 @@ export default function MicEditor({ messages, canWrite, isOpen, onClose, onSaved
           zIndex: 50,
         }}
         onMouseDown={(e) => {
-          if (e.target === e.currentTarget) close()
+            if (e.target === e.currentTarget) void closeAndCleanup()
         }}
       >
         <div
@@ -480,7 +510,7 @@ export default function MicEditor({ messages, canWrite, isOpen, onClose, onSaved
             <div style={{ display: 'flex', justifyContent: 'flex-end', gap: 10, flexWrap: 'wrap', marginTop: 6 }}>
               <button
                 type="button"
-                onClick={close}
+                onClick={() => void closeAndCleanup()}
                 disabled={loading}
                 style={{ padding: '10px 14px', borderRadius: 6, cursor: 'pointer' }}
               >
