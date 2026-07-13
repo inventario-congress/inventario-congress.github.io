@@ -3,6 +3,8 @@ import { useEffect, useMemo, useState, useCallback } from 'react'
 import type { Messages } from '../i18n'
 import { supabase } from '../supabaseClient'
 import BaseEditor from './BaseEditor'
+import DeleteConfirmation from './DeleteConfirmation'
+
 
 
 
@@ -62,6 +64,10 @@ export default function BasePanel({ messages, canWrite }: BasePanelProps) {
   const [moveDialogOpen, setMoveDialogOpen] = useState(false)
   const [moveDialogLoading, setMoveDialogLoading] = useState(false)
   const [moveBaseId, setMoveBaseId] = useState<number | null>(null)
+
+  const [deleteDialogOpen, setDeleteDialogOpen] = useState(false)
+  const [deleteTarget, setDeleteTarget] = useState<{ id: number; name?: string | null } | null>(null)
+
 
 
   const [moveLocationId, setMoveLocationId] = useState<number | ''>('')
@@ -602,12 +608,16 @@ export default function BasePanel({ messages, canWrite }: BasePanelProps) {
 
                           <button
                             type="button"
-                            onClick={() => deleteBase(row.id)}
+                            onClick={() => {
+                              setDeleteTarget({ id: row.id, name: null })
+                              setDeleteDialogOpen(true)
+                            }}
                             disabled={loading}
                             style={{ padding: '6px 10px', borderRadius: 6, cursor: 'pointer' }}
                           >
                             {messages.bases.actions.delete}
                           </button>
+
 
                         </div>
                       </td>
@@ -619,6 +629,37 @@ export default function BasePanel({ messages, canWrite }: BasePanelProps) {
           </div>
         )}
       </div>
+
+      <DeleteConfirmation
+        open={deleteDialogOpen}
+        title={messages.deleteConfirmation.title}
+        messagePrefix={messages.deleteConfirmation.messagePrefix}
+        entities={
+          deleteTarget
+            ? [
+                {
+                  id: deleteTarget.id,
+                  name: deleteTarget.name,
+                  identifier: (deleteTarget.name ?? '') ? undefined : deleteTarget.id,
+                },
+              ]
+            : []
+        }
+        confirmLabel={messages.deleteConfirmation.actions.confirm}
+        cancelLabel={messages.deleteConfirmation.actions.cancel}
+        loading={loading}
+        onCancel={() => {
+          setDeleteDialogOpen(false)
+          setDeleteTarget(null)
+        }}
+        onConfirm={async () => {
+          if (!deleteTarget) return
+          const id = deleteTarget.id
+          setDeleteDialogOpen(false)
+          setDeleteTarget(null)
+          await deleteBase(id)
+        }}
+      />
 
       {moveDialogOpen ? (
         <div
@@ -633,6 +674,7 @@ export default function BasePanel({ messages, canWrite }: BasePanelProps) {
             textAlign: 'left',
           }}
         >
+
           <h4 style={{ margin: '0 0 10px' }}>{messages.bases.dialogs.moveBase.title}</h4>
 
           {moveBaseId !== null ? (

@@ -3,7 +3,6 @@ const es = {
     title: 'Inventario Congress',
   },
   languageSwitcher: {
-    label: 'Idioma',
     options: {
       en: 'English',
       es: 'Español',
@@ -112,6 +111,14 @@ const es = {
       title: 'Mi cuenta',
       profile: 'Perfil',
       signOut: 'Cerrar sesión',
+    },
+  },
+  deleteConfirmation: {
+    title: 'Confirmar eliminación',
+    messagePrefix: 'Estás por eliminar lo siguiente',
+    actions: {
+      confirm: 'Eliminar',
+      cancel: 'Cancelar',
     },
   },
   locations: {

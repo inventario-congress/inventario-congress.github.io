@@ -1,6 +1,8 @@
 import { useEffect, useState, useCallback } from 'react'
 import type { Messages } from '../i18n'
 import { supabase } from '../supabaseClient'
+import DeleteConfirmation from './DeleteConfirmation'
+
 
 type LocationRow = {
   id: number
@@ -19,6 +21,10 @@ export default function LocationsPanel({ messages, canWrite }: LocationsPanelPro
   const [editingId, setEditingId] = useState<number | null>(null)
   const [rows, setRows] = useState<LocationRow[]>([])
   const [loading, setLoading] = useState(false)
+
+  const [deleteDialogOpen, setDeleteDialogOpen] = useState(false)
+  const [deleteTarget, setDeleteTarget] = useState<{ id: number; name: string } | null>(null)
+
   const [error, setError] = useState<string | null>(null)
   const [status, setStatus] = useState<string | null>(null)
 
@@ -172,6 +178,37 @@ export default function LocationsPanel({ messages, canWrite }: LocationsPanelPro
     <div style={{ maxWidth: 820, margin: '0 auto', padding: 16, textAlign: 'left' }}>
       <h2 style={{ marginTop: 0 }}>{messages.locations.title}</h2>
 
+      <DeleteConfirmation
+        open={deleteDialogOpen}
+        title={messages.deleteConfirmation.title}
+        messagePrefix={messages.deleteConfirmation.messagePrefix}
+        entities={
+          deleteTarget
+            ? [
+                {
+                  id: deleteTarget.id,
+                  name: deleteTarget.name,
+                },
+              ]
+            : []
+        }
+        confirmLabel={messages.deleteConfirmation.actions.confirm}
+        cancelLabel={messages.deleteConfirmation.actions.cancel}
+        loading={loading}
+        onCancel={() => {
+          setDeleteDialogOpen(false)
+          setDeleteTarget(null)
+        }}
+        onConfirm={async () => {
+          if (!deleteTarget) return
+          const id = deleteTarget.id
+          setDeleteDialogOpen(false)
+          setDeleteTarget(null)
+          await deleteLocation(id)
+        }}
+      />
+
+
       {!canWrite ? <p>{messages.locations.readOnly}</p> : null}
 
       {canWrite ? (
@@ -310,12 +347,16 @@ export default function LocationsPanel({ messages, canWrite }: LocationsPanelPro
                         </button>
                         <button
                           type="button"
-                          onClick={() => deleteLocation(row.id)}
+                          onClick={() => {
+                            setDeleteTarget({ id: row.id, name: row.name })
+                            setDeleteDialogOpen(true)
+                          }}
                           disabled={loading}
                           style={{ padding: '6px 10px', borderRadius: 6, cursor: 'pointer' }}
                         >
                           {messages.locations.actions.delete}
                         </button>
+
                       </div>
                     </td>
                   ) : null}

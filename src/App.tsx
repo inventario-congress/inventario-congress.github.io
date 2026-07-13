@@ -273,7 +273,6 @@ function App() {
           {theme === 'dark' ? <SunIcon /> : <MoonIcon />}
         </button>
         <label htmlFor="language" className="language-control">
-          <span>{messages.languageSwitcher.label}</span>
           <select
             id="language"
             value={language}
