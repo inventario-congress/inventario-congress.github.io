@@ -80,6 +80,49 @@ const es = {
       actions: 'Acciones',
       empty: 'Todavía no hay micrófonos.',
     },
+    dialogs: {
+      editor: {
+        titleCreate: 'Crear micrófono',
+        titleEdit: 'Actualizar micrófono',
+        description: 'Configura el identificador del micrófono y asocia modelo y tipo.',
+        fields: {
+          identifier: 'Identificador',
+          modelName: 'Modelo',
+          micTypeName: 'Tipo',
+        },
+        actions: {
+          cancel: 'Cancelar',
+          save: 'Guardar micrófono',
+        },
+        feedback: {
+          loadFailed: 'No se pudo cargar el micrófono',
+          loadingModels: 'Cargando modelos...',
+          noModels: 'No hay modelos disponibles',
+          addNewModel: 'Agregar nuevo modelo',
+          loadingMicTypes: 'Cargando tipos...',
+          noMicTypes: 'No hay tipos disponibles',
+          submitting: 'Enviando...',
+          createFailed: 'No se pudo crear el micrófono',
+          updateFailed: 'No se pudo actualizar el micrófono',
+          authRequired: 'Se requiere autenticación',
+          addNewModelCreateFailed: 'No se pudo crear el modelo',
+        },
+        addNewModelDialog: {
+          title: 'Agregar nuevo modelo',
+          description: 'Ingresa el nombre del nuevo modelo.',
+          fields: {
+            modelName: 'Nombre del modelo',
+          },
+          actions: {
+            cancel: 'Cancelar',
+            save: 'Agregar modelo',
+          },
+          feedback: {
+            submitting: 'Agregando...',
+          },
+        },
+      },
+    },
     feedback: {
       loaded: 'Micrófonos cargados.',
       loadFailed: 'No se pudieron cargar los micrófonos',

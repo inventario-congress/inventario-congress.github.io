@@ -2,6 +2,8 @@ import { useCallback, useEffect, useMemo, useState } from 'react'
 import type { Messages } from '../i18n'
 import { supabase } from '../supabaseClient'
 import DeleteConfirmation from './DeleteConfirmation'
+import MicEditor from './MicEditor'
+
 
 
 type MicrophoneRow = {
@@ -44,12 +46,12 @@ function SortIcon({ active, sortDirection }: { active: boolean; sortDirection: '
 
 export default function MicrophonesPanel({ messages, canWrite }: MicrophonesPanelProps) {
 
-  const [modelName, setModelName] = useState('')
-  const [micTypeName, setMicTypeName] = useState('')
-  const [identifier, setIdentifier] = useState('')
-  const [editingId, setEditingId] = useState<number | null>(null)
+  const [micEditorOpen, setMicEditorOpen] = useState(false)
+  const [editingMicId, setEditingMicId] = useState<number | null>(null)
 
   const [micTypeChoices, setMicTypeChoices] = useState<string[]>([])
+  void micTypeChoices
+
 
   const SORT_STORAGE_KEY = 'inventario_congress:microphones:sort'
 
@@ -90,6 +92,7 @@ export default function MicrophonesPanel({ messages, canWrite }: MicrophonesPane
   const [rows, setRows] = useState<MicrophoneRow[]>([])
   const [error, setError] = useState<string | null>(null)
   const [status, setStatus] = useState<string | null>(null)
+  void status
 
   const [attachDialogOpen, setAttachDialogOpen] = useState(false)
   const [attachDialogLoading, setAttachDialogLoading] = useState(false)
@@ -224,97 +227,23 @@ export default function MicrophonesPanel({ messages, canWrite }: MicrophonesPane
     }
   }, [loadMicrophones])
 
-  async function ensureModelId(name: string): Promise<number> {
-    if (!supabase) throw new Error(messages.microphones.feedback.authRequired)
-    const trimmed = name.trim()
-
-    const { data, error } = await supabase
-      .from('model')
-      .upsert({ name: trimmed }, { onConflict: 'name' })
-      .select('id')
-      .single()
-
-    if (error || !data?.id) throw error ?? new Error(messages.microphones.feedback.createFailed)
-    return data.id as number
-  }
-
-  async function ensureMicTypeId(name: string): Promise<number> {
-    if (!supabase) throw new Error(messages.microphones.feedback.authRequired)
-    const trimmed = name.trim()
-
-    const { data, error } = await supabase
-      .from('mic_type')
-      .upsert({ name: trimmed }, { onConflict: 'name' })
-      .select('id')
-      .single()
-
-    if (error || !data?.id) throw error ?? new Error(messages.microphones.feedback.createFailed)
-    return data.id as number
-  }
-
-  async function handleSubmit() {
-    if (!supabase) return
-    if (!canWrite) return
-
-    const trimmedName = modelName.trim()
-    const trimmedMicTypeName = micTypeName.trim()
-    const parsedIdentifier = Number.parseInt(identifier, 10)
-
-    if (!trimmedName || !trimmedMicTypeName || Number.isNaN(parsedIdentifier)) return
-
-    setError(null)
-    setStatus(null)
-    setLoading(true)
-
-    try {
-      const resolvedModelId = await ensureModelId(trimmedName)
-      const resolvedMicTypeId = await ensureMicTypeId(trimmedMicTypeName)
-
-      const microphonePayload = {
-        identifier: parsedIdentifier,
-        model: resolvedModelId,
-        mic_type: resolvedMicTypeId,
-      }
-
-      if (editingId === null) {
-        const { error } = await supabase.from('microphone').insert(microphonePayload)
-        if (error) throw error
-        setStatus(messages.microphones.feedback.created)
-      } else {
-        const { error } = await supabase.from('microphone').update(microphonePayload).eq('id', editingId)
-        if (error) throw error
-        setStatus(messages.microphones.feedback.updated)
-      }
-
-      setModelName('')
-      setMicTypeName('')
-      setIdentifier('')
-      setEditingId(null)
-      await loadMicrophones()
-    } catch (e) {
-      const fallback = editingId === null ? messages.microphones.feedback.createFailed : messages.microphones.feedback.updateFailed
-      const msg = e instanceof Error ? e.message : fallback
-      setError(msg)
-    } finally {
-      setLoading(false)
-    }
-  }
-
   function startEdit(row: MicrophoneRow) {
-    setEditingId(row.id)
-    setModelName(row.modelName)
-    setMicTypeName(row.micTypeName)
-    setIdentifier(String(row.identifier))
-    setError(null)
-    setStatus(null)
+    if (!canWrite) return
+    setEditingMicId(row.id)
+    setMicEditorOpen(true)
   }
 
-  function cancelEdit() {
-    setEditingId(null)
-    setModelName('')
-    setMicTypeName('')
-    setIdentifier('')
+  function startCreate() {
+    if (!canWrite) return
+    setEditingMicId(null)
+    setMicEditorOpen(true)
   }
+
+  function cancelEditor() {
+    setMicEditorOpen(false)
+    setEditingMicId(null)
+  }
+
 
   async function deleteMicrophone(id: number) {
     if (!supabase) return
@@ -328,7 +257,8 @@ export default function MicrophonesPanel({ messages, canWrite }: MicrophonesPane
       const { error } = await supabase.from('microphone').delete().eq('id', id)
       if (error) throw error
 
-      if (editingId === id) cancelEdit()
+      // MicEditor handles editor closing; keep delete logic independent.
+      // (No inline mic editor state remains here.)
 
       setStatus(messages.microphones.feedback.deleted)
       await loadMicrophones()
@@ -518,97 +448,51 @@ export default function MicrophonesPanel({ messages, canWrite }: MicrophonesPane
 
 
       {canWrite ? (
-        <div style={{ display: 'grid', gap: 10, marginTop: 12 }}>
-          <label htmlFor="microphone-identifier" style={{ textAlign: 'left' }}>
-            {messages.microphones.fields.identifier}
-          </label>
-          <input
-            id="microphone-identifier"
-            value={identifier}
-            onChange={(event) => setIdentifier(event.target.value)}
-            type="number"
-            required
-            placeholder={messages.microphones.fields.identifier}
+        <div style={{ display: 'flex', alignItems: 'flex-start', justifyContent: 'space-between', gap: 12, marginTop: 12 }}>
+          <div style={{ marginTop: 6 }} />
+          <button
+            type="button"
+            onClick={startCreate}
+            aria-label={messages.microphones.actions.create}
+            title={messages.microphones.actions.create}
             style={{
-              width: '100%',
-              boxSizing: 'border-box',
-              padding: 10,
-              borderRadius: 6,
+              width: 44,
+              height: 44,
+              borderRadius: 12,
               border: '1px solid var(--border)',
+              background: 'var(--card)',
+              cursor: 'pointer',
+              display: 'inline-flex',
+              alignItems: 'center',
+              justifyContent: 'center',
+              fontSize: 28,
+              lineHeight: 1,
+              padding: 0,
             }}
-          />
-
-          <label htmlFor="microphone-model-name" style={{ textAlign: 'left' }}>
-            {messages.microphones.fields.modelName}
-          </label>
-          <input
-            id="microphone-model-name"
-            value={modelName}
-            onChange={(event) => setModelName(event.target.value)}
-            type="text"
-            required
-            placeholder={messages.microphones.fields.modelName}
-            style={{
-              width: '100%',
-              boxSizing: 'border-box',
-              padding: 10,
-              borderRadius: 6,
-              border: '1px solid var(--border)',
-            }}
-          />
-
-          <label htmlFor="microphone-mic-type" style={{ textAlign: 'left' }}>
-            {messages.microphones.fields.micTypeName}
-          </label>
-          <select
-            id="microphone-mic-type"
-            value={micTypeName}
-            onChange={(event) => setMicTypeName(event.target.value)}
-            style={{
-              width: '100%',
-              boxSizing: 'border-box',
-              padding: 10,
-              borderRadius: 6,
-              border: '1px solid var(--border)',
-            }}
+            disabled={loading}
           >
-            <option value="">{messages.microphones.fields.micTypeName}</option>
-            {micTypeChoices.map((choice) => (
-              <option key={choice} value={choice}>
-                {choice}
-              </option>
-            ))}
-          </select>
-
-          <label htmlFor="microphone-mic-type-new" style={{ textAlign: 'left', marginTop: 6 }}>
-            {messages.microphones.fields.micTypeName}
-          </label>
-
-          <div style={{ display: 'flex', gap: 10, flexWrap: 'wrap' }}>
-            <button
-              type="button"
-              onClick={handleSubmit}
-              disabled={loading || !modelName.trim() || !micTypeName.trim() || !identifier.trim()}
-              style={{ padding: '10px 14px', borderRadius: 6, cursor: 'pointer' }}
-            >
-              {editingId === null ? messages.microphones.actions.create : messages.microphones.actions.update}
-            </button>
-
-            {editingId !== null ? (
-              <button
-                type="button"
-                onClick={cancelEdit}
-                disabled={loading}
-                style={{ padding: '10px 14px', borderRadius: 6, cursor: 'pointer' }}
-              >
-                {messages.microphones.actions.cancelEdit}
-              </button>
-            ) : null}
-          </div>
+            +
+          </button>
         </div>
       ) : (
         <div style={{ marginTop: 12, textAlign: 'left' }}>{messages.microphones.readOnly}</div>
       )}
+
+      <MicEditor
+        messages={messages}
+        canWrite={canWrite}
+        isOpen={micEditorOpen}
+        micId={editingMicId}
+        onClose={cancelEditor}
+        onSaved={async () => {
+          setError(null)
+          setStatus(null)
+          setMicEditorOpen(false)
+          setEditingMicId(null)
+          await loadMicrophones()
+        }}
+      />
+
 
       {error ? (
         <div style={{ marginTop: 12, color: 'crimson', textAlign: 'left' }}>
