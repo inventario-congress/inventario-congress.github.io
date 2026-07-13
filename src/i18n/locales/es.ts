@@ -3,7 +3,6 @@ const es = {
     title: 'Inventario Congress',
   },
   languageSwitcher: {
-    label: 'Idioma',
     options: {
       en: 'English',
       es: 'Español',
