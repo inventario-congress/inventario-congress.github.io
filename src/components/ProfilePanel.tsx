@@ -298,6 +298,12 @@ export default function ProfilePanel({ messages, email, name, lastName }: Profil
         <button
           type="button"
           onClick={openModal}
+          // **************************************************
+          // NOTE: The button is hidden for now, but the functionality is implemented and can be enabled when ready.
+          // Remove the hidden attribute when ready to resume password change functionality, but keep it disabled if
+          // conditions are not met
+          hidden={true}
+          // **************************************************
           disabled={!isSupabaseConfigured || authLoading || !hasSession}
           style={{
             padding: '10px 14px',
