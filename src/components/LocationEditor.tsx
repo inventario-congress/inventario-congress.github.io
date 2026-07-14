@@ -17,8 +17,8 @@ type LocationEditorProps = {
 type RoomChoice = {
   id: number
   name: string
-  checked: boolean
 }
+
 
 export default function LocationEditor({
   messages,
@@ -81,6 +81,7 @@ export default function LocationEditor({
         addRoom: e?.rooms?.addRoom ?? '',
         loadingRooms: e?.rooms?.loadingRooms ?? '',
         noneAssociated: e?.rooms?.noneAssociated ?? '',
+        tableDeleteLabel: e?.rooms?.tableDeleteLabel ?? '',
         addRoomDialogOpen: e?.rooms?.addRoomDialogOpen ?? '',
       },
       addRoomDialog: {
@@ -227,14 +228,23 @@ const loadForEdit = useCallback(async () => {
       }
 
       // Build a list of RoomChoice objects from the RPC result, marking them as checked.
-      const mapped: RoomChoice[] = (rpcData ?? []).map((r: any) => {
-        const roomId = Number(r.room?.id ?? (r.room as unknown as number | undefined) ?? NaN)
-        const roomName = String(r.room?.name ?? r.name ?? '')
+      type RpcRow = { room?: { id?: number | null; name?: string | null } | number | null; name?: string | null }
+      const mapped: RoomChoice[] = (rpcData ?? []).map((r: RpcRow) => {
+        const rawRoom = r.room
+        const roomId =
+          typeof rawRoom === 'number'
+            ? rawRoom
+            : Number((rawRoom as { id?: number | null } | null | undefined)?.id ?? NaN)
+
+        const roomName = String(
+          (typeof rawRoom === 'object' && rawRoom !== null && 'name' in rawRoom
+            ? (rawRoom as { name?: string | null }).name
+            : null) ?? r.name ?? '',
+        )
 
         return {
           id: roomId,
           name: roomName,
-          checked: true,
         }
       })
 
@@ -267,16 +277,7 @@ const loadForEdit = useCallback(async () => {
     })()
   }, [canWrite, isEditMode, isOpen, locationId, loadForEdit, loadRoomsForLocation, resetForm])
 
-  const toggleRoom = useCallback((roomId: number) => {
-    setSelectedRoomIds((prev) => {
-      const next = new Set(prev)
-      if (next.has(roomId)) next.delete(roomId)
-      else next.add(roomId)
-      return next
-    })
 
-    setRoomsChoices((prev) => prev.map((r) => (r.id === roomId ? { ...r, checked: !r.checked } : r)))
-  }, [])
 
   const createRoomModalClose = useCallback(() => {
     if (addRoomLoading) return
@@ -326,7 +327,7 @@ const loadForEdit = useCallback(async () => {
       setNewRoomIds((prev) => (prev.includes(createdRoomId) ? prev : [...prev, createdRoomId]))
 
       // Update UI selection and list: new room should be checked.
-      const newChoice: RoomChoice = { id: createdRoomId, name: trimmed, checked: true }
+      const newChoice: RoomChoice = { id: createdRoomId, name: trimmed }
       setRoomsChoices((prev) => {
         const exists = prev.some((r) => r.id === createdRoomId)
         if (exists) return prev
@@ -334,6 +335,7 @@ const loadForEdit = useCallback(async () => {
         next.sort((a, b) => a.name.localeCompare(b.name))
         return next
       })
+
       setSelectedRoomIds((prev) => {
         const next = new Set(prev)
         next.add(createdRoomId)
@@ -589,29 +591,45 @@ const loadForEdit = useCallback(async () => {
               ) : roomsChoices.length === 0 ? (
                 <div style={{ opacity: 0.85 }}>{editorStrings.rooms.noneAssociated}</div>
               ) : (
-                <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 8 }}>
-                  {roomsChoices.map((r) => (
-                    <label
-                      key={r.id}
-                      style={{
-                        display: 'flex',
-                        alignItems: 'center',
-                        gap: 8,
-                        padding: '6px 8px',
-                        borderRadius: 6,
-                        cursor: loading ? 'not-allowed' : 'pointer',
-                        userSelect: 'none',
-                      }}
-                    >
-                      <input
-                        type="checkbox"
-                        checked={r.checked}
-                        onChange={() => toggleRoom(r.id)}
-                        disabled={loading || roomsLoading}
-                      />
-                      <span>{r.name}</span>
-                    </label>
-                  ))}
+                <div style={{ overflowX: 'auto' }}>
+                  <table style={{ width: '100%', borderCollapse: 'collapse' }}>
+                    <tbody>
+                      {roomsChoices.map((r) => (
+                        <tr key={r.id}>
+                          <td style={{ borderBottom: '1px solid var(--border)', padding: '8px 6px' }}>{r.name}</td>
+                          <td
+                            style={{
+                              borderBottom: '1px solid var(--border)',
+                              padding: '8px 6px',
+                              textAlign: 'right',
+                              whiteSpace: 'nowrap',
+                            }}
+                          >
+                            <button
+                              type="button"
+                              onClick={() => {
+                                if (loading || roomsLoading) return
+                                // Remove from this location's selection (and later association replacement).
+                                setSelectedRoomIds((prev) => {
+                                  const next = new Set(prev)
+                                  next.delete(r.id)
+                                  return next
+                                })
+                                setRoomsChoices((prev) => prev.map((x) => (x.id === r.id ? { ...x, checked: false } : x)))
+                              }}
+                              disabled={loading || roomsLoading}
+                              style={{ padding: '6px 10px', borderRadius: 6, cursor: 'pointer' }}
+                              aria-label={editorStrings.rooms.tableDeleteLabel}
+                              title={editorStrings.rooms.tableDeleteLabel}
+                            >
+                              {editorStrings.rooms.tableDeleteLabel}
+                            </button>
+
+                          </td>
+                        </tr>
+                      ))}
+                    </tbody>
+                  </table>
                 </div>
               )}
             </div>
