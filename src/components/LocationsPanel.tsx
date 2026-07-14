@@ -63,7 +63,6 @@ export default function LocationsPanel({ messages, canWrite }: LocationsPanelPro
     } finally {
       setLoading(false)
     }
-  // 'messages.locations.feedback.loaded' isn't used inside this callback; remove it to satisfy exhaustive-deps.
   }, [messages.locations.feedback.loadFailed])
 
   useEffect(() => {
