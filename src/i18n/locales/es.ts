@@ -61,7 +61,7 @@ const es = {
     fields: {
       modelName: 'Modelo',
       micTypeName: 'Tipo',
-      identifier: 'Identificador',
+      identifier: 'Número de mic',
     },
     actions: {
       create: 'Crear micrófono',
@@ -74,7 +74,7 @@ const es = {
     },
     table: {
       modelName: 'Modelo',
-      identifier: 'Identificador',
+      identifier: 'Número de mic',
       micTypeName: 'Tipo',
       latestAttachmentBase: 'Base',
       actions: 'Acciones',
@@ -84,9 +84,9 @@ const es = {
       editor: {
         titleCreate: 'Crear micrófono',
         titleEdit: 'Actualizar micrófono',
-        description: 'Configura el identificador del micrófono y asocia modelo y tipo.',
+        description: 'Configura el número del micrófono y asocia modelo y tipo.',
         fields: {
-          identifier: 'Identificador',
+          identifier: 'Número de mic',
           modelName: 'Modelo',
           micTypeName: 'Tipo',
         },
@@ -167,7 +167,7 @@ const es = {
     readOnly: 'Modo de solo lectura: puedes ver ubicaciones pero no puedes crear, editar ni eliminar.',
     fields: {
       name: 'Nombre de la ubicación',
-      address: 'Dirección',
+      address: 'Sala',
     },
     actions: {
       create: 'Crear ubicación',
@@ -178,7 +178,7 @@ const es = {
     },
     table: {
       name: 'Nombre',
-      address: 'Dirección',
+      address: 'Sala',
       actions: 'Acciones',
       empty: 'Todavía no hay ubicaciones.',
     },
@@ -272,7 +272,7 @@ const es = {
     title: 'Bases',
     readOnly: 'Modo de solo lectura: puedes ver las bases existentes pero no puedes crear, editar ni eliminar.',
     fields: {
-      identifier: 'Identificador de la base',
+      identifier: 'Número de base',
       maxMicCount: 'Cantidad máxima de micrófonos',
       models: 'Modelos',
     },
@@ -297,7 +297,7 @@ const es = {
         title: 'Crear base ',
         description: 'Configura la base y asocia los modelos de micrófono.',
         fields: {
-          identifier: 'Identificador de la base',
+          identifier: 'Número de base',
           maxMicCount: 'Cantidad máxima de micrófonos',
           models: 'Modelos',
         },
@@ -318,7 +318,7 @@ const es = {
       },
     },
     table: {
-      identifier: 'Identificador',
+      identifier: 'Número de base',
       maxMicCount: 'Cantidad máxima de micrófonos',
       micModelNames: 'Modelos de micrófono',
       latestLocation: 'Ubicación',
