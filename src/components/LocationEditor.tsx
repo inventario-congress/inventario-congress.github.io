@@ -15,8 +15,10 @@ type LocationEditorProps = {
 }
 
 type RoomChoice = {
-  id: number
-  name: string
+  // Rename id -> room_id to avoid confusion with locationId and to match the RPC result structure
+  room_id: number
+  // Rename name -> room_name to avoid confusion with location name and to match the RPC result structure
+  room_name: string
 }
 
 
@@ -75,8 +77,6 @@ export default function LocationEditor({
       rooms: {
         title: e?.rooms?.title ?? '',
         description: e?.rooms?.description ?? '',
-        noneSelected: e?.rooms?.noneSelected ?? '',
-        selectedCountSuffix: e?.rooms?.selectedCountSuffix ?? '',
         addRequiresSavedLocation: e?.rooms?.addRequiresSavedLocation ?? '',
         addRoom: e?.rooms?.addRoom ?? '',
         loadingRooms: e?.rooms?.loadingRooms ?? '',
@@ -136,7 +136,6 @@ export default function LocationEditor({
 
     setRoomsLoading(false)
     setRoomsChoices([])
-    setSelectedRoomIds(new Set())
 
     setAddRoomOpen(false)
     setAddRoomName('')
@@ -209,7 +208,6 @@ const loadForEdit = useCallback(async () => {
     if (!isEditMode || !locationId) {
       // Create mode has no target location yet, so room list is empty until location is saved.
       setRoomsChoices([])
-      setSelectedRoomIds(new Set())
       return
     }
 
@@ -227,34 +225,12 @@ const loadForEdit = useCallback(async () => {
         throw new Error('No data returned from get_rooms_for_location()')
       }
 
-      // Build a list of RoomChoice objects from the RPC result, marking them as checked.
-      type RpcRow = { room?: { id?: number | null; name?: string | null } | number | null; name?: string | null }
-      const mapped: RoomChoice[] = (rpcData ?? []).map((r: RpcRow) => {
-        const rawRoom = r.room
-        const roomId =
-          typeof rawRoom === 'number'
-            ? rawRoom
-            : Number((rawRoom as { id?: number | null } | null | undefined)?.id ?? NaN)
-
-        const roomName = String(
-          (typeof rawRoom === 'object' && rawRoom !== null && 'name' in rawRoom
-            ? (rawRoom as { name?: string | null }).name
-            : null) ?? r.name ?? '',
-        )
-
-        return {
-          id: roomId,
-          name: roomName,
-        }
-      })
-
-      const selected = new Set<number>(mapped.map((r) => r.id).filter((n) => !Number.isNaN(n)))
+      const mapped = rpcData
 
       // Sort for stable UX
-      mapped.sort((a, b) => a.name.localeCompare(b.name))
+      mapped.sort((a, b) => a.room_name.localeCompare(b.room_name))
 
       setRoomsChoices(mapped)
-      setSelectedRoomIds(selected)
     } catch (e) {
       setError(e instanceof Error ? e.message : String(editorStrings.feedback.loadRoomsFailed))
 
@@ -327,18 +303,12 @@ const loadForEdit = useCallback(async () => {
       setNewRoomIds((prev) => (prev.includes(createdRoomId) ? prev : [...prev, createdRoomId]))
 
       // Update UI selection and list: new room should be checked.
-      const newChoice: RoomChoice = { id: createdRoomId, name: trimmed }
+      const newChoice: RoomChoice = { room_id: createdRoomId, room_name: trimmed }
       setRoomsChoices((prev) => {
-        const exists = prev.some((r) => r.id === createdRoomId)
+        const exists = prev.some((r) => r.room_id === createdRoomId)
         if (exists) return prev
         const next = [...prev, newChoice]
-        next.sort((a, b) => a.name.localeCompare(b.name))
-        return next
-      })
-
-      setSelectedRoomIds((prev) => {
-        const next = new Set(prev)
-        next.add(createdRoomId)
+        next.sort((a, b) => a.room_name.localeCompare(b.room_name))
         return next
       })
 
@@ -554,11 +524,6 @@ const loadForEdit = useCallback(async () => {
             <div style={{ fontSize: 13, opacity: 0.9, marginTop: 2 }}>{editorStrings.rooms.description}</div>
 
             <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'baseline', gap: 12, marginTop: 10 }}>
-              <div style={{ fontSize: 14, opacity: 0.85 }}>
-                {selectedRoomIds.size === 0
-                  ? editorStrings.rooms.noneSelected
-                  : `${selectedRoomIds.size} ${editorStrings.rooms.selectedCountSuffix}`}
-              </div>
 
               <button
                 type="button"
@@ -609,13 +574,15 @@ const loadForEdit = useCallback(async () => {
                               type="button"
                               onClick={() => {
                                 if (loading || roomsLoading) return
-                                // Remove from this location's selection (and later association replacement).
-                                setSelectedRoomIds((prev) => {
-                                  const next = new Set(prev)
-                                  next.delete(r.id)
-                                  return next
-                                })
-                                setRoomsChoices((prev) => prev.map((x) => (x.id === r.id ? { ...x, checked: false } : x)))
+                                // Remove this room from the database
+                                void (async () => {
+                                  if (!supabase) return
+                                  const { error: deleteError } = await supabase.from('room').delete().eq('id', r.room_id)
+                                  if (deleteError) {
+                                    setError(deleteError.message)
+                                    return
+                                  }
+                                })()
                               }}
                               disabled={loading || roomsLoading}
                               style={{ padding: '6px 10px', borderRadius: 6, cursor: 'pointer' }}
