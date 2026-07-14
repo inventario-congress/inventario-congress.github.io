@@ -216,19 +216,18 @@ const loadForEdit = useCallback(async () => {
     setError(null)
 
     try {
-      // Join through location_rooms to limit rooms to those associated with this location.
-      // Also capture associated room IDs to pre-check selection.
-      const { data, error: assocError } = await supabase
-        .from('location_rooms')
-        .select('room:id,name,location')
-        .eq('location', locationId)
+      // Use RPC get_rooms_for_location(location_id) to fetch rooms associated with the location.
+      const { data: rpcData, error: rpcError } = await supabase.rpc('get_rooms_for_location', { p_location_id: locationId })
+      if (rpcError) {
+        throw rpcError
+      }
 
+      if (!rpcData) {
+        throw new Error('No data returned from get_rooms_for_location()')
+      }
 
-      if (assocError) throw assocError
-
-      type RoomJoinRow = { room?: { id?: number | null; name?: string | null } | null; name?: string | null }
-
-      const mapped: RoomChoice[] = (data ?? []).map((r: RoomJoinRow) => {
+      // Build a list of RoomChoice objects from the RPC result, marking them as checked.
+      const mapped: RoomChoice[] = (rpcData ?? []).map((r: any) => {
         const roomId = Number(r.room?.id ?? (r.room as unknown as number | undefined) ?? NaN)
         const roomName = String(r.room?.name ?? r.name ?? '')
 
@@ -238,7 +237,6 @@ const loadForEdit = useCallback(async () => {
           checked: true,
         }
       })
-
 
       const selected = new Set<number>(mapped.map((r) => r.id).filter((n) => !Number.isNaN(n)))
 
@@ -361,10 +359,9 @@ const loadForEdit = useCallback(async () => {
     const trimmedName = name.trim()
     if (!trimmedName) return true
 
-    // Selection is required: at least one room associated.
-    // (If your UX requires allowing 0 rooms, remove this check.)
-    return selectedRoomIds.size === 0
-  }, [canWrite, loading, name, roomsLoading, selectedRoomIds.size])
+    // Rooms are optional.
+    return false
+  }, [canWrite, loading, name, roomsLoading])
 
   const handleSubmit = useCallback(async () => {
     if (!supabase) return

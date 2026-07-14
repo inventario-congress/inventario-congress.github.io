@@ -176,6 +176,55 @@ const es = {
       edit: 'Editar',
       delete: 'Eliminar',
     },
+    dialogs: {
+      editor: {
+        titleCreate: 'Crear ubicación',
+        titleEdit: 'Actualizar ubicación',
+        description: 'Configura los detalles de la ubicación y asocia salas a esta ubicación.',
+        fields: {
+          name: 'Nombre de la ubicación',
+          address: 'Dirección',
+        },
+        actions: {
+          cancel: 'Cancelar',
+          save: 'Guardar ubicación',
+        },
+        feedback: {
+          loadFailed: 'No se pudo cargar la ubicación',
+          loadRoomsFailed: 'No se pudieron cargar las salas de la ubicación',
+          createFailed: 'No se pudo crear la ubicación',
+          updateFailed: 'No se pudo actualizar la ubicación',
+          createRoomFailed: 'No se pudo crear la sala',
+          roomsCreateRequiresSavedLocation: 'Primero guarda la ubicación antes de agregar salas.',
+          submitting: 'Enviando...',
+        },
+        rooms: {
+          title: 'Salas',
+          description: 'Selecciona las salas que pertenecen a esta ubicación. También puedes crear salas nuevas para esta ubicación.',
+          noneSelected: 'No hay salas seleccionadas',
+          selectedCountSuffix: 'salas seleccionadas',
+          addRequiresSavedLocation: 'Debes guardar la ubicación antes de agregar salas.',
+          addRoom: 'Agregar sala',
+          loadingRooms: 'Cargando salas...',
+          noneAssociated: 'Todavía no hay salas asociadas a esta ubicación.',
+          addRoomDialogOpen: '',
+        },
+        addRoomDialog: {
+          title: 'Agregar nueva sala',
+          description: 'Ingresa el nombre de la nueva sala. Se asociará a la ubicación seleccionada.',
+          fields: {
+            roomName: 'Nombre de la sala',
+          },
+          actions: {
+            cancel: 'Cancelar',
+            save: 'Agregar sala',
+          },
+          feedback: {
+            submitting: 'Agregando...',
+          },
+        },
+      },
+    },
     table: {
       name: 'Nombre',
       address: 'Dirección',
@@ -193,6 +242,7 @@ const es = {
       deleteFailed: 'No se pudo eliminar la ubicación',
     },
   },
+
 
   attachments: {
     forms: {

@@ -176,6 +176,55 @@ const en = {
       edit: 'Edit',
       delete: 'Delete',
     },
+    dialogs: {
+      editor: {
+        titleCreate: 'Create location',
+        titleEdit: 'Update location',
+        description: 'Configure location details and associate rooms to this location.',
+        fields: {
+          name: 'Location name',
+          address: 'Address',
+        },
+        actions: {
+          cancel: 'Cancel',
+          save: 'Save location',
+        },
+        feedback: {
+          loadFailed: 'Failed to load location',
+          loadRoomsFailed: 'Failed to load rooms for location',
+          createFailed: 'Failed to create location',
+          updateFailed: 'Failed to update location',
+          createRoomFailed: 'Failed to create room',
+          roomsCreateRequiresSavedLocation: 'Save the location first before adding rooms.',
+          submitting: 'Submitting...',
+        },
+        rooms: {
+          title: 'Rooms',
+          description: 'Select the rooms that belong to this location. You can also create new rooms for this location.',
+          noneSelected: 'No rooms selected',
+          selectedCountSuffix: 'rooms selected',
+          addRequiresSavedLocation: 'You must save the location before adding rooms.',
+          addRoom: 'Add room',
+          loadingRooms: 'Loading rooms...',
+          noneAssociated: 'No rooms associated with this location yet.',
+          addRoomDialogOpen: '',
+        },
+        addRoomDialog: {
+          title: 'Add new room',
+          description: 'Enter a name for the new room. It will be associated to the selected location.',
+          fields: {
+            roomName: 'Room name',
+          },
+          actions: {
+            cancel: 'Cancel',
+            save: 'Add room',
+          },
+          feedback: {
+            submitting: 'Adding...',
+          },
+        },
+      },
+    },
     table: {
       name: 'Name',
       address: 'Address',
@@ -193,6 +242,7 @@ const en = {
       deleteFailed: 'Failed to delete location',
     },
   },
+
 
   attachments: {
     forms: {
