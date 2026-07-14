@@ -290,16 +290,27 @@ const loadForEdit = useCallback(async () => {
       if (!createdRoomId) throw new Error(editorStrings.feedback.createRoomFailed)
 
       // Associate to current location
-      const { error: assocError } = await supabase
+      // Use `insert(...).select()` so Supabase returns the inserted row and errors are surfaced reliably.
+      const { data: assocData, error: assocError } = await supabase
         .from('location_rooms')
         .insert({ location: locationId, room: createdRoomId })
+        .select('id, location, room')
 
       if (assocError) throw assocError
+      if (!assocData || assocData.length === 0) throw new Error(editorStrings.feedback.createRoomFailed)
 
       setNewRoomIds((prev) => (prev.includes(createdRoomId) ? prev : [...prev, createdRoomId]))
 
       // Update UI selection and list: new room should be checked.
       const newChoice: RoomChoice = { room_id: createdRoomId, room_name: trimmed }
+
+      // Ensure UI selection includes the new association before the user hits Save.
+      setSelectedRoomIds((prev) => {
+        const next = new Set(prev)
+        next.add(createdRoomId)
+        return next
+      })
+
       setRoomsChoices((prev) => {
         const exists = prev.some((r) => r.room_id === createdRoomId)
         if (exists) return prev
@@ -307,6 +318,7 @@ const loadForEdit = useCallback(async () => {
         next.sort((a, b) => a.room_name.localeCompare(b.room_name))
         return next
       })
+
 
       setAddRoomOpen(false)
       setAddRoomName('')
@@ -570,14 +582,25 @@ const loadForEdit = useCallback(async () => {
                               type="button"
                               onClick={() => {
                                 if (loading || roomsLoading) return
-                                // Remove this room from the database
+                                // Remove this room association from the current location.
+                                // (Rooms themselves are owned only by the location association UI; deleting the association
+                                // is the correct behavior. If DB schema uses ON DELETE CASCADE for related rows,
+                                // you can still optionally delete the room entity separately in another flow.)
                                 void (async () => {
                                   if (!supabase) return
-                                  const { error: deleteError } = await supabase.from('room').delete().eq('room_id', r.room_id)
+                                  if (!locationId) return
+
+                                  const { error: deleteError } = await supabase
+                                    .from('location_rooms')
+                                    .delete()
+                                    .eq('location', locationId)
+                                    .eq('room', r.room_id)
+
                                   if (deleteError) {
                                     setError(deleteError.message)
                                     return
                                   }
+
                                   // Remove this room from the UI list
                                   setRoomsChoices((prev) => prev.filter((room) => room.room_id !== r.room_id))
                                   setSelectedRoomIds((prev) => {
