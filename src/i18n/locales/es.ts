@@ -167,7 +167,7 @@ const es = {
     readOnly: 'Modo de solo lectura: puedes ver ubicaciones pero no puedes crear, editar ni eliminar.',
     fields: {
       name: 'Nombre de la ubicación',
-      address: 'Sala',
+      address: 'Dirección',
     },
     actions: {
       create: 'Crear ubicación',
@@ -178,7 +178,7 @@ const es = {
     },
     table: {
       name: 'Nombre',
-      address: 'Sala',
+      address: 'Dirección',
       actions: 'Acciones',
       empty: 'Todavía no hay ubicaciones.',
     },
