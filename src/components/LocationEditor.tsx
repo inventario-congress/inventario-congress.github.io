@@ -206,8 +206,8 @@ const loadForEdit = useCallback(async () => {
   const loadRoomsForLocation = useCallback(async () => {
     if (!supabase) return
     if (!isEditMode || !locationId) {
-      // Create mode has no target location yet, so room list is empty until location is saved.
       setRoomsChoices([])
+      setSelectedRoomIds(new Set())
       return
     }
 
@@ -217,27 +217,23 @@ const loadForEdit = useCallback(async () => {
     try {
       // Use RPC get_rooms_for_location(location_id) to fetch rooms associated with the location.
       const { data: rpcData, error: rpcError } = await supabase.rpc('get_rooms_for_location', { p_location_id: locationId })
-      if (rpcError) {
-        throw rpcError
-      }
+      if (rpcError) throw rpcError
+      if (!rpcData) throw new Error('No data returned from get_rooms_for_location()')
 
-      if (!rpcData) {
-        throw new Error('No data returned from get_rooms_for_location()')
-      }
-
-      const mapped = rpcData
+      const mapped = rpcData as unknown as RoomChoice[]
 
       // Sort for stable UX
       mapped.sort((a, b) => a.room_name.localeCompare(b.room_name))
 
       setRoomsChoices(mapped)
+      setSelectedRoomIds(new Set(mapped.map((r) => r.room_id)))
     } catch (e) {
       setError(e instanceof Error ? e.message : String(editorStrings.feedback.loadRoomsFailed))
-
     } finally {
       setRoomsLoading(false)
     }
   }, [editorStrings.feedback.loadRoomsFailed, isEditMode, locationId])
+
 
   useEffect(() => {
     if (!isOpen) return
@@ -560,8 +556,8 @@ const loadForEdit = useCallback(async () => {
                   <table style={{ width: '100%', borderCollapse: 'collapse' }}>
                     <tbody>
                       {roomsChoices.map((r) => (
-                        <tr key={r.id}>
-                          <td style={{ borderBottom: '1px solid var(--border)', padding: '8px 6px' }}>{r.name}</td>
+                        <tr key={r.room_id}>
+                          <td style={{ borderBottom: '1px solid var(--border)', padding: '8px 6px' }}>{r.room_name}</td>
                           <td
                             style={{
                               borderBottom: '1px solid var(--border)',
@@ -577,11 +573,18 @@ const loadForEdit = useCallback(async () => {
                                 // Remove this room from the database
                                 void (async () => {
                                   if (!supabase) return
-                                  const { error: deleteError } = await supabase.from('room').delete().eq('id', r.room_id)
+                                  const { error: deleteError } = await supabase.from('room').delete().eq('room_id', r.room_id)
                                   if (deleteError) {
                                     setError(deleteError.message)
                                     return
                                   }
+                                  // Remove this room from the UI list
+                                  setRoomsChoices((prev) => prev.filter((room) => room.room_id !== r.room_id))
+                                  setSelectedRoomIds((prev) => {
+                                    const next = new Set(prev)
+                                    next.delete(r.room_id)
+                                    return next
+                                  })
                                 })()
                               }}
                               disabled={loading || roomsLoading}

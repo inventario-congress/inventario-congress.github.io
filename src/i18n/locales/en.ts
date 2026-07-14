@@ -207,7 +207,7 @@ const en = {
           addRoom: 'Add room',
           loadingRooms: 'Loading rooms...',
           noneAssociated: 'No rooms associated with this location yet.',
-          addRoomDialogOpen: '',
+          tableDeleteLabel: 'Delete',
         },
         addRoomDialog: {
           title: 'Add new room',

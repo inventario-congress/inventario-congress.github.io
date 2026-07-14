@@ -207,6 +207,7 @@ const es = {
           addRoom: 'Agregar sala',
           loadingRooms: 'Cargando salas...',
           noneAssociated: 'Todavía no hay salas asociadas a esta ubicación.',
+          tableDeleteLabel: 'Eliminar',
           addRoomDialogOpen: '',
         },
         addRoomDialog: {
