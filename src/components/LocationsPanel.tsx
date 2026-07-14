@@ -46,13 +46,17 @@ export default function LocationsPanel({ messages, canWrite }: LocationsPanelPro
 
       setRows(
         (data ?? [])
-          .map((entry) => ({
-            id: entry.location_id as number,
-            name: entry.location_name as string,
-            address: (entry.location_address as string | null) ?? '',
-            roomNames: (entry.room_names as string | null) ?? '',
+          // Avoid implicit any type assertions by explicitly typing the entries as objects with the expected properties.
+          .map((entry: { location_id: number; location_name: string; location_address: string | null; room_names: string | null }) => ({
+            id: entry.location_id,
+            name: entry.location_name,
+            address: entry.location_address ?? '',
+            roomNames: entry.room_names ?? '',
           }))
-          .sort((a, b) => a.name.localeCompare(b.name)),
+          .sort((
+            a: { id: number; name: string; address: string | null; roomNames: string },
+            b: { id: number; name: string; address: string | null; roomNames: string }) =>
+                a.name.localeCompare(b.name)),
       )
     } catch (e) {
       setError(e instanceof Error ? e.message : messages.locations.feedback.loadFailed)
