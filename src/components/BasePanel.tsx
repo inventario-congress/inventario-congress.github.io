@@ -6,14 +6,13 @@ import BaseEditor from './BaseEditor'
 import DeleteConfirmation from './DeleteConfirmation'
 
 
-
-
 type BaseRow = {
-  id: number
-  identifier: number
-  maxMicCount: number
-  latestLocationName: string | null
-  micModelNames: string // comma-delimited, already sorted; never null
+  base_id: number
+  base_identifier: number
+  max_mic_count: number
+  latest_location_id: number | null
+  latest_location_name: string | null
+  model_names: string // comma-delimited, already sorted; never null
 }
 
 
@@ -50,30 +49,18 @@ type LocationChoice = {
 export default function BasePanel({ messages, canWrite }: BasePanelProps) {
   const [baseEditorOpen, setBaseEditorOpen] = useState(false)
   const [editingBaseId, setEditingBaseId] = useState<number | null>(null)
-
-
-
-
-
-
   const [loading, setLoading] = useState(false)
   const [rows, setRows] = useState<BaseRow[]>([])
   const [error, setError] = useState<string | null>(null)
-
   const [moveDialogOpen, setMoveDialogOpen] = useState(false)
   const [moveDialogLoading, setMoveDialogLoading] = useState(false)
   const [moveBaseId, setMoveBaseId] = useState<number | null>(null)
-
   const [deleteDialogOpen, setDeleteDialogOpen] = useState(false)
   const [deleteTarget, setDeleteTarget] = useState<{ id: number; name?: string | null } | null>(null)
-
-
-
   const [moveLocationId, setMoveLocationId] = useState<number | ''>('')
   const [moveLocationChoices, setMoveLocationChoices] = useState<LocationChoice[]>([])
 
-  type SortColumn = 'identifier' | 'latestLocationName' | 'micModelNames'
-
+  type SortColumn = 'base_identifier' | 'latest_location_name' | 'model_names'
   type SortDirection = 'asc' | 'desc'
 
   const SORT_STORAGE_KEY = 'inventario_congress:bases:sort'
@@ -81,15 +68,15 @@ export default function BasePanel({ messages, canWrite }: BasePanelProps) {
   const [sortColumn, setSortColumn] = useState<SortColumn>(() => {
     try {
       const raw = window.localStorage.getItem(SORT_STORAGE_KEY)
-      if (!raw) return 'identifier'
+      if (!raw) return 'base_identifier'
       const parsed = JSON.parse(raw) as { sortColumn?: unknown; sortDirection?: unknown }
       const candidate = parsed.sortColumn
-      if (candidate === 'identifier' || candidate === 'latestLocationName' || candidate === 'micModelNames') return candidate
+      if (candidate === 'base_identifier' || candidate === 'latest_location_name' || candidate === 'model_names') return candidate
 
     } catch {
       // ignore
     }
-    return 'identifier'
+    return 'base_identifier'
   })
 
   const [sortDirection, setSortDirection] = useState<SortDirection>(() => {
@@ -125,7 +112,7 @@ export default function BasePanel({ messages, canWrite }: BasePanelProps) {
 
     try {
       // Candidate locations are all locations except the one the base was most recently moved to.
-      const latestName = baseRow.latestLocationName
+      const latestName = baseRow.latest_location_name
 
       const { data: locations, error: locationsError } = await supabase
         .from('location')
@@ -158,78 +145,29 @@ export default function BasePanel({ messages, canWrite }: BasePanelProps) {
     }
   }, [messages.bases.feedback.loadFailed])
 
+
   const loadBases = useCallback(async () => {
     if (!supabase) {
       return
     }
 
-    const dash = '—'
-
     setError(null)
     setLoading(true)
 
-
     try {
-      const { data, error: loadError } = await supabase
-        .from('base')
-        .select('id, identifier, max_mic_count')
-
-        .order('id', { ascending: false })
-
-      if (loadError) throw loadError
-
-      const baseRows: BaseRow[] = (data ?? []).map((entry) => ({
-        id: entry.id as number,
-        identifier: entry.identifier as number,
-        maxMicCount: entry.max_mic_count as number,
-        latestLocationName: null,
-        micModelNames: dash,
-      }))
-
-
-      // Populate latest location name and mic model associations from related tables for each base.
-      for (const row of baseRows) {
-        // Latest location
-        const { data: movements, error: movementError } = await supabase
-          .from('movement')
-          .select('location(name)')
-          .eq('base', row.id)
-          .order('created_at', { ascending: false })
-          .limit(1)
-
-        if (movementError) {
-          console.error('Error fetching latest movement for base', row.id, movementError)
-        } else {
-          const latest = movements?.[0] as
-            | {
-                location?: { name?: string | null } | null
-              }
-            | undefined
-
-          row.latestLocationName = latest?.location?.name ?? null
+      // Load the rows by calling db function get_bases_with_models() to get the base data along with associated mic
+      // model names and latest location name. This avoids multiple queries and simplifies the logic.
+      await supabase.rpc('get_bases_with_models').then(({ data: rpcData, error: rpcError }) => {
+        if (rpcError) {
+          throw rpcError
         }
 
-        // Mic model associations (comma-delimited; names sorted alphabetically)
-        const { data: micModels, error: micModelsError } = await supabase
-          .from('base_mic_models')
-          .select('model(name)')
-          .eq('base', row.id)
-
-        if (micModelsError) {
-          console.error('Error fetching mic models for base', row.id, micModelsError)
-          row.micModelNames = dash
-        } else {
-          const names = (micModels ?? [])
-            .map((r) => (r as { model?: { name?: string | null } | null }).model?.name ?? null)
-            .filter((n): n is string => typeof n === 'string' && n.length > 0)
-
-          names.sort((a, b) => a.localeCompare(b))
-          row.micModelNames = names.length > 0 ? names.join(', ') : dash
+        if (!rpcData) {
+          throw new Error('No data returned from get_bases_with_models()')
         }
-      }
 
-
-      setRows(baseRows)
+        setRows(rpcData as BaseRow[])
+      })
     } catch (e) {
       const msg = e instanceof Error ? e.message : messages.bases.feedback.loadFailed
       setError(msg)
@@ -270,7 +208,7 @@ export default function BasePanel({ messages, canWrite }: BasePanelProps) {
 
     setError(null)
     setMoveDialogOpen(true)
-    setMoveBaseId(row.id)
+    setMoveBaseId(row.base_id)
     setMoveLocationId('')
 
     setMoveLocationChoices([])
@@ -283,6 +221,7 @@ export default function BasePanel({ messages, canWrite }: BasePanelProps) {
   }
 
   async function confirmMoveBase() {
+    console.log('confirmMoveBase', { moveBaseId, moveLocationId })
     if (!supabase) {
       return
     }
@@ -366,15 +305,15 @@ export default function BasePanel({ messages, canWrite }: BasePanelProps) {
 
     copy.sort((a, b) => {
       switch (sortColumn) {
-        case 'identifier':
-          return (a.identifier - b.identifier) * dirMul
-        case 'latestLocationName': {
-          const av = a.latestLocationName ?? ''
-          const bv = b.latestLocationName ?? ''
+        case 'base_identifier':
+          return (a.base_identifier - b.base_identifier) * dirMul
+        case 'latest_location_name': {
+          const av = a.latest_location_name ?? ''
+          const bv = b.latest_location_name ?? ''
           return av.localeCompare(bv) * dirMul
         }
-        case 'micModelNames': {
-          return a.micModelNames.localeCompare(b.micModelNames) * dirMul
+        case 'model_names': {
+          return a.model_names.localeCompare(b.model_names) * dirMul
         }
         default:
           return 0
@@ -470,7 +409,7 @@ export default function BasePanel({ messages, canWrite }: BasePanelProps) {
               <thead>
                 <tr>
                   <th
-                    onClick={() => toggleSort('identifier')}
+                    onClick={() => toggleSort('base_identifier')}
                     style={{
                       cursor: 'pointer',
                       userSelect: 'none',
@@ -482,20 +421,10 @@ export default function BasePanel({ messages, canWrite }: BasePanelProps) {
                     }}
                   >
                     {messages.bases.table.identifier}
-                    <SortIcon active={sortColumn === 'identifier'} sortDirection={sortDirection} />
+                    <SortIcon active={sortColumn === 'base_identifier'} sortDirection={sortDirection} />
                   </th>
                   <th
-                    style={{
-                      textAlign: 'left',
-                      borderBottom: '1px solid var(--border)',
-                      background: 'var(--table-header-bg)',
-                      padding: '8px 6px',
-                    }}
-                  >
-                    {messages.bases.table.maxMicCount}
-                  </th>
-                  <th
-                    onClick={() => toggleSort('micModelNames')}
+                    onClick={() => toggleSort('model_names')}
                     style={{
                       cursor: 'pointer',
                       userSelect: 'none',
@@ -507,12 +436,12 @@ export default function BasePanel({ messages, canWrite }: BasePanelProps) {
                     }}
                   >
                     {messages.bases.table.micModelNames}
-                    <SortIcon active={sortColumn === 'micModelNames'} sortDirection={sortDirection} />
+                    <SortIcon active={sortColumn === 'model_names'} sortDirection={sortDirection} />
                   </th>
 
 
                   <th
-                    onClick={() => toggleSort('latestLocationName')}
+                    onClick={() => toggleSort('latest_location_name')}
                     style={{
                       cursor: 'pointer',
                       userSelect: 'none',
@@ -524,7 +453,7 @@ export default function BasePanel({ messages, canWrite }: BasePanelProps) {
                     }}
                   >
                     {messages.bases.table.latestLocation}
-                    <SortIcon active={sortColumn === 'latestLocationName'} sortDirection={sortDirection} />
+                    <SortIcon active={sortColumn === 'latest_location_name'} sortDirection={sortDirection} />
                   </th>
 
                   {canWrite ? (
@@ -544,12 +473,10 @@ export default function BasePanel({ messages, canWrite }: BasePanelProps) {
               <tbody>
                 {sortedRows.map((row: BaseRow) => (
 
-
-                  <tr key={row.id}>
-                    <td style={{ borderBottom: '1px solid var(--border)', padding: '8px 6px' }}>{row.identifier}</td>
-                    <td style={{ borderBottom: '1px solid var(--border)', padding: '8px 6px' }}>{row.maxMicCount}</td>
-                    <td style={{ borderBottom: '1px solid var(--border)', padding: '8px 6px' }}>{row.micModelNames}</td>
-                    <td style={{ borderBottom: '1px solid var(--border)', padding: '8px 6px' }}>{row.latestLocationName ?? ''}</td>
+                  <tr key={row.base_id}>
+                    <td style={{ borderBottom: '1px solid var(--border)', padding: '8px 6px' }}>{row.base_identifier}</td>
+                    <td style={{ borderBottom: '1px solid var(--border)', padding: '8px 6px' }}>{row.model_names}</td>
+                    <td style={{ borderBottom: '1px solid var(--border)', padding: '8px 6px' }}>{row.latest_location_name ?? ''}</td>
                     {canWrite ? (
 
                       <td style={{ borderBottom: '1px solid var(--border)', padding: '8px 6px' }}>
@@ -566,7 +493,7 @@ export default function BasePanel({ messages, canWrite }: BasePanelProps) {
                           <button
                             type="button"
                             onClick={() => {
-                              setEditingBaseId(row.id)
+                              setEditingBaseId(row.base_id)
                               setBaseEditorOpen(true)
                             }}
                             disabled={loading}
@@ -578,7 +505,7 @@ export default function BasePanel({ messages, canWrite }: BasePanelProps) {
                           <button
                             type="button"
                             onClick={() => {
-                              setDeleteTarget({ id: row.id, name: null })
+                              setDeleteTarget({ id: row.base_id, name: row.base_identifier.toString() })
                               setDeleteDialogOpen(true)
                             }}
                             disabled={loading}
@@ -648,7 +575,7 @@ export default function BasePanel({ messages, canWrite }: BasePanelProps) {
 
           {moveBaseId !== null ? (
             <div style={{ marginBottom: 10, opacity: 0.9 }}>
-              {rows.find((r) => r.id === moveBaseId)?.identifier ?? ''}
+              {rows.find((r) => r.base_id === moveBaseId)?.base_identifier ?? ''}
             </div>
           ) : null}
 
