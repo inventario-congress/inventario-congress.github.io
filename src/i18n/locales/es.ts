@@ -319,8 +319,7 @@ const es = {
     },
     table: {
       identifier: 'Número',
-      maxMicCount: 'Cantidad máxima de micrófonos',
-      micModelNames: 'Modelos de micrófono',
+      micModelNames: 'Modelos de mic',
       latestLocation: 'Ubicación',
       actions: 'Acciones',
       empty: 'Todavía no hay bases.',

@@ -424,16 +424,6 @@ export default function BasePanel({ messages, canWrite }: BasePanelProps) {
                     <SortIcon active={sortColumn === 'base_identifier'} sortDirection={sortDirection} />
                   </th>
                   <th
-                    style={{
-                      textAlign: 'left',
-                      borderBottom: '1px solid var(--border)',
-                      background: 'var(--table-header-bg)',
-                      padding: '8px 6px',
-                    }}
-                  >
-                    {messages.bases.table.maxMicCount}
-                  </th>
-                  <th
                     onClick={() => toggleSort('model_names')}
                     style={{
                       cursor: 'pointer',
@@ -485,7 +475,6 @@ export default function BasePanel({ messages, canWrite }: BasePanelProps) {
 
                   <tr key={row.base_id}>
                     <td style={{ borderBottom: '1px solid var(--border)', padding: '8px 6px' }}>{row.base_identifier}</td>
-                    <td style={{ borderBottom: '1px solid var(--border)', padding: '8px 6px' }}>{row.max_mic_count}</td>
                     <td style={{ borderBottom: '1px solid var(--border)', padding: '8px 6px' }}>{row.model_names}</td>
                     <td style={{ borderBottom: '1px solid var(--border)', padding: '8px 6px' }}>{row.latest_location_name ?? ''}</td>
                     {canWrite ? (
