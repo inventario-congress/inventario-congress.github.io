@@ -151,8 +151,6 @@ export default function BasePanel({ messages, canWrite }: BasePanelProps) {
       return
     }
 
-    const dash = '—'
-
     setError(null)
     setLoading(true)
 
@@ -547,7 +545,7 @@ export default function BasePanel({ messages, canWrite }: BasePanelProps) {
           deleteTarget
             ? [
                 {
-                  id: deleteTarget.base_id,
+                  id: deleteTarget.id,
                   name: deleteTarget.name,
                   identifier: (deleteTarget.name ?? '') ? undefined : deleteTarget.id,
                 },
