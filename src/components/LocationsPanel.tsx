@@ -15,12 +15,14 @@ type LocationsPanelProps = {
   canWrite: boolean
 }
 
+import LocationEditor from './LocationEditor'
+
 export default function LocationsPanel({ messages, canWrite }: LocationsPanelProps) {
-  const [name, setName] = useState('')
-  const [address, setAddress] = useState('')
-  const [editingId, setEditingId] = useState<number | null>(null)
   const [rows, setRows] = useState<LocationRow[]>([])
   const [loading, setLoading] = useState(false)
+  const [locationEditorOpen, setLocationEditorOpen] = useState(false)
+  const [editingLocationId, setEditingLocationId] = useState<number | null>(null)
+
 
   const [deleteDialogOpen, setDeleteDialogOpen] = useState(false)
   const [deleteTarget, setDeleteTarget] = useState<{ id: number; name: string } | null>(null)
@@ -82,66 +84,14 @@ export default function LocationsPanel({ messages, canWrite }: LocationsPanelPro
     }
   }, [loadLocations])
 
-  async function saveLocation() {
-    if (!supabase || !canWrite) {
-      return
-    }
 
-    const trimmedName = name.trim()
-    const trimmedAddress = address.trim()
-
-    if (!trimmedName) {
-      return
-    }
-
-    setLoading(true)
-    setError(null)
-
-    try {
-      if (editingId === null) {
-        const { error: createError } = await supabase.from('location').insert({
-          name: trimmedName,
-          address: trimmedAddress || null,
-        })
-
-        if (createError) throw createError
-      } else {
-        const { error: updateError } = await supabase
-          .from('location')
-          .update({ name: trimmedName, address: trimmedAddress || null })
-          .eq('id', editingId)
-
-        if (updateError) throw updateError
-      }
-
-      setEditingId(null)
-      setName('')
-      setAddress('')
-      await loadLocations()
-    } catch (e) {
-      const fallback = editingId === null ? messages.locations.feedback.createFailed : messages.locations.feedback.updateFailed
-      setError(e instanceof Error ? e.message : fallback)
-    } finally {
-      setLoading(false)
-    }
-  }
 
   function startEdit(row: LocationRow) {
-    if (!canWrite) {
-      return
-    }
-
-    setEditingId(row.id)
-    setName(row.name)
-    setAddress(row.address ?? '')
-    setError(null)
+    if (!canWrite) return
+    setEditingLocationId(row.id)
+    setLocationEditorOpen(true)
   }
 
-  function cancelEdit() {
-    setEditingId(null)
-    setName('')
-    setAddress('')
-  }
 
   async function deleteLocation(id: number) {
     if (!supabase || !canWrite) {
@@ -155,9 +105,7 @@ export default function LocationsPanel({ messages, canWrite }: LocationsPanelPro
       const { error: deleteError } = await supabase.from('location').delete().eq('id', id)
       if (deleteError) throw deleteError
 
-      if (editingId === id) {
-        cancelEdit()
-      }
+
 
       await loadLocations()
     } catch (e) {
@@ -167,9 +115,10 @@ export default function LocationsPanel({ messages, canWrite }: LocationsPanelPro
     }
   }
 
-  return (
+    return (
     <div style={{ maxWidth: 820, margin: '0 auto', padding: 16, textAlign: 'left' }}>
       <h2 style={{ marginTop: 0 }}>{messages.locations.title}</h2>
+
 
       <DeleteConfirmation
         open={deleteDialogOpen}
@@ -202,52 +151,57 @@ export default function LocationsPanel({ messages, canWrite }: LocationsPanelPro
       />
 
 
+      <LocationEditor
+        messages={messages}
+        canWrite={canWrite}
+        isOpen={locationEditorOpen}
+        locationId={editingLocationId}
+        onClose={() => {
+          setLocationEditorOpen(false)
+          setEditingLocationId(null)
+        }}
+        onSaved={async () => {
+          setError(null)
+          setLocationEditorOpen(false)
+          setEditingLocationId(null)
+          await loadLocations()
+        }}
+      />
+
       {!canWrite ? <p>{messages.locations.readOnly}</p> : null}
 
       {canWrite ? (
-        <div style={{ display: 'grid', gap: 10, marginBottom: 18 }}>
-          <label htmlFor="location-name">{messages.locations.fields.name}</label>
-          <input
-            id="location-name"
-            value={name}
-            onChange={(event) => setName(event.target.value)}
-            type="text"
-            placeholder={messages.locations.fields.name}
-            style={{ padding: 10, borderRadius: 6, border: '1px solid var(--border)' }}
-          />
-
-          <label htmlFor="location-address">{messages.locations.fields.address}</label>
-          <input
-            id="location-address"
-            value={address}
-            onChange={(event) => setAddress(event.target.value)}
-            type="text"
-            placeholder={messages.locations.fields.address}
-            style={{ padding: 10, borderRadius: 6, border: '1px solid var(--border)' }}
-          />
-
-          <div style={{ display: 'flex', gap: 10, flexWrap: 'wrap' }}>
-            <button
-              type="button"
-              onClick={saveLocation}
-              disabled={loading || !name.trim()}
-              style={{ padding: '10px 14px', borderRadius: 6, cursor: 'pointer' }}
-            >
-              {editingId === null ? messages.locations.actions.create : messages.locations.actions.update}
-            </button>
-            {editingId !== null ? (
-              <button
-                type="button"
-                onClick={cancelEdit}
-                disabled={loading}
-                style={{ padding: '10px 14px', borderRadius: 6, cursor: 'pointer' }}
-              >
-                {messages.locations.actions.cancelEdit}
-              </button>
-            ) : null}
-          </div>
+        <div style={{ display: 'flex', alignItems: 'flex-start', justifyContent: 'space-between', gap: 12, marginTop: 12 }}>
+          <div style={{ marginTop: 6 }} />
+          <button
+            type="button"
+            onClick={() => {
+              setEditingLocationId(null)
+              setLocationEditorOpen(true)
+            }}
+            aria-label={messages.locations.actions.create}
+            title={messages.locations.actions.create}
+            style={{
+              width: 44,
+              height: 44,
+              borderRadius: 12,
+              border: '1px solid var(--border)',
+              background: 'var(--card)',
+              cursor: 'pointer',
+              display: 'inline-flex',
+              alignItems: 'center',
+              justifyContent: 'center',
+              fontSize: 28,
+              lineHeight: 1,
+              padding: 0,
+            }}
+            disabled={loading}
+          >
+            +
+          </button>
         </div>
-      ) : null }
+      ) : null}
+
 
       {error ? (
         <div style={{ color: 'crimson', marginBottom: 10 }}>
