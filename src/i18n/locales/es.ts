@@ -231,6 +231,7 @@ const es = {
       address: 'Dirección',
       actions: 'Acciones',
       empty: 'Todavía no hay ubicaciones.',
+      rooms: 'Salas',
     },
     feedback: {
       loaded: 'Ubicaciones cargadas.',

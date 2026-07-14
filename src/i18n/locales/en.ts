@@ -230,6 +230,7 @@ const en = {
       address: 'Address',
       actions: 'Actions',
       empty: 'No locations yet.',
+      rooms: 'Rooms',
     },
     feedback: {
       loaded: 'Locations loaded.',

@@ -8,6 +8,7 @@ type LocationRow = {
   id: number
   name: string
   address: string | null
+  roomNames: string
 }
 
 type LocationsPanelProps = {
@@ -38,19 +39,18 @@ export default function LocationsPanel({ messages, canWrite }: LocationsPanelPro
     setError(null)
 
     try {
-      const { data, error: loadError } = await supabase
-        .from('location')
-        .select('id, name, address')
-        .order('id', { ascending: false })
+      // Use RPC get_locations_with_room_names() to fetch locations with their associated room names
+      const { data, error: loadError } = await supabase.rpc('get_locations_with_room_names')
 
       if (loadError) throw loadError
 
       setRows(
         (data ?? [])
           .map((entry) => ({
-            id: entry.id as number,
-            name: entry.name as string,
-            address: (entry.address as string | null) ?? null,
+            id: entry.location_id as number,
+            name: entry.location_name as string,
+            address: (entry.location_address as string | null) ?? '',
+            roomNames: (entry.room_names as string | null) ?? '',
           }))
           .sort((a, b) => a.name.localeCompare(b.name)),
       )
@@ -234,6 +234,16 @@ export default function LocationsPanel({ messages, canWrite }: LocationsPanelPro
                     padding: '8px 6px',
                   }}
                 >
+                  {messages.locations.table.rooms}
+                </th>
+                <th
+                  style={{
+                    textAlign: 'left',
+                    borderBottom: '1px solid var(--border)',
+                    background: 'var(--table-header-bg)',
+                    padding: '8px 6px',
+                  }}
+                >
                   {messages.locations.table.address}
                 </th>
                 {canWrite ? (
@@ -254,6 +264,7 @@ export default function LocationsPanel({ messages, canWrite }: LocationsPanelPro
               {rows.map((row) => (
                 <tr key={row.id}>
                   <td style={{ borderBottom: '1px solid var(--border)', padding: '8px 6px' }}>{row.name}</td>
+                  <td style={{ borderBottom: '1px solid var(--border)', padding: '8px 6px' }}>{row.roomNames ?? '-'}</td>
                   <td style={{ borderBottom: '1px solid var(--border)', padding: '8px 6px' }}>{row.address ?? '-'}</td>
                   {canWrite ? (
                     <td style={{ borderBottom: '1px solid var(--border)', padding: '8px 6px' }}>
