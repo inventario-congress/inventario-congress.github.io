@@ -339,9 +339,13 @@ const en = {
     dialogs: {
       moveBase: {
         title: 'Move base to a location',
+        description: 'Select a location and room, then submit to record the move.',
         searchLabel: 'Location',
         searchPlaceholder: 'Search locations...',
-        moveDisabledReason: 'Select a location to enable move',
+        roomLabel: 'Room',
+        roomSearchPlaceholder: 'Select a room...',
+        roomsNoneAssociated: 'No rooms associated with this location.',
+        moveDisabledReason: 'Select a location and room to enable move',
         empty: 'No available locations.',
       },
       editor: {

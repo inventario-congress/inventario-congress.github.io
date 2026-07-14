@@ -340,9 +340,13 @@ const es = {
     dialogs: {
       moveBase: {
         title: 'Mover la base a una ubicación',
+        description: 'Selecciona una ubicación y una sala, luego envía para registrar el movimiento.',
         searchLabel: 'Ubicación',
         searchPlaceholder: 'Buscar ubicaciones...',
-        moveDisabledReason: 'Selecciona una ubicación para habilitar mover',
+        roomLabel: 'Sala',
+        roomSearchPlaceholder: 'Selecciona una sala...',
+        roomsNoneAssociated: 'No hay salas asociadas a esta ubicación.',
+        moveDisabledReason: 'Selecciona una ubicación y una sala para habilitar mover',
         empty: 'No hay ubicaciones disponibles.',
       },
       editor: {
