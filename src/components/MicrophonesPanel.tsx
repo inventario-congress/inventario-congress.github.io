@@ -422,9 +422,6 @@ export default function MicrophonesPanel({ messages, canWrite }: MicrophonesPane
         }}
       />
 
-
-      {!canWrite ? <div style={{ marginTop: 12, textAlign: 'left' }}>{messages.microphones.readOnly}</div> : null}
-
       <MicEditor
         messages={messages}
         canWrite={canWrite}

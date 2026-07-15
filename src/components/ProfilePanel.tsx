@@ -280,7 +280,6 @@ export default function ProfilePanel({ messages, email, name, lastName }: Profil
   return (
     <div style={{ maxWidth: 760, margin: '0 auto', padding: 16, textAlign: 'left' }}>
       <h2 style={{ marginTop: 0 }}>{messages.profile.title}</h2>
-      <p style={{ marginTop: 0 }}>{messages.profile.readOnly}</p>
 
       <div style={{ display: 'grid', gap: 10 }}>
         <div>
