@@ -360,7 +360,35 @@ export default function MicrophonesPanel({ messages, canWrite }: MicrophonesPane
   return (
 
       <div style={{ maxWidth: 820, margin: '0 auto', padding: 16, textAlign: 'left' }}>
-      <h2 style={{ marginTop: 24 }}>{messages.microphones.title}</h2>
+      <div style={{ display: 'flex', alignItems: 'flex-start', justifyContent: 'space-between', gap: 12, marginTop: 24 }}>
+        <h2 style={{ margin: 0 }}>{messages.microphones.title}</h2>
+
+        {canWrite ? (
+          <button
+            type="button"
+            onClick={startCreate}
+            aria-label={messages.microphones.actions.create}
+            title={messages.microphones.actions.create}
+            style={{
+              width: 44,
+              height: 44,
+              borderRadius: 12,
+              border: '1px solid var(--border)',
+              background: 'var(--card)',
+              cursor: 'pointer',
+              display: 'inline-flex',
+              alignItems: 'center',
+              justifyContent: 'center',
+              fontSize: 28,
+              lineHeight: 1,
+              padding: 0,
+            }}
+            disabled={loading}
+          >
+            +
+          </button>
+        ) : null}
+      </div>
 
       <DeleteConfirmation
         open={deleteDialogOpen}
@@ -395,36 +423,7 @@ export default function MicrophonesPanel({ messages, canWrite }: MicrophonesPane
       />
 
 
-      {canWrite ? (
-        <div style={{ display: 'flex', alignItems: 'flex-start', justifyContent: 'space-between', gap: 12, marginTop: 12 }}>
-          <div style={{ marginTop: 6 }} />
-          <button
-            type="button"
-            onClick={startCreate}
-            aria-label={messages.microphones.actions.create}
-            title={messages.microphones.actions.create}
-            style={{
-              width: 44,
-              height: 44,
-              borderRadius: 12,
-              border: '1px solid var(--border)',
-              background: 'var(--card)',
-              cursor: 'pointer',
-              display: 'inline-flex',
-              alignItems: 'center',
-              justifyContent: 'center',
-              fontSize: 28,
-              lineHeight: 1,
-              padding: 0,
-            }}
-            disabled={loading}
-          >
-            +
-          </button>
-        </div>
-      ) : (
-        <div style={{ marginTop: 12, textAlign: 'left' }}>{messages.microphones.readOnly}</div>
-      )}
+      {!canWrite ? <div style={{ marginTop: 12, textAlign: 'left' }}>{messages.microphones.readOnly}</div> : null}
 
       <MicEditor
         messages={messages}

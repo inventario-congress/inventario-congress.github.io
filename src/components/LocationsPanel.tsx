@@ -120,7 +120,38 @@ export default function LocationsPanel({ messages, canWrite }: LocationsPanelPro
 
     return (
     <div style={{ maxWidth: 820, margin: '0 auto', padding: 16, textAlign: 'left' }}>
-      <h2 style={{ marginTop: 0 }}>{messages.locations.title}</h2>
+      <div style={{ display: 'flex', alignItems: 'flex-start', justifyContent: 'space-between', gap: 12, marginTop: 24 }}>
+        <h2 style={{ margin: 0 }}>{messages.locations.title}</h2>
+
+        {canWrite ? (
+          <button
+            type="button"
+            onClick={() => {
+              setEditingLocationId(null)
+              setLocationEditorOpen(true)
+            }}
+            aria-label={messages.locations.actions.create}
+            title={messages.locations.actions.create}
+            style={{
+              width: 44,
+              height: 44,
+              borderRadius: 12,
+              border: '1px solid var(--border)',
+              background: 'var(--card)',
+              cursor: 'pointer',
+              display: 'inline-flex',
+              alignItems: 'center',
+              justifyContent: 'center',
+              fontSize: 28,
+              lineHeight: 1,
+              padding: 0,
+            }}
+            disabled={loading}
+          >
+            +
+          </button>
+        ) : null}
+      </div>
 
 
       <DeleteConfirmation
@@ -173,45 +204,13 @@ export default function LocationsPanel({ messages, canWrite }: LocationsPanelPro
 
       {!canWrite ? <p>{messages.locations.readOnly}</p> : null}
 
-      {canWrite ? (
-        <div style={{ display: 'flex', alignItems: 'flex-start', justifyContent: 'space-between', gap: 12, marginTop: 12 }}>
-          <div style={{ marginTop: 6 }} />
-          <button
-            type="button"
-            onClick={() => {
-              setEditingLocationId(null)
-              setLocationEditorOpen(true)
-            }}
-            aria-label={messages.locations.actions.create}
-            title={messages.locations.actions.create}
-            style={{
-              width: 44,
-              height: 44,
-              borderRadius: 12,
-              border: '1px solid var(--border)',
-              background: 'var(--card)',
-              cursor: 'pointer',
-              display: 'inline-flex',
-              alignItems: 'center',
-              justifyContent: 'center',
-              fontSize: 28,
-              lineHeight: 1,
-              padding: 0,
-            }}
-            disabled={loading}
-          >
-            +
-          </button>
-        </div>
-      ) : null}
-
-
       {error ? (
         <div style={{ color: 'crimson', marginBottom: 10 }}>
           <strong>{messages.auth.feedback.error}</strong> {error}
         </div>
       ) : null}
 
+      <div style={{ marginTop: 24, textAlign: 'left' }}>
       {rows.length === 0 ? (
         <div>{messages.locations.table.empty}</div>
       ) : (
@@ -301,6 +300,7 @@ export default function LocationsPanel({ messages, canWrite }: LocationsPanelPro
           </table>
         </div>
       )}
+      </div>
     </div>
   )
 }
