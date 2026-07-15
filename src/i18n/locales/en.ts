@@ -193,6 +193,7 @@ const en = {
           updateFailed: 'Failed to update location',
           createRoomFailed: 'Failed to create room',
           roomsCreateRequiresSavedLocation: 'Save the location first before adding rooms.',
+          duplicateRoomForLocation: 'A room with this name already exists for this location.',
           submitting: 'Submitting...',
         },
         rooms: {

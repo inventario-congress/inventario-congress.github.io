@@ -273,6 +273,31 @@ const loadForEdit = useCallback(async () => {
     const trimmed = addRoomName.trim()
     if (!trimmed) return
 
+    // Disallow duplicate room names for the same location.
+    // Use the existing RPC used for loading rooms for the location.
+    try {
+      const { data: rpcData, error: rpcError } = await supabase.rpc('get_rooms_for_location', {
+        p_location_id: locationId,
+      })
+
+      if (rpcError) throw rpcError
+
+      const mapped = rpcData as unknown as RoomChoice[]
+      const inputLower = trimmed.toLocaleLowerCase()
+
+      const existsForLocation = mapped.some(
+        (r) => r.room_name?.toLocaleLowerCase() === inputLower,
+      )
+
+      if (existsForLocation) {
+        setAddRoomError(editorStrings.feedback.duplicateRoomForLocation)
+        return
+      }
+    } catch {
+      // Best-effort: if the duplicate check fails, allow the create attempt to proceed.
+    }
+
+
     setAddRoomLoading(true)
     setAddRoomError(null)
 

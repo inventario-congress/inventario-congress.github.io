@@ -193,6 +193,7 @@ const es = {
           updateFailed: 'No se pudo actualizar la ubicación',
           createRoomFailed: 'No se pudo crear la sala',
           roomsCreateRequiresSavedLocation: 'Primero guarda la ubicación antes de agregar salas.',
+          duplicateRoomForLocation: 'Ya existe una sala con ese nombre para esta ubicación.',
           submitting: 'Enviando...',
         },
         rooms: {
