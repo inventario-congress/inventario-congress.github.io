@@ -149,16 +149,9 @@ export default function AuthPanel({ messages }: AuthPanelProps) {
     <div style={{ maxWidth: 640, margin: '0 auto', padding: 16 }}>
       <h2 style={{ marginTop: 24 }}>{messages.auth.title}</h2>
 
-      <div style={{ margin: '12px 0' }}>
-        <div>
-          <strong>{messages.auth.session.label}</strong>{' '}
-          {sessionEmail ?? messages.auth.session.signedOut}
-        </div>
-      </div>
-
       <form onSubmit={handleAuthSubmit} style={{ display: 'grid', gap: 10, marginTop: 12 }}>
         <h3 style={{ margin: '0 0 4px', textAlign: 'left' }}>
-          {authMode === 'signIn' ? messages.auth.panels.signInTitle : messages.auth.panels.signUpTitle}
+          {authMode === 'signIn' ? '' : messages.auth.panels.signUpTitle}
         </h3>
 
         {authMode === 'signUp' ? (
@@ -192,9 +185,6 @@ export default function AuthPanel({ messages }: AuthPanelProps) {
           </>
         ) : null}
 
-        <label htmlFor="auth-email" style={{ textAlign: 'left' }}>
-          {messages.auth.fields.email}
-        </label>
         <input
           id="auth-email"
           value={email}
@@ -211,9 +201,6 @@ export default function AuthPanel({ messages }: AuthPanelProps) {
             border: '1px solid var(--border)',
           }}
         />
-        <label htmlFor="auth-password" style={{ textAlign: 'left' }}>
-          {messages.auth.fields.password}
-        </label>
         <div style={{ position: 'relative', width: '100%' }}>
           <input
             id="auth-password"
@@ -325,18 +312,6 @@ export default function AuthPanel({ messages }: AuthPanelProps) {
               {messages.auth.actions.signUp}
             </button>
           )}
-
-          {/* Only show sign-out when not in signUp mode and when authenticated */}
-          {authMode === 'signIn' ? (
-            <button
-              type="button"
-              onClick={signOut}
-              disabled={missingConfig || authLoading || !sessionEmail}
-              style={{ padding: '10px 14px', borderRadius: 6, cursor: 'pointer' }}
-            >
-              {messages.auth.actions.signOut}
-            </button>
-          ) : null}
         </div>
 
         <div style={{ textAlign: 'left' }}>

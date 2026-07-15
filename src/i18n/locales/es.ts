@@ -13,11 +13,7 @@ const es = {
     toDark: 'Cambiar a tema oscuro',
   },
   auth: {
-    title: 'Autenticación',
-    session: {
-      label: 'Sesión iniciada como:',
-      signedOut: 'Sin iniciar sesión',
-    },
+    title: 'Inventario Congress',
     fields: {
       name: 'Nombre',
       lastName: 'Apellido',
