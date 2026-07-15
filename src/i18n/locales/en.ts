@@ -341,7 +341,10 @@ const en = {
         title: 'Move base to a location',
         searchLabel: 'Location',
         searchPlaceholder: 'Search locations...',
-        moveDisabledReason: 'Select a location to enable move',
+        roomLabel: 'Room',
+        roomSearchPlaceholder: 'Select a room...',
+        roomsNoneAssociated: 'No rooms associated with this location.',
+        moveDisabledReason: 'Select a location and room to enable move',
         empty: 'No available locations.',
       },
       editor: {
