@@ -113,7 +113,8 @@ export default function BaseMover({ messages, canWrite, open, baseId, onClose, o
       if (!isActive()) return
 
       setRooms(mapped)
-      setSelectedRoomId(mapped.length > 0 ? mapped[0].room_id : '')
+      // IMPORTANT: do not mutate selectedRoomId here; the user selection should remain stable
+      // and this function may race with user interaction.
       setRoomsLoading(false)
     },
     []
