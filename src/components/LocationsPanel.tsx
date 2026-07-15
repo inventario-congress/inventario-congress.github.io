@@ -236,16 +236,6 @@ export default function LocationsPanel({ messages, canWrite }: LocationsPanelPro
                 >
                   {messages.locations.table.rooms}
                 </th>
-                <th
-                  style={{
-                    textAlign: 'left',
-                    borderBottom: '1px solid var(--border)',
-                    background: 'var(--table-header-bg)',
-                    padding: '8px 6px',
-                  }}
-                >
-                  {messages.locations.table.address}
-                </th>
                 {canWrite ? (
                   <th
                     style={{
@@ -265,7 +255,6 @@ export default function LocationsPanel({ messages, canWrite }: LocationsPanelPro
                 <tr key={row.id}>
                   <td style={{ borderBottom: '1px solid var(--border)', padding: '8px 6px' }}>{row.name}</td>
                   <td style={{ borderBottom: '1px solid var(--border)', padding: '8px 6px' }}>{row.roomNames ?? '-'}</td>
-                  <td style={{ borderBottom: '1px solid var(--border)', padding: '8px 6px' }}>{row.address ?? '-'}</td>
                   {canWrite ? (
                     <td style={{ borderBottom: '1px solid var(--border)', padding: '8px 6px' }}>
                       <div style={{ display: 'flex', gap: 8, flexWrap: 'wrap' }}>
