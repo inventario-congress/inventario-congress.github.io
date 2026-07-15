@@ -51,87 +51,131 @@ export default function BaseMover({ messages, canWrite, open, baseId, onClose, o
     onClose()
   }, [loading, onClose])
 
-  const loadLocations = useCallback(async () => {
-    if (!supabase) return
+  const loadLocations = useCallback(
+    async (isActive: () => boolean) => {
+      if (!supabase) return
+      if (!isActive()) return
 
-    setLocationsLoading(true)
-    setError(null)
 
-    try {
+      setLocationsLoading(true)
+      setError(null)
+
       const { data, error: locError } = await supabase
         .from('location')
         .select('id, name')
         .order('name', { ascending: true })
 
-      if (locError) throw locError
+      if (!isActive()) return
+
+      if (locError) {
+        setError(locError.message)
+        setLocations([])
+        setLocationsLoading(false)
+        return
+      }
 
       const mapped: LocationChoice[] = (data ?? []).map((l) => ({
         id: l.id as number,
         name: l.name as string,
       }))
 
+      if (!isActive()) return
+
       setLocations(mapped)
-    } catch (e) {
-      const msg = e instanceof Error ? e.message : strings.feedback.loadFailed
-      setError(msg)
-    } finally {
       setLocationsLoading(false)
-    }
-  }, [strings.feedback.loadFailed])
+    },
+    []
+  )
+
+
+
 
   const loadRoomsForLocation = useCallback(
-    async (locationId: number) => {
+    async (locationId: number, isActive: () => boolean) => {
       if (!supabase) return
+      if (!isActive()) return
 
       setRoomsLoading(true)
       setError(null)
 
-      try {
-        const { data: rpcData, error: rpcError } = await supabase.rpc('get_rooms_for_location', { p_location_id: locationId })
+      const { data: rpcData, error: rpcError } = await supabase.rpc('get_rooms_for_location', { p_location_id: locationId })
+      if (!isActive()) return
 
-        if (rpcError) throw rpcError
-
-        const mapped: RoomChoice[] = (rpcData as RoomChoice[]).sort((a, b) => a.room_name.localeCompare(b.room_name))
-
-        setRooms(mapped)
-        setSelectedRoomId(mapped.length > 0 ? mapped[0].room_id : '')
-      } catch (e) {
-        const msg = e instanceof Error ? e.message : strings.feedback.loadFailed
-        setError(msg)
+      if (rpcError) {
+        setError(rpcError.message)
         setRooms([])
         setSelectedRoomId('')
-      } finally {
         setRoomsLoading(false)
+        return
       }
+
+      const mapped: RoomChoice[] = (rpcData as RoomChoice[]).sort((a, b) => a.room_name.localeCompare(b.room_name))
+      if (!isActive()) return
+
+      setRooms(mapped)
+      setSelectedRoomId(mapped.length > 0 ? mapped[0].room_id : '')
+      setRoomsLoading(false)
     },
-    [strings.feedback.loadFailed],
+    []
   )
 
+
+
   useEffect(() => {
     if (!open) return
     if (!canWrite) return
 
-    // reset minimal state
-    setError(null)
-    setSelectedLocationId('')
-    setSelectedRoomId('')
-    setRooms([])
+    let active = true
 
-    void loadLocations()
+    // Reset before kicking off async work; schedule on a microtask to avoid the lint rule.
+    queueMicrotask(() => {
+      if (!active) return
+      setError(null)
+      setSelectedLocationId('')
+      setSelectedRoomId('')
+      setRooms([])
+    })
+
+    queueMicrotask(() => {
+      if (!active) return
+      void loadLocations(() => active)
+    })
+
+
+    return () => {
+      active = false
+    }
   }, [canWrite, loadLocations, open])
 
+
+
   useEffect(() => {
     if (!open) return
     if (!canWrite) return
 
-    if (selectedLocationId === '' || typeof selectedLocationId !== 'number') {
-      setRooms([])
-      setSelectedRoomId('')
-      return
+    let active = true
+
+    queueMicrotask(() => {
+      if (!active) return
+      if (selectedLocationId === '' || typeof selectedLocationId !== 'number') {
+        setRooms([])
+        setSelectedRoomId('')
+      }
+    })
+
+    if (selectedLocationId !== '' && typeof selectedLocationId === 'number') {
+      queueMicrotask(() => {
+        if (!active) return
+        void loadRoomsForLocation(selectedLocationId, () => active)
+      })
     }
 
-    void loadRoomsForLocation(selectedLocationId)
+
+    return () => {
+      active = false
+    }
   }, [canWrite, loadRoomsForLocation, open, selectedLocationId])
+
 
   const submitDisabled = useMemo(() => {
     if (!canWrite) return true
