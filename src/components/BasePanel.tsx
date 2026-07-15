@@ -14,6 +14,7 @@ type BaseRow = {
   max_mic_count: number
   latest_location_id: number | null
   latest_location_name: string | null
+  latest_room_id: number | null
   model_names: string // comma-delimited, already sorted; never null
 }
 
@@ -53,6 +54,8 @@ export default function BasePanel({ messages, canWrite }: BasePanelProps) {
   const [error, setError] = useState<string | null>(null)
   const [moveDialogOpen, setMoveDialogOpen] = useState(false)
   const [moveBaseId, setMoveBaseId] = useState<number | null>(null)
+  const [moveLocationId, setMoveLocationId] = useState<number | null>(null)
+  const [moveRoomId, setMoveRoomId] = useState<number | null>(null)
   const [deleteDialogOpen, setDeleteDialogOpen] = useState(false)
   const [deleteTarget, setDeleteTarget] = useState<{ id: number; name?: string | null } | null>(null)
 
@@ -94,6 +97,8 @@ export default function BasePanel({ messages, canWrite }: BasePanelProps) {
   const resetMoveDialog = useCallback(() => {
     setMoveDialogOpen(false)
     setMoveBaseId(null)
+    setMoveLocationId(null)
+    setMoveRoomId(null)
   }, [])
 
 
@@ -161,6 +166,8 @@ export default function BasePanel({ messages, canWrite }: BasePanelProps) {
     setError(null)
     setMoveDialogOpen(true)
     setMoveBaseId(row.base_id)
+    setMoveLocationId(row.latest_location_id)
+    setMoveRoomId(row.latest_room_id)
   }
 
 
@@ -461,12 +468,15 @@ export default function BasePanel({ messages, canWrite }: BasePanelProps) {
         canWrite={canWrite}
         open={moveDialogOpen}
         baseId={moveBaseId}
+        locationId={moveLocationId}
+        roomId={moveRoomId}
         onClose={() => cancelMoveDialog()}
         onMoved={async () => {
           setError(null)
           await loadBases()
         }}
       />
+
 
     </div>
   )

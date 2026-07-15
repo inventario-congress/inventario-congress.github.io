@@ -18,11 +18,13 @@ type BaseMoverProps = {
   canWrite: boolean
   open: boolean
   baseId: number | null
+  locationId: number | null
+  roomId: number | null
   onClose: () => void
   onMoved: () => Promise<void> | void
 }
 
-export default function BaseMover({ messages, canWrite, open, baseId, onClose, onMoved }: BaseMoverProps) {
+export default function BaseMover({ messages, canWrite, open, baseId, locationId, roomId, onClose, onMoved }: BaseMoverProps) {
   const strings = messages.bases
   const dialogStrings = strings.dialogs.moveBase
 
@@ -91,7 +93,7 @@ export default function BaseMover({ messages, canWrite, open, baseId, onClose, o
 
 
   const loadRoomsForLocation = useCallback(
-    async (locationId: number, isActive: () => boolean) => {
+    async (locationId: number, isActive: () => boolean, latestRoomId: number | null) => {
       if (!supabase) return
       if (!isActive()) return
 
@@ -112,8 +114,9 @@ export default function BaseMover({ messages, canWrite, open, baseId, onClose, o
       const mapped: RoomChoice[] = (rpcData as RoomChoice[]).sort((a, b) => a.room_name.localeCompare(b.room_name))
       if (!isActive()) return
 
-      setRooms(mapped)
-      setSelectedRoomId(mapped.length > 0 ? mapped[0].room_id : '')
+      const filtered =
+        typeof latestRoomId === 'number' ? mapped.filter((r) => r.room_id !== latestRoomId) : mapped
+      setRooms(filtered)
       setRoomsLoading(false)
     },
     []
@@ -131,8 +134,8 @@ export default function BaseMover({ messages, canWrite, open, baseId, onClose, o
     queueMicrotask(() => {
       if (!active) return
       setError(null)
-      setSelectedLocationId('')
-      setSelectedRoomId('')
+      setSelectedLocationId(typeof locationId === 'number' ? locationId : '')
+      setSelectedRoomId(typeof roomId === 'number' ? roomId : '')
       setRooms([])
     })
 
@@ -141,11 +144,10 @@ export default function BaseMover({ messages, canWrite, open, baseId, onClose, o
       void loadLocations(() => active)
     })
 
-
     return () => {
       active = false
     }
-  }, [canWrite, loadLocations, open])
+  }, [canWrite, loadLocations, locationId, open, roomId])
 
 
 
@@ -166,16 +168,14 @@ export default function BaseMover({ messages, canWrite, open, baseId, onClose, o
     if (selectedLocationId !== '' && typeof selectedLocationId === 'number') {
       queueMicrotask(() => {
         if (!active) return
-        void loadRoomsForLocation(selectedLocationId, () => active)
+        void loadRoomsForLocation(selectedLocationId, () => active, roomId)
       })
     }
-
 
     return () => {
       active = false
     }
-  }, [canWrite, loadRoomsForLocation, open, selectedLocationId])
-
+  }, [canWrite, loadRoomsForLocation, open, roomId, selectedLocationId])
 
   const submitDisabled = useMemo(() => {
     if (!canWrite) return true
