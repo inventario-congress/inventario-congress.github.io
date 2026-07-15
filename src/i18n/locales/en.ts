@@ -13,9 +13,8 @@ const en = {
     toDark: 'Switch to dark theme',
   },
   auth: {
-    title: 'Authentication',
+    title: 'Congress Inventory',
     session: {
-      label: 'Signed in as:',
       signedOut: 'Not signed in',
     },
     fields: {
