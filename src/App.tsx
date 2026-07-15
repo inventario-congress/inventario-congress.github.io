@@ -52,7 +52,26 @@ function App() {
   const [isAuthenticated, setIsAuthenticated] = useState(false)
   const [isWriter, setIsWriter] = useState(false)
   const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false)
-  const [activePanel, setActivePanel] = useState<AppPanel>('microphones')
+
+  const ACTIVE_PANEL_STORAGE_KEY = 'inventario_congress:activePanel'
+
+  function getInitialActivePanel(): AppPanel {
+    if (typeof window === 'undefined') return 'microphones'
+
+    try {
+      const raw = window.localStorage.getItem(ACTIVE_PANEL_STORAGE_KEY)
+      if (raw === 'microphones' || raw === 'bases' || raw === 'locations' || raw === 'profile') {
+        return raw
+      }
+    } catch {
+      // ignore
+    }
+
+    return 'microphones'
+  }
+
+  const [activePanel, setActivePanel] = useState<AppPanel>(getInitialActivePanel)
+
 
   const [sessionEmail, setSessionEmail] = useState<string | null>(null)
   const [sessionName, setSessionName] = useState<string | null>(null)
@@ -104,10 +123,10 @@ function App() {
       await loadWriterAccess(session)
 
       if (session?.user) {
-        setActivePanel('microphones')
         setIsMobileMenuOpen(false)
       }
     })()
+
 
     const {
       data: { subscription },
@@ -115,9 +134,9 @@ function App() {
       void loadWriterAccess(session)
 
       if (event === 'SIGNED_IN') {
-        setActivePanel('microphones')
         setIsMobileMenuOpen(false)
       }
+
     })
 
     return () => {
@@ -227,10 +246,19 @@ function App() {
     await supabase.auth.signOut()
   }
 
+  useEffect(() => {
+    try {
+      window.localStorage.setItem(ACTIVE_PANEL_STORAGE_KEY, activePanel)
+    } catch {
+      // ignore
+    }
+  }, [activePanel])
+
   function handleSelectPanel(panel: AppPanel) {
     setActivePanel(panel)
     setIsMobileMenuOpen(false)
   }
+
 
   function renderPanel() {
     if (activePanel === 'microphones') {
