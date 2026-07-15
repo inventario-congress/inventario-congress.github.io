@@ -339,7 +339,6 @@ const en = {
     dialogs: {
       moveBase: {
         title: 'Move base to a location',
-        description: 'Select a location and room, then submit to record the move.',
         searchLabel: 'Location',
         searchPlaceholder: 'Search locations...',
         roomLabel: 'Room',

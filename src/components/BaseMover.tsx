@@ -93,16 +93,6 @@ export default function BaseMover({ messages, canWrite, open, baseId, onClose, o
 
         const mapped: RoomChoice[] = (rpcData as RoomChoice[]).sort((a, b) => a.room_name.localeCompare(b.room_name))
 
-        // De-dupe + filter invalid rows
-        // const cleaned = mapped
-        //   .filter((r) => typeof r.room_id === 'number' && typeof r.room_name === 'string')
-        //   .reduce<RoomChoice[]>((acc, r) => {
-        //     if (acc.some((x) => x.room_id === r.room_id)) return acc
-        //     acc.push(r)
-        //     return acc
-        //   }, [])
-        //   .sort((a, b) => a.room_name.localeCompare(b.room_name))
-
         setRooms(mapped)
         setSelectedRoomId(mapped.length > 0 ? mapped[0].room_id : '')
       } catch (e) {
@@ -229,7 +219,6 @@ export default function BaseMover({ messages, canWrite, open, baseId, onClose, o
         <div style={{ display: 'flex', alignItems: 'flex-start', justifyContent: 'space-between', gap: 12 }}>
           <div>
             <h3 style={{ margin: '0 0 6px 0' }}>{dialogStrings.title}</h3>
-            <p style={{ margin: 0, color: 'var(--text)' }}>{dialogStrings.description ?? ''}</p>
           </div>
           <button
             type="button"
