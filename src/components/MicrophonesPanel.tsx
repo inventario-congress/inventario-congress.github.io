@@ -143,7 +143,6 @@ export default function MicrophonesPanel({ messages, canWrite }: MicrophonesPane
     try {
       // Fetch microphones using RPC get_mics(), which returns the same fields as MicrophoneRow
       const { data: mappedRows, error: rpcError } = await supabase.rpc('get_mics')
-      console.log('RPC get_mics() returned:', mappedRows, rpcError)
 
       // Stable baseline ordering; `sortedRows` applies actual sort.
       mappedRows.sort((a, b) => {
