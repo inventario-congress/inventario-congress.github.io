@@ -277,6 +277,12 @@
   display: none;
 }
 
+.menu-toggle,
+.control-button {
+  min-height: 44px;
+}
+
+
 .menu-overlay {
   display: none;
 }
@@ -284,7 +290,18 @@
 @media (max-width: 900px) {
   .top-controls {
     padding: 12px;
+    align-items: flex-start;
   }
+
+  .top-controls .control-button {
+    min-height: 44px;
+    width: 44px;
+    height: 44px;
+    padding: 0;
+    justify-content: center;
+    display: inline-flex;
+  }
+
 
   .app-shell {
     grid-template-columns: 1fr;
@@ -295,16 +312,36 @@
   .menu-toggle {
     display: inline-flex;
     align-items: center;
-    gap: 8px;
-    justify-self: start;
-    padding: 8px 12px;
-    border-radius: 8px;
+    justify-content: center;
+    gap: 0;
+
+    /* bigger hamburger glyph */
+    font-size: 22px;
+
+
+    /* bigger tap target, icon-only */
+    width: 44px;
+    height: 44px;
+    padding: 0;
+
+    border-radius: 10px;
     border: 1px solid var(--border);
     background: var(--bg-soft);
     color: var(--text-h);
     cursor: pointer;
+
+    /* top-left */
+    position: fixed;
+    top: 12px;
+    left: 12px;
+
     z-index: 1201;
   }
+
+  .menu-toggle span:last-child {
+    display: none;
+  }
+
 
   .app-sidebar {
     position: fixed;
