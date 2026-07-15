@@ -49,10 +49,6 @@ export default function MicrophonesPanel({ messages, canWrite }: MicrophonesPane
   const [micEditorOpen, setMicEditorOpen] = useState(false)
   const [editingMicId, setEditingMicId] = useState<number | null>(null)
 
-  const [micTypeChoices, setMicTypeChoices] = useState<string[]>([])
-  void micTypeChoices
-
-
   const SORT_STORAGE_KEY = 'inventario_congress:microphones:sort'
 
   const [sortColumn, setSortColumn] = useState<SortColumn>(() => {
@@ -143,9 +139,11 @@ export default function MicrophonesPanel({ messages, canWrite }: MicrophonesPane
     try {
       // Fetch microphones using RPC get_mics(), which returns the same fields as MicrophoneRow
       const { data: mappedRows, error: rpcError } = await supabase.rpc('get_mics')
+      if (rpcError) throw rpcError
+      if (!mappedRows) throw new Error('No data returned from get_mics RPC')
 
       // Stable baseline ordering; `sortedRows` applies actual sort.
-      mappedRows.sort((a, b) => {
+      mappedRows.sort((a: MicrophoneRow, b: MicrophoneRow) => {
         const modelNameComparison = a.modelName.localeCompare(b.modelName)
         if (modelNameComparison !== 0) return modelNameComparison
         return a.identifier - b.identifier
