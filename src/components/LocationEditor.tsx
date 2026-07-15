@@ -73,6 +73,7 @@ export default function LocationEditor({
         updateFailed: e?.feedback?.updateFailed ?? '',
         createRoomFailed: e?.feedback?.createRoomFailed ?? '',
         roomsCreateRequiresSavedLocation: e?.feedback?.roomsCreateRequiresSavedLocation ?? '',
+        duplicateRoomForLocation: e?.feedback?.duplicateRoomForLocation ?? '',
       },
       rooms: {
         title: e?.rooms?.title ?? '',
