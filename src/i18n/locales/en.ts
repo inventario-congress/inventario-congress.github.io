@@ -374,7 +374,7 @@ const en = {
     table: {
       identifier: 'Identifier',
       maxMicCount: 'Max mic count',
-      micModelNames: 'Mic models',
+      micModelNames: 'Models',
       latestLocation: 'Location',
       actions: 'Actions',
       empty: 'No bases yet.',

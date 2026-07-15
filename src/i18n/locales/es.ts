@@ -374,7 +374,7 @@ const es = {
     },
     table: {
       identifier: 'Número',
-      micModelNames: 'Modelos de mic',
+      micModelNames: 'Modelos',
       latestLocation: 'Ubicación',
       actions: 'Acciones',
       empty: 'Todavía no hay bases.',
