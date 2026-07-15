@@ -14,6 +14,9 @@ const en = {
   },
   auth: {
     title: 'Congress Inventory',
+    session: {
+      signedOut: 'Not signed in',
+    },
     fields: {
       name: 'Name',
       lastName: 'Last name',

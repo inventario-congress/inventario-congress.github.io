@@ -14,6 +14,9 @@ const es = {
   },
   auth: {
     title: 'Inventario Congress',
+    session: {
+      signedOut: 'Sin iniciar sesión',
+    },
     fields: {
       name: 'Nombre',
       lastName: 'Apellido',

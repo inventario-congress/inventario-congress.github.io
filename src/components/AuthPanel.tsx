@@ -114,26 +114,6 @@ export default function AuthPanel({ messages }: AuthPanelProps) {
     }
   }
 
-  async function signOut() {
-    if (!supabase) {
-      return
-    }
-
-    setStatus(null)
-    setError(null)
-    setAuthLoading(true)
-    try {
-      const { error } = await supabase.auth.signOut()
-      if (error) throw error
-      setStatus(messages.auth.feedback.signedOut)
-    } catch (e) {
-      const msg = e instanceof Error ? e.message : messages.auth.feedback.signOutFailed
-      setError(msg)
-    } finally {
-      setAuthLoading(false)
-    }
-  }
-
   function handleAuthSubmit(event: FormEvent<HTMLFormElement>) {
     event.preventDefault()
 
