@@ -7,7 +7,7 @@ import Menu, { type AppPanel } from './components/Menu'
 import ProfilePanel from './components/ProfilePanel'
 import BasePanel from './components/BasePanel'
 import { MoonIcon, SunIcon } from './components/icons'
-import { getPreferredLanguage, translations, type Language } from './i18n'
+import { translations } from './i18n'
 
 import { supabase } from './supabaseClient'
 import type { Session } from '@supabase/supabase-js'
@@ -47,7 +47,6 @@ function getRoleFromAccessToken(accessToken: string | null | undefined): string 
 }
 
 function App() {
-  const [language, setLanguage] = useState<Language>(() => getPreferredLanguage())
   const [theme, setTheme] = useState<Theme>(() => getPreferredTheme())
   const [isAuthenticated, setIsAuthenticated] = useState(false)
   const [isWriter, setIsWriter] = useState(false)
@@ -79,7 +78,7 @@ function App() {
   const menuToggleRef = useRef<HTMLButtonElement | null>(null)
   const sidebarRef = useRef<HTMLElement | null>(null)
   const didOpenMobileMenuRef = useRef(false)
-  const messages = useMemo(() => translations[language], [language])
+  const messages = useMemo(() => translations['es'], [])
 
   useEffect(() => {
     if (!supabase) {
@@ -146,10 +145,10 @@ function App() {
   }, [])
 
   useEffect(() => {
-    document.documentElement.lang = language
+    document.documentElement.lang = 'es'
     document.title = messages.meta.title
-    window.localStorage.setItem('language', language)
-  }, [language, messages.meta.title])
+    window.localStorage.setItem('language', 'es')
+  }, [messages.meta.title])
 
   useEffect(() => {
     document.documentElement.setAttribute('data-theme', theme)
@@ -300,17 +299,6 @@ function App() {
         >
           {theme === 'dark' ? <SunIcon /> : <MoonIcon />}
         </button>
-        <label htmlFor="language" className="language-control">
-          <select
-            id="language"
-            value={language}
-            onChange={(event) => setLanguage(event.target.value as Language)}
-            className="language-select"
-          >
-            <option value="en">{messages.languageSwitcher.options.en}</option>
-            <option value="es">{messages.languageSwitcher.options.es}</option>
-          </select>
-        </label>
       </div>
 
       {isAuthenticated ? (
