@@ -49,10 +49,6 @@ export default function MicrophonesPanel({ messages, canWrite }: MicrophonesPane
   const [micEditorOpen, setMicEditorOpen] = useState(false)
   const [editingMicId, setEditingMicId] = useState<number | null>(null)
 
-  const [micTypeChoices, setMicTypeChoices] = useState<string[]>([])
-  void micTypeChoices
-
-
   const SORT_STORAGE_KEY = 'inventario_congress:microphones:sort'
 
   const [sortColumn, setSortColumn] = useState<SortColumn>(() => {
@@ -141,61 +137,13 @@ export default function MicrophonesPanel({ messages, canWrite }: MicrophonesPane
     setLoading(true)
 
     try {
-      const [{ data: microphones, error: microphonesError }, { data: micTypes, error: micTypesError }] =
-        await Promise.all([
-          supabase
-            .from('microphone')
-            .select('id, identifier, model, mic_type')
-            .order('id', { ascending: false }),
-          supabase.from('mic_type').select('id, name').order('name', { ascending: true }),
-        ])
-
-      if (microphonesError) throw microphonesError
-      if (micTypesError) throw micTypesError
-
-      const micTypeNames = Array.from(new Set((micTypes ?? []).map((t) => (t.name as string) ?? ''))).filter(Boolean)
-      setMicTypeChoices(micTypeNames)
-
-      const modelIds = Array.from(new Set((microphones ?? []).map((microphone) => microphone.model as number)))
-
-      let modelMap = new Map<number, string>()
-      if (modelIds.length > 0) {
-        const { data: models, error: modelsError } = await supabase.from('model').select('id, name').in('id', modelIds)
-        if (modelsError) throw modelsError
-        modelMap = new Map((models ?? []).map((model) => [model.id as number, model.name as string]))
-      }
-
-      const micTypeMap = new Map<number, string>((micTypes ?? []).map((t) => [t.id as number, t.name as string]))
-
-      const mappedRows: MicrophoneRow[] = (microphones ?? []).map((microphone) => ({
-        id: microphone.id as number,
-        identifier: microphone.identifier as number,
-        modelId: microphone.model as number,
-        modelName: modelMap.get(microphone.model as number) ?? '',
-        micTypeId: microphone.mic_type ? (microphone.mic_type as number) : null,
-        micTypeName: microphone.mic_type ? micTypeMap.get(microphone.mic_type as number) ?? '' : '',
-        latestAttachmentBase: null,
-      }))
-
-      for (const row of mappedRows) {
-        const { data: attachments, error: attachmentsError } = await supabase
-          .from('attachment')
-          .select('base:base(identifier)')
-          .eq('microphone', row.id)
-          .order('created_at', { ascending: false })
-          .limit(1)
-
-        if (attachmentsError) {
-          console.error('Error fetching latest attachment:', attachmentsError)
-        } else {
-          const baseIdentifier =
-            (attachments?.[0] as { base?: { identifier?: number | null } } | undefined)?.base?.identifier ?? null
-          row.latestAttachmentBase = baseIdentifier
-        }
-      }
+      // Fetch microphones using RPC get_mics(), which returns the same fields as MicrophoneRow
+      const { data: mappedRows, error: rpcError } = await supabase.rpc('get_mics')
+      if (rpcError) throw rpcError
+      if (!mappedRows) throw new Error('No data returned from get_mics RPC')
 
       // Stable baseline ordering; `sortedRows` applies actual sort.
-      mappedRows.sort((a, b) => {
+      mappedRows.sort((a: MicrophoneRow, b: MicrophoneRow) => {
         const modelNameComparison = a.modelName.localeCompare(b.modelName)
         if (modelNameComparison !== 0) return modelNameComparison
         return a.identifier - b.identifier
