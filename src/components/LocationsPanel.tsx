@@ -202,8 +202,6 @@ export default function LocationsPanel({ messages, canWrite }: LocationsPanelPro
         }}
       />
 
-      {!canWrite ? <p>{messages.locations.readOnly}</p> : null}
-
       {error ? (
         <div style={{ color: 'crimson', marginBottom: 10 }}>
           <strong>{messages.auth.feedback.error}</strong> {error}

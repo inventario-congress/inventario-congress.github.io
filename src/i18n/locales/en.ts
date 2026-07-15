@@ -57,7 +57,6 @@ const en = {
   },
   microphones: {
     title: 'Microphones',
-    readOnly: 'Read-only mode: you can view existing microphones but cannot create, edit, or delete.',
     fields: {
       modelName: 'Model',
       micTypeName: 'Type',
@@ -164,7 +163,6 @@ const en = {
   },
   locations: {
     title: 'Locations',
-    readOnly: 'Read-only mode: you can view locations but cannot create, edit, or delete.',
     fields: {
       name: 'Location name',
       address: 'Address',
@@ -288,7 +286,6 @@ const en = {
   },
   profile: {
     title: 'Profile',
-    readOnly: 'User data is read-only in this view.',
     fields: {
       name: 'Name:',
       lastName: 'Last name:',
@@ -321,7 +318,6 @@ const en = {
   },
   bases: {
     title: 'Bases',
-    readOnly: 'Read-only mode: you can view existing bases but cannot create, edit, or delete.',
     fields: {
       identifier: 'Base identifier',
       maxMicCount: 'Max mic count',

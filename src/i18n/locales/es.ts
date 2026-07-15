@@ -57,7 +57,6 @@ const es = {
   },
   microphones: {
     title: 'Micrófonos',
-    readOnly: 'Modo de solo lectura: puedes ver los micrófonos existentes pero no puedes crear, editar ni eliminar.',
     fields: {
       modelName: 'Modelo',
       micTypeName: 'Tipo',
@@ -164,7 +163,6 @@ const es = {
   },
   locations: {
     title: 'Ubicaciones',
-    readOnly: 'Modo de solo lectura: puedes ver ubicaciones pero no puedes crear, editar ni eliminar.',
     fields: {
       name: 'Nombre de la ubicación',
       address: 'Dirección',
@@ -289,7 +287,6 @@ const es = {
   },
   profile: {
     title: 'Perfil',
-    readOnly: 'Los datos del usuario son de solo lectura en esta vista.',
     fields: {
       name: 'Nombre:',
       lastName: 'Apellido:',
@@ -322,7 +319,6 @@ const es = {
   },
   bases: {
     title: 'Bases',
-    readOnly: 'Modo de solo lectura: puedes ver las bases existentes pero no puedes crear, editar ni eliminar.',
     fields: {
       identifier: 'Número',
       maxMicCount: 'Cantidad máxima de micrófonos',
