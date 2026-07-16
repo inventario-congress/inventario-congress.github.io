@@ -24,6 +24,16 @@ type BasePanelProps = {
   canWrite: boolean
 }
 
+
+type MicAttachment = {
+  mic_id: number
+  mic_identifier: number
+  mic_model_name: string
+  mic_type_name: string
+  mic_attachment_date: string | null
+  mic_attachment_user_name: string | null
+}
+
 function SortIcon({ active, sortDirection }: { active: boolean; sortDirection: 'asc' | 'desc' }) {
   return (
     <span
@@ -51,6 +61,7 @@ export default function BasePanel({ messages, canWrite }: BasePanelProps) {
   const [editingBaseId, setEditingBaseId] = useState<number | null>(null)
   const [loading, setLoading] = useState(false)
   const [rows, setRows] = useState<BaseRow[]>([])
+  const [micsByBaseId, setMicsByBaseId] = useState<Record<number, MicAttachment[]> | null>(null)
   const [error, setError] = useState<string | null>(null)
   const [moveDialogOpen, setMoveDialogOpen] = useState(false)
   const [moveBaseId, setMoveBaseId] = useState<number | null>(null)
@@ -114,6 +125,20 @@ export default function BasePanel({ messages, canWrite }: BasePanelProps) {
     setLoading(true)
 
     try {
+      // Load the microphones attached to each base from the attachment table using the get_mics_for_bases() function
+      const { data: micData, error: micError } = await supabase.rpc('get_mics_for_bases')
+      if (micError) {
+        throw micError
+      }
+
+      if (!micData) {
+        // RPC returns '{}' when no microphones are attached to any base.
+        setMicsByBaseId({})
+      } else {
+        // get_mics_for_bases() returns a jsonb object keyed by base_id as string.
+        setMicsByBaseId(micData as Record<number, MicAttachment[]>)
+      }
+
       // Load the rows by calling db function get_bases_with_models() to get the base data along with associated mic
       // model names and latest location name. This avoids multiple queries and simplifies the logic.
       await supabase.rpc('get_bases_with_models').then(({ data: rpcData, error: rpcError }) => {
@@ -245,7 +270,23 @@ export default function BasePanel({ messages, canWrite }: BasePanelProps) {
     }
   }
 
+  function formatDateTime(value: string | null): string {
+    if (!value) return ''
+    const d = new Date(value)
+    if (Number.isNaN(d.getTime())) return ''
+    return d.toLocaleString()
+  }
 
+  function getBaseMics(row: BaseRow): MicAttachment[] {
+    if (!micsByBaseId) return []
+    const raw = (micsByBaseId as Record<number, MicAttachment[]>)[row.base_id]
+    if (!raw) return []
+    if (!Array.isArray(raw)) return []
+
+    // The RPC returns an array of microphone attachment objects.
+    // At runtime we trust the shape and rely on TypeScript for correctness.
+    return raw as MicAttachment[]
+  }
 
   return (
     <div style={{ maxWidth: 820, margin: '0 auto', padding: 16, textAlign: 'left' }}>
@@ -382,8 +423,11 @@ export default function BasePanel({ messages, canWrite }: BasePanelProps) {
                 {sortedRows.map((row: BaseRow) => (
                   <Fragment key={row.base_id}>
                     <tr
-                      style={{ cursor: 'pointer' }}
+                      style={{ cursor: getBaseMics(row).length === 0 ? 'default' : 'pointer' }}
                       onClick={() => {
+                        // If there are no microphone attachments for this base, do not allow expansion.
+                        if (getBaseMics(row).length === 0) return
+
                         // Toggle visibility of the spacer row for this base.
                         // Clicking on action buttons should not toggle; those handlers stop propagation.
                         setExpandedBaseRowId((prev) => (prev === row.base_id ? null : row.base_id))
@@ -441,8 +485,55 @@ export default function BasePanel({ messages, canWrite }: BasePanelProps) {
                       style={{ display: expandedBaseRowId === row.base_id ? 'table-row' : 'none' }}
                     >
                       <td colSpan={canWrite ? 4 : 3} style={{ padding: 0, borderBottom: '1px solid var(--border)' }}>
-                        {/* Empty placeholder row under each base row; content will be added later. */}
-                        <div style={{ height: 18 }} />
+                        {getBaseMics(row).length === 0 ? (
+                          <div style={{ height: 18 }} />
+                        ) : (
+                          <div style={{ padding: '10px 6px 14px 6px' }}>
+                            <div style={{ fontSize: 12, color: 'var(--muted)' }}>{messages.bases.table.mics}</div>
+                            <table style={{ width: '100%', borderCollapse: 'collapse', marginTop: 8 }}>
+                              <thead>
+                                <tr>
+                                  <th style={{ textAlign: 'left', borderBottom: '1px solid var(--border)', padding: '6px 4px', whiteSpace: 'nowrap' }}>
+                                    {messages.bases.table.identifier}
+                                  </th>
+                                  <th style={{ textAlign: 'left', borderBottom: '1px solid var(--border)', padding: '6px 4px' }}>
+                                    {messages.bases.table.model}
+                                  </th>
+                                  <th style={{ textAlign: 'left', borderBottom: '1px solid var(--border)', padding: '6px 4px' }}>
+                                    {messages.bases.table.type}
+                                  </th>
+                                  <th style={{ textAlign: 'left', borderBottom: '1px solid var(--border)', padding: '6px 4px', whiteSpace: 'nowrap' }}>
+                                    {messages.bases.table.date}
+                                  </th>
+                                  <th style={{ textAlign: 'left', borderBottom: '1px solid var(--border)', padding: '6px 4px' }}>
+                                    {messages.bases.table.user}
+                                  </th>
+                                </tr>
+                              </thead>
+                              <tbody>
+                                {getBaseMics(row).map((m) => (
+                                  <tr key={m.mic_id}>
+                                    <td style={{ borderBottom: '1px solid var(--border)', padding: '6px 4px', whiteSpace: 'nowrap' }}>
+                                      {m.mic_identifier}
+                                    </td>
+                                    <td style={{ borderBottom: '1px solid var(--border)', padding: '6px 4px' }}>
+                                      {m.mic_model_name}
+                                    </td>
+                                    <td style={{ borderBottom: '1px solid var(--border)', padding: '6px 4px' }}>
+                                      {m.mic_type_name}
+                                    </td>
+                                    <td style={{ borderBottom: '1px solid var(--border)', padding: '6px 4px', whiteSpace: 'nowrap' }}>
+                                      {formatDateTime(m.mic_attachment_date)}
+                                    </td>
+                                    <td style={{ borderBottom: '1px solid var(--border)', padding: '6px 4px' }}>
+                                      {m.mic_attachment_user_name ?? ''}
+                                    </td>
+                                  </tr>
+                                ))}
+                              </tbody>
+                            </table>
+                          </div>
+                        )}
                       </td>
                     </tr>
                   </Fragment>

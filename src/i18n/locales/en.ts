@@ -370,7 +370,12 @@ const en = {
     table: {
       identifier: 'Identifier',
       maxMicCount: 'Max mic count',
+      mics: 'Microphones',
       micModelNames: 'Models',
+      model: 'Model',
+      type: 'Type',
+      date: 'Date',
+      user: 'User',
       latestLocation: 'Location',
       actions: 'Actions',
       empty: 'No bases yet.',
