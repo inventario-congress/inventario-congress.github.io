@@ -53,6 +53,30 @@ function SortIcon({ active, sortDirection }: { active: boolean; sortDirection: '
   )
 }
 
+function TriangleIcon({
+  isOpen,
+}: {
+  isOpen: boolean
+}) {
+  return (
+    <span
+      aria-hidden="true"
+      style={{
+        display: 'inline-block',
+        width: 16,
+        textAlign: 'center',
+        marginRight: 8,
+        color: 'var(--muted)',
+        transition: 'transform 120ms ease',
+        transform: isOpen ? 'rotate(90deg)' : 'rotate(0deg)',
+        userSelect: 'none',
+      }}
+    >
+      ▶
+    </span>
+  )
+}
+
 
 
 
@@ -433,9 +457,15 @@ export default function BasePanel({ messages, canWrite }: BasePanelProps) {
                         setExpandedBaseRowId((prev) => (prev === row.base_id ? null : row.base_id))
                       }}
                     >
-                      <td style={{ borderBottom: '1px solid var(--border)', padding: '8px 6px' }}>{row.base_identifier}</td>
+                      <td style={{ borderBottom: '1px solid var(--border)', padding: '8px 6px' }}>
+                        {getBaseMics(row).length === 0 ? null : (
+                          <TriangleIcon isOpen={expandedBaseRowId === row.base_id} />
+                        )}
+                        {row.base_identifier}
+                      </td>
                       <td style={{ borderBottom: '1px solid var(--border)', padding: '8px 6px' }}>{row.model_names}</td>
                       <td style={{ borderBottom: '1px solid var(--border)', padding: '8px 6px' }}>{row.latest_location_name ?? ''}</td>
+
                       {canWrite ? (
                         <td style={{ borderBottom: '1px solid var(--border)', padding: '8px 6px' }}>
                           <div style={{ display: 'flex', gap: 8, flexWrap: 'wrap' }}>
