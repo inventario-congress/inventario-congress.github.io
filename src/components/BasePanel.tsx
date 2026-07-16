@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useState, useCallback } from 'react'
+import { useEffect, useMemo, useState, useCallback, Fragment } from 'react'
 
 import type { Messages } from '../i18n'
 import { supabase } from '../supabaseClient'
@@ -58,6 +58,8 @@ export default function BasePanel({ messages, canWrite }: BasePanelProps) {
   const [moveRoomId, setMoveRoomId] = useState<number | null>(null)
   const [deleteDialogOpen, setDeleteDialogOpen] = useState(false)
   const [deleteTarget, setDeleteTarget] = useState<{ id: number; name?: string | null } | null>(null)
+  const [expandedBaseRowId, setExpandedBaseRowId] = useState<number | null>(null)
+
 
 
   type SortColumn = 'base_identifier' | 'latest_location_name' | 'model_names'
@@ -378,53 +380,72 @@ export default function BasePanel({ messages, canWrite }: BasePanelProps) {
               </thead>
               <tbody>
                 {sortedRows.map((row: BaseRow) => (
+                  <Fragment key={row.base_id}>
+                    <tr
+                      style={{ cursor: 'pointer' }}
+                      onClick={() => {
+                        // Toggle visibility of the spacer row for this base.
+                        // Clicking on action buttons should not toggle; those handlers stop propagation.
+                        setExpandedBaseRowId((prev) => (prev === row.base_id ? null : row.base_id))
+                      }}
+                    >
+                      <td style={{ borderBottom: '1px solid var(--border)', padding: '8px 6px' }}>{row.base_identifier}</td>
+                      <td style={{ borderBottom: '1px solid var(--border)', padding: '8px 6px' }}>{row.model_names}</td>
+                      <td style={{ borderBottom: '1px solid var(--border)', padding: '8px 6px' }}>{row.latest_location_name ?? ''}</td>
+                      {canWrite ? (
+                        <td style={{ borderBottom: '1px solid var(--border)', padding: '8px 6px' }}>
+                          <div style={{ display: 'flex', gap: 8, flexWrap: 'wrap' }}>
+                            <button
+                              type="button"
+                              onClick={(e) => {
+                                e.stopPropagation()
+                                openMoveDialog(row)
+                              }}
+                              disabled={loading}
+                              style={{ padding: '6px 10px', borderRadius: 6, cursor: 'pointer' }}
+                            >
+                              {messages.bases.actions.move}
+                            </button>
 
-                  <tr key={row.base_id}>
-                    <td style={{ borderBottom: '1px solid var(--border)', padding: '8px 6px' }}>{row.base_identifier}</td>
-                    <td style={{ borderBottom: '1px solid var(--border)', padding: '8px 6px' }}>{row.model_names}</td>
-                    <td style={{ borderBottom: '1px solid var(--border)', padding: '8px 6px' }}>{row.latest_location_name ?? ''}</td>
-                    {canWrite ? (
+                            <button
+                              type="button"
+                              onClick={(e) => {
+                                e.stopPropagation()
+                                setEditingBaseId(row.base_id)
+                                setBaseEditorOpen(true)
+                              }}
+                              disabled={loading}
+                              style={{ padding: '6px 10px', borderRadius: 6, cursor: 'pointer' }}
+                            >
+                              {messages.bases.actions.edit}
+                            </button>
 
-                      <td style={{ borderBottom: '1px solid var(--border)', padding: '8px 6px' }}>
-                        <div style={{ display: 'flex', gap: 8, flexWrap: 'wrap' }}>
-                          <button
-                            type="button"
-                            onClick={() => openMoveDialog(row)}
-                            disabled={loading}
-                            style={{ padding: '6px 10px', borderRadius: 6, cursor: 'pointer' }}
-                          >
-                            {messages.bases.actions.move}
-                          </button>
+                            <button
+                              type="button"
+                              onClick={(e) => {
+                                e.stopPropagation()
+                                setDeleteTarget({ id: row.base_id, name: row.base_identifier.toString() })
+                                setDeleteDialogOpen(true)
+                              }}
+                              disabled={loading}
+                              style={{ padding: '6px 10px', borderRadius: 6, cursor: 'pointer' }}
+                            >
+                              {messages.bases.actions.delete}
+                            </button>
+                          </div>
+                        </td>
+                      ) : null}
+                    </tr>
 
-                          <button
-                            type="button"
-                            onClick={() => {
-                              setEditingBaseId(row.base_id)
-                              setBaseEditorOpen(true)
-                            }}
-                            disabled={loading}
-                            style={{ padding: '6px 10px', borderRadius: 6, cursor: 'pointer' }}
-                          >
-                            {messages.bases.actions.edit}
-                          </button>
-
-                          <button
-                            type="button"
-                            onClick={() => {
-                              setDeleteTarget({ id: row.base_id, name: row.base_identifier.toString() })
-                              setDeleteDialogOpen(true)
-                            }}
-                            disabled={loading}
-                            style={{ padding: '6px 10px', borderRadius: 6, cursor: 'pointer' }}
-                          >
-                            {messages.bases.actions.delete}
-                          </button>
-
-
-                        </div>
+                    <tr
+                      style={{ display: expandedBaseRowId === row.base_id ? 'table-row' : 'none' }}
+                    >
+                      <td colSpan={canWrite ? 4 : 3} style={{ padding: 0, borderBottom: '1px solid var(--border)' }}>
+                        {/* Empty placeholder row under each base row; content will be added later. */}
+                        <div style={{ height: 18 }} />
                       </td>
-                    ) : null}
-                  </tr>
+                    </tr>
+                  </Fragment>
                 ))}
               </tbody>
             </table>
