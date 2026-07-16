@@ -511,61 +511,74 @@ export default function BasePanel({ messages, canWrite }: BasePanelProps) {
                       ) : null}
                     </tr>
 
-                    <tr
-                      style={{ display: expandedBaseRowId === row.base_id ? 'table-row' : 'none' }}
-                    >
-                      <td colSpan={canWrite ? 4 : 3} style={{ padding: 0, borderBottom: '1px solid var(--border)' }}>
-                        {getBaseMics(row).length === 0 ? (
-                          <div style={{ height: 18 }} />
-                        ) : (
-                          <div style={{ padding: '10px 6px 14px 6px' }}>
-                            <div style={{ fontSize: 12, color: 'var(--muted)' }}>{messages.bases.table.mics}</div>
-                            <table style={{ width: '100%', borderCollapse: 'collapse', marginTop: 8 }}>
-                              <thead>
-                                <tr>
-                                  <th style={{ textAlign: 'left', borderBottom: '1px solid var(--border)', padding: '6px 4px', whiteSpace: 'nowrap' }}>
-                                    {messages.bases.table.identifier}
-                                  </th>
-                                  <th style={{ textAlign: 'left', borderBottom: '1px solid var(--border)', padding: '6px 4px' }}>
-                                    {messages.bases.table.model}
-                                  </th>
-                                  <th style={{ textAlign: 'left', borderBottom: '1px solid var(--border)', padding: '6px 4px' }}>
-                                    {messages.bases.table.type}
-                                  </th>
-                                  <th style={{ textAlign: 'left', borderBottom: '1px solid var(--border)', padding: '6px 4px', whiteSpace: 'nowrap' }}>
-                                    {messages.bases.table.date}
-                                  </th>
-                                  <th style={{ textAlign: 'left', borderBottom: '1px solid var(--border)', padding: '6px 4px' }}>
-                                    {messages.bases.table.user}
-                                  </th>
-                                </tr>
-                              </thead>
-                              <tbody>
-                                {getBaseMics(row).map((m) => (
-                                  <tr key={m.mic_id}>
-                                    <td style={{ borderBottom: '1px solid var(--border)', padding: '6px 4px', whiteSpace: 'nowrap' }}>
-                                      {m.mic_identifier}
-                                    </td>
-                                    <td style={{ borderBottom: '1px solid var(--border)', padding: '6px 4px' }}>
-                                      {m.mic_model_name}
-                                    </td>
-                                    <td style={{ borderBottom: '1px solid var(--border)', padding: '6px 4px' }}>
-                                      {m.mic_type_name}
-                                    </td>
-                                    <td style={{ borderBottom: '1px solid var(--border)', padding: '6px 4px', whiteSpace: 'nowrap' }}>
-                                      {formatDateTime(m.mic_attachment_date)}
-                                    </td>
-                                    <td style={{ borderBottom: '1px solid var(--border)', padding: '6px 4px' }}>
-                                      {m.mic_attachment_user_name ?? ''}
-                                    </td>
+                    <tr>
+                      <td
+                        colSpan={canWrite ? 4 : 3}
+                        style={{ padding: 0, borderBottom: '1px solid var(--border)' }}
+                      >
+                        <div
+                          style={{
+                            overflow: 'hidden',
+                            transition: 'max-height 120ms ease, opacity 120ms ease, transform 120ms ease',
+                            maxHeight: expandedBaseRowId === row.base_id ? 1000 : 0,
+                            opacity: expandedBaseRowId === row.base_id ? 1 : 0,
+                            transform: expandedBaseRowId === row.base_id ? 'translateY(0px)' : 'translateY(-4px)',
+                            pointerEvents: expandedBaseRowId === row.base_id ? 'auto' : 'none',
+                          }}
+                        >
+                          {getBaseMics(row).length === 0 ? (
+                            <div style={{ height: 18 }} />
+                          ) : (
+                            <div style={{ padding: '10px 6px 14px 6px' }}>
+                              <div style={{ fontSize: 12, color: 'var(--muted)' }}>{messages.bases.table.mics}</div>
+                              <table style={{ width: '100%', borderCollapse: 'collapse', marginTop: 8 }}>
+                                <thead>
+                                  <tr>
+                                    <th style={{ textAlign: 'left', borderBottom: '1px solid var(--border)', padding: '6px 4px', whiteSpace: 'nowrap' }}>
+                                      {messages.bases.table.identifier}
+                                    </th>
+                                    <th style={{ textAlign: 'left', borderBottom: '1px solid var(--border)', padding: '6px 4px' }}>
+                                      {messages.bases.table.model}
+                                    </th>
+                                    <th style={{ textAlign: 'left', borderBottom: '1px solid var(--border)', padding: '6px 4px' }}>
+                                      {messages.bases.table.type}
+                                    </th>
+                                    <th style={{ textAlign: 'left', borderBottom: '1px solid var(--border)', padding: '6px 4px', whiteSpace: 'nowrap' }}>
+                                      {messages.bases.table.date}
+                                    </th>
+                                    <th style={{ textAlign: 'left', borderBottom: '1px solid var(--border)', padding: '6px 4px' }}>
+                                      {messages.bases.table.user}
+                                    </th>
                                   </tr>
-                                ))}
-                              </tbody>
-                            </table>
-                          </div>
-                        )}
+                                </thead>
+                                <tbody>
+                                  {getBaseMics(row).map((m) => (
+                                    <tr key={m.mic_id}>
+                                      <td style={{ borderBottom: '1px solid var(--border)', padding: '6px 4px', whiteSpace: 'nowrap' }}>
+                                        {m.mic_identifier}
+                                      </td>
+                                      <td style={{ borderBottom: '1px solid var(--border)', padding: '6px 4px' }}>
+                                        {m.mic_model_name}
+                                      </td>
+                                      <td style={{ borderBottom: '1px solid var(--border)', padding: '6px 4px' }}>
+                                        {m.mic_type_name}
+                                      </td>
+                                      <td style={{ borderBottom: '1px solid var(--border)', padding: '6px 4px', whiteSpace: 'nowrap' }}>
+                                        {formatDateTime(m.mic_attachment_date)}
+                                      </td>
+                                      <td style={{ borderBottom: '1px solid var(--border)', padding: '6px 4px' }}>
+                                        {m.mic_attachment_user_name ?? ''}
+                                      </td>
+                                    </tr>
+                                  ))}
+                                </tbody>
+                              </table>
+                            </div>
+                          )}
+                        </div>
                       </td>
                     </tr>
+
                   </Fragment>
                 ))}
               </tbody>

@@ -59,7 +59,7 @@ const es = {
     fields: {
       modelName: 'Modelo',
       micTypeName: 'Tipo',
-      identifier: 'Número',
+      identifier: 'N°',
     },
     actions: {
       create: 'Crear micrófono',
@@ -72,7 +72,7 @@ const es = {
     },
     table: {
       modelName: 'Modelo',
-      identifier: 'Número',
+      identifier: 'N°',
       micTypeName: 'Tipo',
       latestAttachmentBase: 'Base',
       actions: 'Acciones',
@@ -84,7 +84,7 @@ const es = {
         titleEdit: 'Actualizar micrófono',
         description: 'Configura el número del micrófono y asocia modelo y tipo.',
         fields: {
-          identifier: 'Número',
+          identifier: 'N°',
           modelName: 'Modelo',
           micTypeName: 'Tipo',
         },
@@ -320,7 +320,7 @@ const es = {
   bases: {
     title: 'Bases',
     fields: {
-      identifier: 'Número',
+      identifier: 'N°',
       maxMicCount: 'Cantidad máxima de micrófonos',
       models: 'Modelos',
     },
@@ -348,7 +348,7 @@ const es = {
         title: 'Crear base ',
         description: 'Configura la base y asocia los modelos de micrófono.',
         fields: {
-          identifier: 'Número',
+          identifier: 'N°',
           maxMicCount: 'Cantidad máxima de micrófonos',
           models: 'Modelos',
         },
