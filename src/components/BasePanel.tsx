@@ -102,7 +102,12 @@ export default function BasePanel({ messages, canWrite }: BasePanelProps) {
   type SortColumn = 'base_identifier' | 'latest_location_name' | 'model_names'
   type SortDirection = 'asc' | 'desc'
 
+  type MicSortColumn = 'mic_identifier' | 'mic_type_name' | 'mic_attachment_date' | 'mic_attachment_user_name'
+
+
   const SORT_STORAGE_KEY = 'inventario_congress:bases:sort'
+  const MIC_SORT_STORAGE_KEY = 'inventario_congress:base_mics:sort'
+
 
   const [sortColumn, setSortColumn] = useState<SortColumn>(() => {
     try {
@@ -131,6 +136,38 @@ export default function BasePanel({ messages, canWrite }: BasePanelProps) {
     return 'asc'
   })
 
+  const [micSortColumn, setMicSortColumn] = useState<MicSortColumn>(() => {
+    try {
+      const raw = window.localStorage.getItem(MIC_SORT_STORAGE_KEY)
+      if (!raw) return 'mic_identifier'
+      const parsed = JSON.parse(raw) as { micSortColumn?: unknown; micSortDirection?: unknown; sortColumn?: unknown; sortDirection?: unknown }
+      const candidate = parsed.micSortColumn ?? parsed.sortColumn
+      if (
+        candidate === 'mic_identifier' ||
+        candidate === 'mic_type_name' ||
+        candidate === 'mic_attachment_date' ||
+        candidate === 'mic_attachment_user_name'
+      ) {
+        return candidate
+      }
+    } catch {
+      // ignore
+    }
+    return 'mic_identifier'
+  })
+
+  const [micSortDirection, setMicSortDirection] = useState<SortDirection>(() => {
+    try {
+      const raw = window.localStorage.getItem(MIC_SORT_STORAGE_KEY)
+      if (!raw) return 'asc'
+      const parsed = JSON.parse(raw) as { micSortColumn?: unknown; micSortDirection?: unknown; sortColumn?: unknown; sortDirection?: unknown }
+      const candidate = parsed.micSortDirection ?? parsed.sortDirection
+      if (candidate === 'asc' || candidate === 'desc') return candidate
+    } catch {
+      // ignore
+    }
+    return 'asc'
+  })
 
 
   const resetMoveDialog = useCallback(() => {
@@ -303,6 +340,19 @@ export default function BasePanel({ messages, canWrite }: BasePanelProps) {
     }
   }
 
+  function toggleMicSort(column: MicSortColumn) {
+    if (micSortColumn === column) {
+      const next: SortDirection = micSortDirection === 'asc' ? 'desc' : 'asc'
+      setMicSortDirection(next)
+      window.localStorage.setItem(MIC_SORT_STORAGE_KEY, JSON.stringify({ micSortColumn: column, micSortDirection: next }))
+    } else {
+      const next: SortDirection = 'asc'
+      setMicSortColumn(column)
+      setMicSortDirection(next)
+      window.localStorage.setItem(MIC_SORT_STORAGE_KEY, JSON.stringify({ micSortColumn: column, micSortDirection: next }))
+    }
+  }
+
   function formatDateTime(value: string | null): string {
     if (!value) return ''
     const d = new Date(value)
@@ -313,7 +363,54 @@ export default function BasePanel({ messages, canWrite }: BasePanelProps) {
       day: 'numeric',
       hour: '2-digit',
       minute: '2-digit'
-    });
+    })
+  }
+
+  function parseDateOrNull(value: string | null): number | null {
+    if (!value) return null
+    const d = new Date(value)
+    if (Number.isNaN(d.getTime())) return null
+    return d.getTime()
+  }
+
+  function compareNullableStrings(a: string | null, b: string | null, dirMul: number): number {
+    const av = a ?? ''
+    const bv = b ?? ''
+    return av.localeCompare(bv) * dirMul
+  }
+
+  function compareNullableDates(a: string | null, b: string | null, dirMul: number): number {
+    const at = parseDateOrNull(a)
+    const bt = parseDateOrNull(b)
+
+    if (at === null && bt === null) return 0
+    if (at === null) return 1 * dirMul
+    if (bt === null) return -1 * dirMul
+
+    return (at - bt) * dirMul
+  }
+
+  function getSortedMics(mics: MicAttachment[]): MicAttachment[] {
+    const copy = [...mics]
+
+    const dirMul = micSortDirection === 'asc' ? 1 : -1
+
+    copy.sort((a, b) => {
+      switch (micSortColumn) {
+        case 'mic_identifier':
+          return (a.mic_identifier - b.mic_identifier) * dirMul
+        case 'mic_type_name':
+          return compareNullableStrings(a.mic_type_name ?? null, b.mic_type_name ?? null, dirMul)
+        case 'mic_attachment_date':
+          return compareNullableDates(a.mic_attachment_date, b.mic_attachment_date, dirMul)
+        case 'mic_attachment_user_name':
+          return compareNullableStrings(a.mic_attachment_user_name, b.mic_attachment_user_name, dirMul)
+        default:
+          return 0
+      }
+    })
+
+    return copy
   }
 
   function getBaseMics(row: BaseRow): MicAttachment[] {
@@ -543,8 +640,8 @@ export default function BasePanel({ messages, canWrite }: BasePanelProps) {
                         >
                           {loadingMicsByBaseId[row.base_id] ? (
                             <div style={{ padding: '10px 6px 14px 6px' }}>
-                              <div style={{ fontSize: 12, color: 'var(--muted)' }}>{messages.bases.table.mics}</div>
-                              <div style={{ marginTop: 8, fontSize: 12, color: 'var(--muted)' }}>Loading…</div>
+                              <div style={{ fontSize: 16, color: 'var(--muted)' }}>{messages.bases.table.mics}</div>
+                              <div style={{ marginTop: 10, fontSize: 12, color: 'var(--muted)' }}>{messages.bases.feedback.loading_mics}</div>
                             </div>
                           ) : (
                             (() => {
@@ -563,31 +660,74 @@ export default function BasePanel({ messages, canWrite }: BasePanelProps) {
                                   <table style={{ width: '100%', borderCollapse: 'collapse', marginTop: 8 }}>
                                     <thead>
                                       <tr>
-                                        <th style={{ textAlign: 'left', borderBottom: '1px solid var(--border)', padding: '6px 4px', whiteSpace: 'nowrap', background: 'var(--table-header-bg)' }}>
+                                        <th
+                                          onClick={() => toggleMicSort('mic_identifier')}
+                                          style={{
+                                            cursor: 'pointer',
+                                            userSelect: 'none',
+                                            textAlign: 'left',
+                                            borderBottom: '1px solid var(--border)',
+                                            padding: '6px 4px',
+                                            whiteSpace: 'nowrap',
+                                            background: 'var(--table-header-bg)',
+                                          }}
+                                        >
                                           {messages.bases.table.identifier}
+                                          <SortIcon active={micSortColumn === 'mic_identifier'} sortDirection={micSortDirection} />
                                         </th>
-                                        <th style={{ textAlign: 'left', borderBottom: '1px solid var(--border)', padding: '6px 4px', background: 'var(--table-header-bg)' }}>
-                                          {messages.bases.table.model}
-                                        </th>
-                                        <th style={{ textAlign: 'left', borderBottom: '1px solid var(--border)', padding: '6px 4px', background: 'var(--table-header-bg)' }}>
+                                        <th
+                                          onClick={() => toggleMicSort('mic_type_name')}
+                                          style={{
+                                            cursor: 'pointer',
+                                            userSelect: 'none',
+                                            textAlign: 'left',
+                                            borderBottom: '1px solid var(--border)',
+                                            padding: '6px 4px',
+                                            background: 'var(--table-header-bg)',
+                                          }}
+                                        >
                                           {messages.bases.table.type}
+                                          <SortIcon active={micSortColumn === 'mic_type_name'} sortDirection={micSortDirection} />
                                         </th>
-                                        <th style={{ textAlign: 'left', borderBottom: '1px solid var(--border)', padding: '6px 4px', whiteSpace: 'nowrap', background: 'var(--table-header-bg)' }}>
+                                        <th
+                                          onClick={() => toggleMicSort('mic_attachment_date')}
+                                          style={{
+                                            cursor: 'pointer',
+                                            userSelect: 'none',
+                                            textAlign: 'left',
+                                            borderBottom: '1px solid var(--border)',
+                                            padding: '6px 4px',
+                                            whiteSpace: 'nowrap',
+                                            background: 'var(--table-header-bg)',
+                                          }}
+                                        >
                                           {messages.bases.table.date}
+                                          <SortIcon active={micSortColumn === 'mic_attachment_date'} sortDirection={micSortDirection} />
                                         </th>
-                                        <th style={{ textAlign: 'left', borderBottom: '1px solid var(--border)', padding: '6px 4px', background: 'var(--table-header-bg)' }}>
+                                        <th
+                                          onClick={() => toggleMicSort('mic_attachment_user_name')}
+                                          style={{
+                                            cursor: 'pointer',
+                                            userSelect: 'none',
+                                            textAlign: 'left',
+                                            borderBottom: '1px solid var(--border)',
+                                            padding: '6px 4px',
+                                            background: 'var(--table-header-bg)',
+                                          }}
+                                        >
                                           {messages.bases.table.user}
+                                          <SortIcon
+                                            active={micSortColumn === 'mic_attachment_user_name'}
+                                            sortDirection={micSortDirection}
+                                          />
                                         </th>
                                       </tr>
                                     </thead>
                                     <tbody>
-                                      {mics.map((m) => (
+                                      {getSortedMics(mics).map((m) => (
                                         <tr key={m.mic_id}>
                                           <td style={{ borderBottom: '1px solid var(--border)', padding: '6px 4px', whiteSpace: 'nowrap' }}>
                                             {m.mic_identifier}
-                                          </td>
-                                          <td style={{ borderBottom: '1px solid var(--border)', padding: '6px 4px' }}>
-                                            {m.mic_model_name}
                                           </td>
                                           <td style={{ borderBottom: '1px solid var(--border)', padding: '6px 4px' }}>
                                             {m.mic_type_name}
@@ -603,7 +743,7 @@ export default function BasePanel({ messages, canWrite }: BasePanelProps) {
 
                                       {Array.from({ length: availableSlots }).map((_, i) => (
                                         <tr key={`available-${i}`}>
-                                          <td colSpan={5} style={{ fontSize: 14, borderBottom: '1px solid var(--border)', padding: '6px 4px' }}>
+                                          <td colSpan={4} style={{ fontSize: 14, borderBottom: '1px solid var(--border)', padding: '6px 4px' }}>
                                             {'<' + messages.bases.table.available + '>'}
                                           </td>
                                         </tr>
@@ -670,8 +810,6 @@ export default function BasePanel({ messages, canWrite }: BasePanelProps) {
           await loadBases()
         }}
       />
-
-
     </div>
   )
 }
