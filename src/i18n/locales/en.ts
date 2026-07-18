@@ -382,6 +382,7 @@ const en = {
       empty: 'No bases yet.',
     },
     feedback: {
+      loading_mics: 'Loading microphones...',
       loaded: 'Bases loaded.',
       loadFailed: 'Failed to load bases',
       created: 'Base created.',
