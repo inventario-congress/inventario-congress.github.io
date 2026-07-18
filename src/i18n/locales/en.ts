@@ -378,6 +378,7 @@ const en = {
       user: 'User',
       latestLocation: 'Location',
       actions: 'Actions',
+      available: 'Available',
       empty: 'No bases yet.',
     },
     feedback: {
