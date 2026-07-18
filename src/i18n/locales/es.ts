@@ -378,6 +378,7 @@ const es = {
       user: 'Usuario',
       latestLocation: 'Venue y Sala',
       actions: 'Acciones',
+      available: 'Disponible',
       empty: 'Todavía no hay bases.',
     },
     feedback: {

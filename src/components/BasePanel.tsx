@@ -546,54 +546,73 @@ export default function BasePanel({ messages, canWrite }: BasePanelProps) {
                               <div style={{ fontSize: 12, color: 'var(--muted)' }}>{messages.bases.table.mics}</div>
                               <div style={{ marginTop: 8, fontSize: 12, color: 'var(--muted)' }}>Loading…</div>
                             </div>
-                          ) : getBaseMics(row).length === 0 ? (
-                            <div style={{ height: 18 }} />
                           ) : (
-                            <div style={{ padding: '10px 6px 14px 6px' }}>
-                              <div style={{ fontSize: 12, color: 'var(--muted)' }}>{messages.bases.table.mics}</div>
-                              <table style={{ width: '100%', borderCollapse: 'collapse', marginTop: 8 }}>
-                                <thead>
-                                  <tr>
-                                    <th style={{ textAlign: 'left', borderBottom: '1px solid var(--border)', padding: '6px 4px', whiteSpace: 'nowrap' }}>
-                                      {messages.bases.table.identifier}
-                                    </th>
-                                    <th style={{ textAlign: 'left', borderBottom: '1px solid var(--border)', padding: '6px 4px' }}>
-                                      {messages.bases.table.model}
-                                    </th>
-                                    <th style={{ textAlign: 'left', borderBottom: '1px solid var(--border)', padding: '6px 4px' }}>
-                                      {messages.bases.table.type}
-                                    </th>
-                                    <th style={{ textAlign: 'left', borderBottom: '1px solid var(--border)', padding: '6px 4px', whiteSpace: 'nowrap' }}>
-                                      {messages.bases.table.date}
-                                    </th>
-                                    <th style={{ textAlign: 'left', borderBottom: '1px solid var(--border)', padding: '6px 4px' }}>
-                                      {messages.bases.table.user}
-                                    </th>
-                                  </tr>
-                                </thead>
-                                <tbody>
-                                  {getBaseMics(row).map((m) => (
-                                    <tr key={m.mic_id}>
-                                      <td style={{ borderBottom: '1px solid var(--border)', padding: '6px 4px', whiteSpace: 'nowrap' }}>
-                                        {m.mic_identifier}
-                                      </td>
-                                      <td style={{ borderBottom: '1px solid var(--border)', padding: '6px 4px' }}>
-                                        {m.mic_model_name}
-                                      </td>
-                                      <td style={{ borderBottom: '1px solid var(--border)', padding: '6px 4px' }}>
-                                        {m.mic_type_name}
-                                      </td>
-                                      <td style={{ borderBottom: '1px solid var(--border)', padding: '6px 4px', whiteSpace: 'nowrap' }}>
-                                        {formatDateTime(m.mic_attachment_date)}
-                                      </td>
-                                      <td style={{ borderBottom: '1px solid var(--border)', padding: '6px 4px' }}>
-                                        {m.mic_attachment_user_name ?? ''}
-                                      </td>
-                                    </tr>
-                                  ))}
-                                </tbody>
-                              </table>
-                            </div>
+                            (() => {
+                              const mics = getBaseMics(row)
+                              const maxMicCount = row.max_mic_count ?? 0
+                              const availableSlots = Math.max(0, maxMicCount - mics.length)
+
+                              // Always render the table so we can show max_mic_count rows (including Available/Disponible rows).
+                              if (maxMicCount <= 0) {
+                                return <div style={{ height: 18 }} />
+                              }
+
+                              return (
+                                <div style={{ padding: '10px 6px 14px 6px' }}>
+                                  <div style={{ fontSize: 16, color: 'var(--muted)' }}>{messages.bases.table.mics}</div>
+                                  <table style={{ width: '100%', borderCollapse: 'collapse', marginTop: 8 }}>
+                                    <thead>
+                                      <tr>
+                                        <th style={{ textAlign: 'left', borderBottom: '1px solid var(--border)', padding: '6px 4px', whiteSpace: 'nowrap', background: 'var(--table-header-bg)' }}>
+                                          {messages.bases.table.identifier}
+                                        </th>
+                                        <th style={{ textAlign: 'left', borderBottom: '1px solid var(--border)', padding: '6px 4px', background: 'var(--table-header-bg)' }}>
+                                          {messages.bases.table.model}
+                                        </th>
+                                        <th style={{ textAlign: 'left', borderBottom: '1px solid var(--border)', padding: '6px 4px', background: 'var(--table-header-bg)' }}>
+                                          {messages.bases.table.type}
+                                        </th>
+                                        <th style={{ textAlign: 'left', borderBottom: '1px solid var(--border)', padding: '6px 4px', whiteSpace: 'nowrap', background: 'var(--table-header-bg)' }}>
+                                          {messages.bases.table.date}
+                                        </th>
+                                        <th style={{ textAlign: 'left', borderBottom: '1px solid var(--border)', padding: '6px 4px', background: 'var(--table-header-bg)' }}>
+                                          {messages.bases.table.user}
+                                        </th>
+                                      </tr>
+                                    </thead>
+                                    <tbody>
+                                      {mics.map((m) => (
+                                        <tr key={m.mic_id}>
+                                          <td style={{ borderBottom: '1px solid var(--border)', padding: '6px 4px', whiteSpace: 'nowrap' }}>
+                                            {m.mic_identifier}
+                                          </td>
+                                          <td style={{ borderBottom: '1px solid var(--border)', padding: '6px 4px' }}>
+                                            {m.mic_model_name}
+                                          </td>
+                                          <td style={{ borderBottom: '1px solid var(--border)', padding: '6px 4px' }}>
+                                            {m.mic_type_name}
+                                          </td>
+                                          <td style={{ borderBottom: '1px solid var(--border)', padding: '6px 4px', whiteSpace: 'nowrap' }}>
+                                            {formatDateTime(m.mic_attachment_date)}
+                                          </td>
+                                          <td style={{ borderBottom: '1px solid var(--border)', padding: '6px 4px' }}>
+                                            {m.mic_attachment_user_name ?? ''}
+                                          </td>
+                                        </tr>
+                                      ))}
+
+                                      {Array.from({ length: availableSlots }).map((_, i) => (
+                                        <tr key={`available-${i}`}>
+                                          <td colSpan={5} style={{ fontSize: 14, borderBottom: '1px solid var(--border)', padding: '6px 4px' }}>
+                                            {'<' + messages.bases.table.available + '>'}
+                                          </td>
+                                        </tr>
+                                      ))}
+                                    </tbody>
+                                  </table>
+                                </div>
+                              )
+                            })()
                           )}
                         </div>
                       </td>
