@@ -743,7 +743,7 @@ export default function BasePanel({ messages, canWrite }: BasePanelProps) {
 
                                       {Array.from({ length: availableSlots }).map((_, i) => (
                                         <tr key={`available-${i}`}>
-                                          <td colSpan={4} style={{ fontSize: 14, borderBottom: '1px solid var(--border)', padding: '6px 4px' }}>
+                                          <td colSpan={4} style={{ fontSize: 14, borderBottom: '1px solid var(--border)', padding: '6px 4px', fontStyle: 'italic', color: 'var(--muted)' }}>
                                             {'<' + messages.bases.table.available + '>'}
                                           </td>
                                         </tr>
