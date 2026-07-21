@@ -144,6 +144,7 @@ const es = {
       microphones: 'Micrófonos',
       bases: 'Bases',
       locations: 'Venues',
+      combos: 'Combos',
 
     },
     user: {
@@ -315,6 +316,55 @@ const es = {
           loading: 'Guardando...',
         },
       },
+    },
+  },
+  combos: {
+    title: 'Combos',
+    fields: {
+      identifier: 'N°',
+      model: 'Modelo',
+    },
+    actions: {
+      create: 'Crear combo',
+      update: 'Actualizar combo',
+      cancelEdit: 'Cancelar',
+      edit: 'Editar',
+      delete: 'Eliminar',
+    },
+    dialogs: {
+      editor: {
+        titleCreate: 'Crear combo',
+        titleEdit: 'Actualizar combo',
+        description: 'Configura el número del combo y el modelo.',
+        fields: {
+          identifier: 'N°',
+          model: 'Modelo',
+        },
+        actions: {
+          cancel: 'Cancelar',
+          save: 'Guardar combo',
+        },
+        feedback: {
+          submitting: 'Enviando...',
+          createFailed: 'No se pudo crear el combo',
+          updateFailed: 'No se pudo actualizar el combo',
+        },
+      },
+    },
+    table: {
+      identifier: 'N°',
+      model: 'Modelo',
+      actions: 'Acciones',
+      empty: 'Todavía no hay combos.',
+    },
+    feedback: {
+      loadFailed: 'No se pudieron cargar los combos',
+      created: 'Combo creado.',
+      createFailed: 'No se pudo crear el combo',
+      updated: 'Combo actualizado.',
+      updateFailed: 'No se pudo actualizar el combo',
+      deleted: 'Combo eliminado.',
+      deleteFailed: 'No se pudo eliminar el combo',
     },
   },
   bases: {

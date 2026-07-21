@@ -6,6 +6,7 @@ import Menu, { type AppPanel } from './components/Menu'
 
 import ProfilePanel from './components/ProfilePanel'
 import BasePanel from './components/BasePanel'
+import ComboPanel from './components/ComboPanel'
 import { MoonIcon, SunIcon } from './components/icons'
 import { translations } from './i18n'
 
@@ -59,7 +60,7 @@ function App() {
 
     try {
       const raw = window.localStorage.getItem(ACTIVE_PANEL_STORAGE_KEY)
-      if (raw === 'microphones' || raw === 'bases' || raw === 'locations' || raw === 'profile') {
+      if (raw === 'microphones' || raw === 'bases' || raw === 'locations' || raw === 'combos' || raw === 'profile') {
         return raw
       }
     } catch {
@@ -270,6 +271,10 @@ function App() {
 
     if (activePanel === 'locations') {
       return <LocationsPanel messages={messages} canWrite={isWriter} />
+    }
+
+    if (activePanel === 'combos') {
+      return <ComboPanel messages={messages} canWrite={isWriter} />
     }
 
 

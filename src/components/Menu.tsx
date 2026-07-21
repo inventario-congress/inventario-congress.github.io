@@ -1,6 +1,6 @@
 import type { Messages } from '../i18n'
 
-export type AppPanel = 'microphones' | 'bases' | 'locations' | 'profile'
+export type AppPanel = 'microphones' | 'bases' | 'locations' | 'combos' | 'profile'
 
 
 type MenuProps = {
@@ -51,7 +51,11 @@ export default function Menu({ messages, activePanel, onSelectPanel, onSignOut }
             selected={activePanel === 'locations'}
             onClick={() => onSelectPanel('locations')}
           />
-
+          <MenuButton
+            label={messages.menu.system.combos}
+            selected={activePanel === 'combos'}
+            onClick={() => onSelectPanel('combos')}
+          />
 
         </div>
       </section>

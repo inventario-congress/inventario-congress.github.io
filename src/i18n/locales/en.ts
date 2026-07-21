@@ -144,6 +144,7 @@ const en = {
       microphones: 'Microphones',
       bases: 'Bases',
       locations: 'Locations',
+      combos: 'Combos',
 
     },
     user: {
@@ -314,6 +315,55 @@ const en = {
           loading: 'Saving...',
         },
       },
+    },
+  },
+  combos: {
+    title: 'Combos',
+    fields: {
+      identifier: 'Identifier',
+      model: 'Model',
+    },
+    actions: {
+      create: 'Create combo',
+      update: 'Update combo',
+      cancelEdit: 'Cancel',
+      edit: 'Edit',
+      delete: 'Delete',
+    },
+    dialogs: {
+      editor: {
+        titleCreate: 'Create combo',
+        titleEdit: 'Update combo',
+        description: 'Configure combo identifier and model.',
+        fields: {
+          identifier: 'Identifier',
+          model: 'Model',
+        },
+        actions: {
+          cancel: 'Cancel',
+          save: 'Save combo',
+        },
+        feedback: {
+          submitting: 'Submitting...',
+          createFailed: 'Failed to create combo',
+          updateFailed: 'Failed to update combo',
+        },
+      },
+    },
+    table: {
+      identifier: 'Identifier',
+      model: 'Model',
+      actions: 'Actions',
+      empty: 'No combos yet.',
+    },
+    feedback: {
+      loadFailed: 'Failed to load combos',
+      created: 'Combo created.',
+      createFailed: 'Failed to create combo',
+      updated: 'Combo updated.',
+      updateFailed: 'Failed to update combo',
+      deleted: 'Combo deleted.',
+      deleteFailed: 'Failed to delete combo',
     },
   },
   bases: {
