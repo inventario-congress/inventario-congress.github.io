@@ -9,9 +9,10 @@ type ComboRow = {
   id: number
   identifier: number
   model: string
+  latest_location_room: string | null
 }
 
-type SortColumn = 'identifier' | 'model'
+type SortColumn = 'identifier' | 'model' | 'latest_location_room'
 type SortDirection = 'asc' | 'desc'
 
 type ComboPanelProps = {
@@ -61,7 +62,7 @@ export default function ComboPanel({ messages, canWrite }: ComboPanelProps) {
       if (!raw) return 'identifier'
       const parsed = JSON.parse(raw) as { sortColumn?: unknown; sortDirection?: unknown }
       const candidate = parsed.sortColumn
-      if (candidate === 'identifier' || candidate === 'model') return candidate
+      if (candidate === 'identifier' || candidate === 'model' || candidate === 'latest_location_room') return candidate
     } catch {
       // ignore
     }
@@ -91,17 +92,11 @@ export default function ComboPanel({ messages, canWrite }: ComboPanelProps) {
 
     try {
       const { data, error: loadError } = await supabase
-        .from('combo')
-        .select('id, identifier, model')
-        .order('identifier', { ascending: true })
+        .rpc('get_combos_with_latest_location_room')
 
       if (loadError) throw loadError
 
-      setRows((data ?? []).map((entry) => ({
-        id: entry.id as number,
-        identifier: entry.identifier as number,
-        model: entry.model as string,
-      })))
+      setRows((data ?? []) as ComboRow[])
     } catch (e) {
       setError(e instanceof Error ? e.message : messages.combos.feedback.loadFailed)
     } finally {
@@ -141,6 +136,11 @@ export default function ComboPanel({ messages, canWrite }: ComboPanelProps) {
           return (a.identifier - b.identifier) * dirMul
         case 'model':
           return a.model.localeCompare(b.model) * dirMul
+        case 'latest_location_room': {
+          const av = a.latest_location_room ?? ''
+          const bv = b.latest_location_room ?? ''
+          return av.localeCompare(bv) * dirMul
+        }
         default:
           return 0
       }
@@ -350,6 +350,21 @@ export default function ComboPanel({ messages, canWrite }: ComboPanelProps) {
                   {messages.combos.table.model}
                   <SortIcon active={sortColumn === 'model'} sortDirection={sortDirection} />
                 </th>
+                <th
+                  onClick={() => toggleSort('latest_location_room')}
+                  style={{
+                    cursor: 'pointer',
+                    userSelect: 'none',
+                    textAlign: 'left',
+                    borderBottom: '1px solid var(--border)',
+                    background: 'var(--table-header-bg)',
+                    padding: '8px 6px',
+                    whiteSpace: 'nowrap',
+                  }}
+                >
+                  {messages.combos.table.latestLocationRoom}
+                  <SortIcon active={sortColumn === 'latest_location_room'} sortDirection={sortDirection} />
+                </th>
                 {canWrite ? (
                   <th
                     style={{
@@ -369,6 +384,7 @@ export default function ComboPanel({ messages, canWrite }: ComboPanelProps) {
                 <tr key={row.id}>
                   <td style={{ borderBottom: '1px solid var(--border)', padding: '8px 6px' }}>{row.identifier}</td>
                   <td style={{ borderBottom: '1px solid var(--border)', padding: '8px 6px' }}>{row.model}</td>
+                  <td style={{ borderBottom: '1px solid var(--border)', padding: '8px 6px' }}>{row.latest_location_room ?? ''}</td>
                   {canWrite ? (
                     <td style={{ borderBottom: '1px solid var(--border)', padding: '8px 6px' }}>
                       <div style={{ display: 'flex', gap: 8, flexWrap: 'wrap' }}>

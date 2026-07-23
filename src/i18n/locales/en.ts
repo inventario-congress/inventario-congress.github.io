@@ -365,6 +365,7 @@ const en = {
     table: {
       identifier: 'Identifier',
       model: 'Model',
+      latestLocationRoom: 'Venue and Room',
       actions: 'Actions',
       empty: 'No combos yet.',
     },
@@ -458,5 +459,3 @@ const en = {
 } as const
 
 export default en
-
-
