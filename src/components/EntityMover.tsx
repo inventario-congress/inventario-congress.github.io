@@ -13,21 +13,31 @@ type RoomChoice = {
   room_name: string
 }
 
-type BaseMoverProps = {
+type MoveDialogStrings = {
+  title: string
+  searchLabel: string
+  searchPlaceholder: string
+  roomLabel: string
+  roomSearchPlaceholder: string
+  roomsNoneAssociated: string
+  moveDisabledReason: string
+  empty: string
+}
+
+type EntityMoverProps = {
   messages: Messages
   canWrite: boolean
   open: boolean
-  baseId: number | null
+  entityId: number | null
+  entityType: 'base' | 'combo'
   locationId: number | null
   roomId: number | null
+  dialogStrings: MoveDialogStrings
   onClose: () => void
   onMoved: () => Promise<void> | void
 }
 
-export default function BaseMover({ messages, canWrite, open, baseId, locationId, roomId, onClose, onMoved }: BaseMoverProps) {
-  const strings = messages.bases
-  const dialogStrings = strings.dialogs.moveBase
-
+export default function EntityMover({ messages, canWrite, open, entityId, entityType, locationId, roomId, dialogStrings, onClose, onMoved }: EntityMoverProps) {
   const [loading, setLoading] = useState(false)
   const [error, setError] = useState<string | null>(null)
 
@@ -180,17 +190,17 @@ export default function BaseMover({ messages, canWrite, open, baseId, locationId
   const submitDisabled = useMemo(() => {
     if (!canWrite) return true
     if (!supabase) return true
-    if (!baseId) return true
+    if (!entityId) return true
     if (loading) return true
     if (locationsLoading || roomsLoading) return true
     if (selectedLocationId === '' || selectedRoomId === '') return true
     return false
-  }, [baseId, canWrite, locationsLoading, loading, roomsLoading, selectedLocationId, selectedRoomId])
+  }, [entityId, canWrite, locationsLoading, loading, roomsLoading, selectedLocationId, selectedRoomId])
 
   const handleSubmit = useCallback(async () => {
     if (!supabase) return
     if (!canWrite) return
-    if (!baseId) return
+    if (!entityId) return
     if (selectedLocationId === '' || selectedRoomId === '') return
 
     setError(null)
@@ -206,11 +216,16 @@ export default function BaseMover({ messages, canWrite, open, baseId, locationId
         throw new Error(messages.microphones.feedback.authRequired)
       }
 
-      const payload = {
-        base: baseId,
+      const payload: Record<string, number | string> = {
         location: selectedLocationId,
         room: selectedRoomId,
         user: userId,
+      }
+
+      if (entityType === 'base') {
+        payload.base = entityId
+      } else {
+        payload.combo = entityId
       }
 
       const { error: createError } = await supabase.from('movement').insert(payload)
@@ -219,12 +234,12 @@ export default function BaseMover({ messages, canWrite, open, baseId, locationId
       await onMoved()
       close()
     } catch (e) {
-      const msg = e instanceof Error ? e.message : strings.feedback.loadFailed
+      const msg = e instanceof Error ? e.message : messages.bases.feedback.loadFailed
       setError(msg)
     } finally {
       setLoading(false)
     }
-  }, [baseId, canWrite, close, messages.microphones.feedback.authRequired, onMoved, selectedLocationId, selectedRoomId, strings.feedback.loadFailed])
+  }, [entityId, entityType, canWrite, close, messages.microphones.feedback.authRequired, onMoved, selectedLocationId, selectedRoomId, messages.bases.feedback.loadFailed])
 
   if (!open) return null
 
@@ -290,12 +305,12 @@ export default function BaseMover({ messages, canWrite, open, baseId, locationId
           }}
           style={{ display: 'grid', gap: 10, marginTop: 14 }}
         >
-          <label htmlFor="base-mover-location" style={{ textAlign: 'left' }}>
+          <label htmlFor="entity-mover-location" style={{ textAlign: 'left' }}>
             {dialogStrings.searchLabel}
           </label>
 
           <select
-            id="base-mover-location"
+            id="entity-mover-location"
             value={selectedLocationId}
             onChange={(e) => {
               const value = e.target.value
@@ -326,12 +341,12 @@ export default function BaseMover({ messages, canWrite, open, baseId, locationId
             )}
           </select>
 
-          <label htmlFor="base-mover-room" style={{ textAlign: 'left' }}>
+          <label htmlFor="entity-mover-room" style={{ textAlign: 'left' }}>
             {dialogStrings.roomLabel}
           </label>
 
           <select
-            id="base-mover-room"
+            id="entity-mover-room"
             value={selectedRoomId}
             onChange={(e) => {
               const value = e.target.value
@@ -374,10 +389,10 @@ export default function BaseMover({ messages, canWrite, open, baseId, locationId
               disabled={loading}
               style={{ padding: '10px 14px', borderRadius: 6, cursor: 'pointer' }}
             >
-              {strings.actions.cancelMove}
+              {messages.bases.actions.cancelMove}
             </button>
             <button type="submit" disabled={submitDisabled} style={{ padding: '10px 14px', borderRadius: 6, cursor: 'pointer' }}>
-              {loading ? strings.actions.move + '...' : strings.actions.move}
+              {loading ? messages.bases.actions.move + '...' : messages.bases.actions.move}
             </button>
           </div>
         </form>

@@ -3,14 +3,16 @@ import type { Messages } from '../i18n'
 import { supabase } from '../supabaseClient'
 import DeleteConfirmation from './DeleteConfirmation'
 import ComboEditor from './ComboEditor'
+import EntityMover from './EntityMover'
 
 type ComboRow = {
   id: number
   identifier: number
   model: string
+  latest_location_room: string | null
 }
 
-type SortColumn = 'identifier' | 'model'
+type SortColumn = 'identifier' | 'model' | 'latest_location_room'
 type SortDirection = 'asc' | 'desc'
 
 type ComboPanelProps = {
@@ -47,6 +49,10 @@ export default function ComboPanel({ messages, canWrite }: ComboPanelProps) {
   const [deleteTarget, setDeleteTarget] = useState<{ id: number; name: string } | null>(null)
 
   const [error, setError] = useState<string | null>(null)
+  const [moveDialogOpen, setMoveDialogOpen] = useState(false)
+  const [moveComboId, setMoveComboId] = useState<number | null>(null)
+  const [moveLocationId, setMoveLocationId] = useState<number | null>(null)
+  const [moveRoomId, setMoveRoomId] = useState<number | null>(null)
 
   const SORT_STORAGE_KEY = 'inventario_congress:combos:sort'
 
@@ -56,7 +62,7 @@ export default function ComboPanel({ messages, canWrite }: ComboPanelProps) {
       if (!raw) return 'identifier'
       const parsed = JSON.parse(raw) as { sortColumn?: unknown; sortDirection?: unknown }
       const candidate = parsed.sortColumn
-      if (candidate === 'identifier' || candidate === 'model') return candidate
+      if (candidate === 'identifier' || candidate === 'model' || candidate === 'latest_location_room') return candidate
     } catch {
       // ignore
     }
@@ -86,17 +92,11 @@ export default function ComboPanel({ messages, canWrite }: ComboPanelProps) {
 
     try {
       const { data, error: loadError } = await supabase
-        .from('combo')
-        .select('id, identifier, model')
-        .order('identifier', { ascending: true })
+        .rpc('get_combos_with_latest_location_room')
 
       if (loadError) throw loadError
 
-      setRows((data ?? []).map((entry) => ({
-        id: entry.id as number,
-        identifier: entry.identifier as number,
-        model: entry.model as string,
-      })))
+      setRows((data ?? []) as ComboRow[])
     } catch (e) {
       setError(e instanceof Error ? e.message : messages.combos.feedback.loadFailed)
     } finally {
@@ -136,6 +136,11 @@ export default function ComboPanel({ messages, canWrite }: ComboPanelProps) {
           return (a.identifier - b.identifier) * dirMul
         case 'model':
           return a.model.localeCompare(b.model) * dirMul
+        case 'latest_location_room': {
+          const av = a.latest_location_room ?? ''
+          const bv = b.latest_location_room ?? ''
+          return av.localeCompare(bv) * dirMul
+        }
         default:
           return 0
       }
@@ -181,6 +186,26 @@ export default function ComboPanel({ messages, canWrite }: ComboPanelProps) {
     } finally {
       setLoading(false)
     }
+  }
+
+  const resetMoveDialog = useCallback(() => {
+    setMoveDialogOpen(false)
+    setMoveComboId(null)
+    setMoveLocationId(null)
+    setMoveRoomId(null)
+  }, [])
+
+  function openMoveDialog(row: ComboRow) {
+    if (!canWrite) return
+    setError(null)
+    setMoveDialogOpen(true)
+    setMoveComboId(row.id)
+    setMoveLocationId(null)
+    setMoveRoomId(null)
+  }
+
+  function cancelMoveDialog() {
+    resetMoveDialog()
   }
 
   return (
@@ -265,6 +290,22 @@ export default function ComboPanel({ messages, canWrite }: ComboPanelProps) {
         }}
       />
 
+      <EntityMover
+        messages={messages}
+        canWrite={canWrite}
+        open={moveDialogOpen}
+        entityId={moveComboId}
+        entityType="combo"
+        locationId={moveLocationId}
+        roomId={moveRoomId}
+        dialogStrings={messages.combos.dialogs.moveCombo}
+        onClose={() => cancelMoveDialog()}
+        onMoved={async () => {
+          setError(null)
+          await loadCombos()
+        }}
+      />
+
       {error ? (
         <div style={{ color: 'crimson', marginBottom: 10 }}>
           <strong>{messages.auth.feedback.error}</strong> {error}
@@ -309,6 +350,21 @@ export default function ComboPanel({ messages, canWrite }: ComboPanelProps) {
                   {messages.combos.table.model}
                   <SortIcon active={sortColumn === 'model'} sortDirection={sortDirection} />
                 </th>
+                <th
+                  onClick={() => toggleSort('latest_location_room')}
+                  style={{
+                    cursor: 'pointer',
+                    userSelect: 'none',
+                    textAlign: 'left',
+                    borderBottom: '1px solid var(--border)',
+                    background: 'var(--table-header-bg)',
+                    padding: '8px 6px',
+                    whiteSpace: 'nowrap',
+                  }}
+                >
+                  {messages.combos.table.latestLocationRoom}
+                  <SortIcon active={sortColumn === 'latest_location_room'} sortDirection={sortDirection} />
+                </th>
                 {canWrite ? (
                   <th
                     style={{
@@ -328,9 +384,18 @@ export default function ComboPanel({ messages, canWrite }: ComboPanelProps) {
                 <tr key={row.id}>
                   <td style={{ borderBottom: '1px solid var(--border)', padding: '8px 6px' }}>{row.identifier}</td>
                   <td style={{ borderBottom: '1px solid var(--border)', padding: '8px 6px' }}>{row.model}</td>
+                  <td style={{ borderBottom: '1px solid var(--border)', padding: '8px 6px' }}>{row.latest_location_room ?? ''}</td>
                   {canWrite ? (
                     <td style={{ borderBottom: '1px solid var(--border)', padding: '8px 6px' }}>
                       <div style={{ display: 'flex', gap: 8, flexWrap: 'wrap' }}>
+                        <button
+                          type="button"
+                          onClick={() => openMoveDialog(row)}
+                          disabled={loading}
+                          style={{ padding: '6px 10px', borderRadius: 6, cursor: 'pointer' }}
+                        >
+                          {messages.combos.actions.move}
+                        </button>
                         <button
                           type="button"
                           onClick={() => startEdit(row)}
