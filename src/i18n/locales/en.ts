@@ -329,8 +329,20 @@ const en = {
       cancelEdit: 'Cancel',
       edit: 'Edit',
       delete: 'Delete',
+      move: 'Move',
+      cancelMove: 'Cancel',
     },
     dialogs: {
+      moveCombo: {
+        title: 'Move combo to a location',
+        searchLabel: 'Location',
+        searchPlaceholder: 'Search locations...',
+        roomLabel: 'Room',
+        roomSearchPlaceholder: 'Select a room...',
+        roomsNoneAssociated: 'No rooms associated with this location.',
+        moveDisabledReason: 'Select a location and room to enable move',
+        empty: 'No available locations.',
+      },
       editor: {
         titleCreate: 'Create combo',
         titleEdit: 'Update combo',

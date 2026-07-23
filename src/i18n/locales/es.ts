@@ -330,8 +330,20 @@ const es = {
       cancelEdit: 'Cancelar',
       edit: 'Editar',
       delete: 'Eliminar',
+      move: 'Mover',
+      cancelMove: 'Cancelar',
     },
     dialogs: {
+      moveCombo: {
+        title: 'Mover el combo a un venue y sala',
+        searchLabel: 'Venue',
+        searchPlaceholder: 'Buscar venues...',
+        roomLabel: 'Sala',
+        roomSearchPlaceholder: 'Selecciona una sala...',
+        roomsNoneAssociated: 'No hay salas asociadas a este venue.',
+        moveDisabledReason: 'Selecciona un venue y una sala para habilitar mover',
+        empty: 'No hay venues disponibles.',
+      },
       editor: {
         titleCreate: 'Crear combo',
         titleEdit: 'Actualizar combo',

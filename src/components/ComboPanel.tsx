@@ -3,6 +3,7 @@ import type { Messages } from '../i18n'
 import { supabase } from '../supabaseClient'
 import DeleteConfirmation from './DeleteConfirmation'
 import ComboEditor from './ComboEditor'
+import EntityMover from './EntityMover'
 
 type ComboRow = {
   id: number
@@ -47,6 +48,10 @@ export default function ComboPanel({ messages, canWrite }: ComboPanelProps) {
   const [deleteTarget, setDeleteTarget] = useState<{ id: number; name: string } | null>(null)
 
   const [error, setError] = useState<string | null>(null)
+  const [moveDialogOpen, setMoveDialogOpen] = useState(false)
+  const [moveComboId, setMoveComboId] = useState<number | null>(null)
+  const [moveLocationId, setMoveLocationId] = useState<number | null>(null)
+  const [moveRoomId, setMoveRoomId] = useState<number | null>(null)
 
   const SORT_STORAGE_KEY = 'inventario_congress:combos:sort'
 
@@ -183,6 +188,26 @@ export default function ComboPanel({ messages, canWrite }: ComboPanelProps) {
     }
   }
 
+  const resetMoveDialog = useCallback(() => {
+    setMoveDialogOpen(false)
+    setMoveComboId(null)
+    setMoveLocationId(null)
+    setMoveRoomId(null)
+  }, [])
+
+  function openMoveDialog(row: ComboRow) {
+    if (!canWrite) return
+    setError(null)
+    setMoveDialogOpen(true)
+    setMoveComboId(row.id)
+    setMoveLocationId(null)
+    setMoveRoomId(null)
+  }
+
+  function cancelMoveDialog() {
+    resetMoveDialog()
+  }
+
   return (
     <div style={{ maxWidth: 820, margin: '0 auto', padding: 16, textAlign: 'left' }}>
       <div style={{ display: 'flex', alignItems: 'flex-start', justifyContent: 'space-between', gap: 12, marginTop: 24 }}>
@@ -265,6 +290,22 @@ export default function ComboPanel({ messages, canWrite }: ComboPanelProps) {
         }}
       />
 
+      <EntityMover
+        messages={messages}
+        canWrite={canWrite}
+        open={moveDialogOpen}
+        entityId={moveComboId}
+        entityType="combo"
+        locationId={moveLocationId}
+        roomId={moveRoomId}
+        dialogStrings={messages.combos.dialogs.moveCombo}
+        onClose={() => cancelMoveDialog()}
+        onMoved={async () => {
+          setError(null)
+          await loadCombos()
+        }}
+      />
+
       {error ? (
         <div style={{ color: 'crimson', marginBottom: 10 }}>
           <strong>{messages.auth.feedback.error}</strong> {error}
@@ -331,6 +372,14 @@ export default function ComboPanel({ messages, canWrite }: ComboPanelProps) {
                   {canWrite ? (
                     <td style={{ borderBottom: '1px solid var(--border)', padding: '8px 6px' }}>
                       <div style={{ display: 'flex', gap: 8, flexWrap: 'wrap' }}>
+                        <button
+                          type="button"
+                          onClick={() => openMoveDialog(row)}
+                          disabled={loading}
+                          style={{ padding: '6px 10px', borderRadius: 6, cursor: 'pointer' }}
+                        >
+                          {messages.combos.actions.move}
+                        </button>
                         <button
                           type="button"
                           onClick={() => startEdit(row)}

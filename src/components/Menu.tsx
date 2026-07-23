@@ -37,26 +37,25 @@ export default function Menu({ messages, activePanel, onSelectPanel, onSignOut }
         <h3 className="menu-title">{messages.menu.system.title}</h3>
         <div className="menu-list">
           <MenuButton
-            label={messages.menu.system.microphones}
-            selected={activePanel === 'microphones'}
-            onClick={() => onSelectPanel('microphones')}
-          />
-          <MenuButton
             label={messages.menu.system.bases}
             selected={activePanel === 'bases'}
             onClick={() => onSelectPanel('bases')}
-          />
-          <MenuButton
-            label={messages.menu.system.locations}
-            selected={activePanel === 'locations'}
-            onClick={() => onSelectPanel('locations')}
           />
           <MenuButton
             label={messages.menu.system.combos}
             selected={activePanel === 'combos'}
             onClick={() => onSelectPanel('combos')}
           />
-
+          <MenuButton
+            label={messages.menu.system.microphones}
+            selected={activePanel === 'microphones'}
+            onClick={() => onSelectPanel('microphones')}
+          />
+          <MenuButton
+            label={messages.menu.system.locations}
+            selected={activePanel === 'locations'}
+            onClick={() => onSelectPanel('locations')}
+          />
         </div>
       </section>
 

@@ -4,7 +4,7 @@ import type { Messages } from '../i18n'
 import { supabase } from '../supabaseClient'
 import BaseEditor from './BaseEditor'
 import DeleteConfirmation from './DeleteConfirmation'
-import BaseMover from './BaseMover'
+import EntityMover from './EntityMover'
 
 
 
@@ -797,13 +797,15 @@ export default function BasePanel({ messages, canWrite }: BasePanelProps) {
         }}
       />
 
-      <BaseMover
+      <EntityMover
         messages={messages}
         canWrite={canWrite}
         open={moveDialogOpen}
-        baseId={moveBaseId}
+        entityId={moveBaseId}
+        entityType="base"
         locationId={moveLocationId}
         roomId={moveRoomId}
+        dialogStrings={messages.bases.dialogs.moveBase}
         onClose={() => cancelMoveDialog()}
         onMoved={async () => {
           setError(null)
