@@ -139,6 +139,7 @@ const es = {
     ariaLabel: 'Menú de la aplicación',
     toggle: 'Menú',
     close: 'Cerrar menú',
+    loading: 'Cargando...',
     system: {
       title: 'Sistema',
       microphones: 'Micrófonos',
