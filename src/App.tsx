@@ -1,13 +1,14 @@
 import { lazy, Suspense, useEffect, useMemo, useRef, useState } from 'react'
-import AuthPanel from './components/AuthPanel'
-import Menu, { type AppPanel } from './components/Menu'
-import { MoonIcon, SunIcon } from './components/icons'
-import { translations } from './i18n'
-
-import { supabase } from './supabaseClient'
+import type { AppPanel } from './components/Menu'
 import type { Session } from '@supabase/supabase-js'
+import { MoonIcon, SunIcon } from './components/icons'
+import { supabase } from './supabaseClient'
 import './App.css'
 
+import esMessages from './i18n/locales/es'
+
+const AuthPanel = lazy(() => import('./components/AuthPanel'))
+const Menu = lazy(() => import('./components/Menu'))
 const MicrophonesPanel = lazy(() => import('./components/MicrophonesPanel'))
 const BasePanel = lazy(() => import('./components/BasePanel'))
 const LocationsPanel = lazy(() => import('./components/LocationsPanel'))
@@ -79,7 +80,7 @@ function App() {
   const menuToggleRef = useRef<HTMLButtonElement | null>(null)
   const sidebarRef = useRef<HTMLElement | null>(null)
   const didOpenMobileMenuRef = useRef(false)
-  const messages = useMemo(() => translations['es'], [])
+  const messages = useMemo(() => esMessages, [])
 
   useEffect(() => {
     if (!supabase) {
@@ -334,12 +335,14 @@ function App() {
             tabIndex={-1}
             className={`app-sidebar ${isMobileMenuOpen ? 'open' : ''}`}
           >
-            <Menu
-              messages={messages}
-              activePanel={activePanel}
-              onSelectPanel={handleSelectPanel}
-              onSignOut={handleSignOut}
-            />
+            <Suspense fallback={<div style={{ padding: 32, textAlign: 'center', opacity: 0.6 }}>{messages.menu.loading}</div>}>
+              <Menu
+                messages={messages}
+                activePanel={activePanel}
+                onSelectPanel={handleSelectPanel}
+                onSignOut={handleSignOut}
+              />
+            </Suspense>
           </aside>
 
           <section className="app-content">
@@ -349,7 +352,9 @@ function App() {
           </section>
         </div>
       ) : (
-        <AuthPanel messages={messages} />
+        <Suspense fallback={<div style={{ padding: 32, textAlign: 'center', opacity: 0.6 }}>{messages.menu.loading}</div>}>
+          <AuthPanel messages={messages} />
+        </Suspense>
       )}
     </main>
   )
