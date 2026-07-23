@@ -10,6 +10,8 @@ type ComboRow = {
   identifier: number
   model: string
   latest_location_room: string | null
+  latest_location_id: number | null
+  latest_room_id: number | null
 }
 
 type SortColumn = 'identifier' | 'model' | 'latest_location_room'
@@ -200,8 +202,8 @@ export default function ComboPanel({ messages, canWrite }: ComboPanelProps) {
     setError(null)
     setMoveDialogOpen(true)
     setMoveComboId(row.id)
-    setMoveLocationId(null)
-    setMoveRoomId(null)
+    setMoveLocationId(row.latest_location_id)
+    setMoveRoomId(row.latest_room_id)
   }
 
   function cancelMoveDialog() {
