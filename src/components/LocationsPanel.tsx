@@ -254,7 +254,11 @@ export default function LocationsPanel({ messages, canWrite }: LocationsPanelPro
               {rows.map((row) => (
                 <tr key={row.id}>
                   <td style={{ borderBottom: '1px solid var(--border)', padding: '8px 6px' }}>{row.name}</td>
-                  <td style={{ borderBottom: '1px solid var(--border)', padding: '8px 6px' }}>{row.roomNames ?? '-'}</td>
+                  <td style={{ borderBottom: '1px solid var(--border)', padding: '8px 6px' }}>
+                    {row.roomNames ? row.roomNames.split(',').map((name, index) => (
+                      <div key={index}>{name}</div>
+                    )) : '-'}
+                  </td>
                   {canWrite ? (
                     <td style={{ borderBottom: '1px solid var(--border)', padding: '8px 6px' }}>
                       <div style={{ display: 'flex', gap: 8, flexWrap: 'wrap' }}>
