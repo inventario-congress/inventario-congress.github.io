@@ -64,7 +64,7 @@ const es = {
     actions: {
       create: 'Crear micrófono',
       update: 'Actualizar micrófono',
-      cancelEdit: 'Cancelar edición',
+      cancelEdit: 'Cancelar',
       edit: 'Editar',
       delete: 'Eliminar',
       attach: 'Anexar',
@@ -171,7 +171,7 @@ const es = {
     actions: {
       create: 'Crear venue',
       update: 'Actualizar venue',
-      cancelEdit: 'Cancelar edición',
+      cancelEdit: 'Cancelar',
       edit: 'Editar',
       delete: 'Eliminar',
     },
@@ -264,7 +264,7 @@ const es = {
     actions: {
       create: 'Crear anexo',
       update: 'Actualizar anexo',
-      cancelEdit: 'Cancelar edición',
+      cancelEdit: 'Cancelar',
       edit: 'Editar',
       delete: 'Eliminar',
     },
