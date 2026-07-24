@@ -21,6 +21,12 @@ type MicAttacherProps = {
   onAttached: () => Promise<void>
 }
 
+type AvailableBaseRow = {
+  id: number
+  identifier: number
+  available: boolean
+}
+
 export default function MicAttacher({
   messages,
   canWrite,
@@ -32,7 +38,7 @@ export default function MicAttacher({
   // Initialize loading as true: the parent uses a key prop to remount this
   // component fresh each time the dialog opens, so we start in a fetching state.
   const [loading, setLoading] = useState(true)
-  const [baseChoices, setBaseChoices] = useState<Array<{ id: number; label: string; available: boolean }>>([])
+  const [baseChoices, setBaseChoices] = useState<Array<AvailableBaseRow>>([])
   const [baseId, setBaseId] = useState('')
   const [error, setError] = useState<string | null>(null)
 
@@ -56,11 +62,8 @@ export default function MicAttacher({
         if (!active) return
         if (rpcError) throw rpcError
 
-        const mapped = (availableBases ?? [])
-          .map((b) => ({ id: b.id as number, label: String(b.identifier), available: b.available ?? true }))
-
         if (!active) return
-        setBaseChoices(mapped)
+        setBaseChoices((availableBases ?? []) as AvailableBaseRow[])
       } catch (e) {
         if (!active) return
         const msg = e instanceof Error ? e.message : messages.microphones.feedback.loadFailed
@@ -172,7 +175,7 @@ export default function MicAttacher({
           <option value="">{messages.attachments.fields.selectBase}</option>
           {baseChoices.map((choice) => (
             <option key={choice.id} value={choice.id}>
-              {choice.label}
+              {choice.identifier}
             </option>
           ))}
         </select>
@@ -183,15 +186,7 @@ export default function MicAttacher({
           </div>
         ) : null}
 
-        <div style={{ display: 'flex', gap: 10, flexWrap: 'wrap', marginTop: 12 }}>
-          <button
-            type="button"
-            onClick={confirmAttach}
-            disabled={loading || !baseId}
-            style={{ padding: '10px 14px', borderRadius: 6, cursor: 'pointer' }}
-          >
-            {messages.microphones.actions.attach}
-          </button>
+        <div style={{ display: 'flex', gap: 10, flexWrap: 'wrap', marginTop: 12, alignItems: 'center', justifyContent: 'flex-end' }}>
           <button
             type="button"
             onClick={onClose}
@@ -199,6 +194,14 @@ export default function MicAttacher({
             style={{ padding: '10px 14px', borderRadius: 6, cursor: 'pointer' }}
           >
             {messages.microphones.actions.cancelEdit}
+          </button>
+          <button
+            type="button"
+            onClick={confirmAttach}
+            disabled={loading || !baseId}
+            style={{ padding: '10px 14px', borderRadius: 6, cursor: 'pointer' }}
+          >
+            {messages.microphones.actions.attach}
           </button>
         </div>
       </div>
