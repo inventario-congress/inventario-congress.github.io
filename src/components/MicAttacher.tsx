@@ -29,7 +29,9 @@ export default function MicAttacher({
   onClose,
   onAttached,
 }: MicAttacherProps) {
-  const [loading, setLoading] = useState(false)
+  // Initialize loading as true: the parent uses a key prop to remount this
+  // component fresh each time the dialog opens, so we start in a fetching state.
+  const [loading, setLoading] = useState(true)
   const [baseChoices, setBaseChoices] = useState<Array<{ id: number; label: string; available: boolean }>>([])
   const [baseId, setBaseId] = useState('')
   const [error, setError] = useState<string | null>(null)
@@ -39,11 +41,6 @@ export default function MicAttacher({
     if (!open || !microphone || !supabase || !canWrite) return
 
     let active = true
-
-    setLoading(true)
-    setBaseChoices([])
-    setBaseId('')
-    setError(null)
 
     ;(async () => {
       try {
@@ -208,3 +205,4 @@ export default function MicAttacher({
     </div>
   )
 }
+

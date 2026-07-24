@@ -328,6 +328,7 @@ export default function MicrophonesPanel({ messages, canWrite }: MicrophonesPane
       ) : null}
 
       <MicAttacher
+        key={attachDialogOpen ? `attach-${attachForMicrophone?.id}` : 'closed'}
         messages={messages}
         canWrite={canWrite}
         open={attachDialogOpen}
