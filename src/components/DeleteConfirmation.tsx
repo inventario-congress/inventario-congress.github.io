@@ -115,7 +115,7 @@ export default function DeleteConfirmation({
           </ul>
         ) : null}
 
-        <div style={{ display: 'flex', gap: 10, flexWrap: 'wrap' }}>
+        <div style={{ display: 'flex', gap: 10, flexWrap: 'wrap', alignItems: 'center', justifyContent: 'flex-end' }}>
           <button
             type="button"
             data-delete-confirmation="cancel"
