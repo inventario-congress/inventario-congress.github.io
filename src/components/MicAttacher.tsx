@@ -30,7 +30,7 @@ export default function MicAttacher({
   onAttached,
 }: MicAttacherProps) {
   const [loading, setLoading] = useState(false)
-  const [baseChoices, setBaseChoices] = useState<Array<{ id: number; label: string }>>([])
+  const [baseChoices, setBaseChoices] = useState<Array<{ id: number; label: string; available: boolean }>>([])
   const [baseId, setBaseId] = useState('')
   const [error, setError] = useState<string | null>(null)
 
@@ -50,58 +50,17 @@ export default function MicAttacher({
         const micId = microphone.id
         const modelId = microphone.modelId
 
-        // Only select the latest attachment for the microphone, so we can exclude that base from the choices
-        const { data: currentAttachments, error: attachmentsError } = await supabase
-          .from('attachment')
-          .select('base')
-          .eq('microphone', micId)
-          .order('created_at', { ascending: false })
-          .limit(1)
+        const { data: availableBases, error: rpcError } = await supabase
+          .rpc('get_available_bases_for_mic', {
+            p_mic_id: micId,
+            p_model_id: modelId,
+          })
 
         if (!active) return
-        if (attachmentsError) throw attachmentsError
+        if (rpcError) throw rpcError
 
-        const alreadyAttachedBaseIds = new Set<number>(
-          (currentAttachments ?? [])
-            .map((a) => (a.base as number) ?? -1)
-            .filter((n) => n !== -1),
-        )
-
-        const { data: baseMicModelRows, error: baseMicModelsError } = await supabase
-          .from('base_mic_models')
-          .select('base')
-          .eq('model', modelId)
-
-        if (!active) return
-        if (baseMicModelsError) throw baseMicModelsError
-
-        const candidateBaseIds = Array.from(
-          new Set(
-            (baseMicModelRows ?? [])
-              .map((r) => (r.base as number) ?? -1)
-              .filter((n) => n !== -1)
-              .filter((baseId) => !alreadyAttachedBaseIds.has(baseId)),
-          ),
-        )
-
-        if (candidateBaseIds.length === 0) {
-          if (!active) return
-          setBaseChoices([])
-          setBaseId('')
-          return
-        }
-
-        const { data: bases, error: basesError } = await supabase
-          .from('base')
-          .select('id, identifier')
-          .in('id', candidateBaseIds)
-
-        if (!active) return
-        if (basesError) throw basesError
-
-        const mapped = (bases ?? [])
-          .map((b) => ({ id: b.id as number, label: String(b.identifier) }))
-          .sort((a, b) => a.label.localeCompare(b.label, undefined, { numeric: true }))
+        const mapped = (availableBases ?? [])
+          .map((b) => ({ id: b.id as number, label: String(b.identifier), available: b.available ?? true }))
 
         if (!active) return
         setBaseChoices(mapped)
