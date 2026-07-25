@@ -320,14 +320,14 @@ const es = {
     },
   },
   combos: {
-    title: 'Combos',
+    title: 'Combos y Dinámicos',
     fields: {
       identifier: 'N°',
       model: 'Modelo',
     },
     actions: {
-      create: 'Crear combo',
-      update: 'Actualizar combo',
+      create: 'Crear',
+      update: 'Actualizar',
       cancelEdit: 'Cancelar',
       edit: 'Editar',
       delete: 'Eliminar',
@@ -336,7 +336,7 @@ const es = {
     },
     dialogs: {
       moveCombo: {
-        title: 'Mover el combo a un venue y sala',
+        title: 'Mover',
         searchLabel: 'Venue',
         searchPlaceholder: 'Buscar venues...',
         roomLabel: 'Sala',
@@ -346,21 +346,21 @@ const es = {
         empty: 'No hay venues disponibles.',
       },
       editor: {
-        titleCreate: 'Crear combo',
-        titleEdit: 'Actualizar combo',
-        description: 'Configura el número del combo y el modelo.',
+        titleCreate: 'Crear',
+        titleEdit: 'Actualizar',
+        description: 'Configura el número y el modelo.',
         fields: {
           identifier: 'N°',
           model: 'Modelo',
         },
         actions: {
           cancel: 'Cancelar',
-          save: 'Guardar combo',
+          save: 'Guardar',
         },
         feedback: {
           submitting: 'Enviando...',
-          createFailed: 'No se pudo crear el combo',
-          updateFailed: 'No se pudo actualizar el combo',
+          createFailed: 'No se pudo crear',
+          updateFailed: 'No se pudo actualizar',
         },
       },
     },
@@ -369,16 +369,16 @@ const es = {
       model: 'Modelo',
       latestLocationRoom: 'Venue y Sala',
       actions: 'Acciones',
-      empty: 'Todavía no hay combos.',
+      empty: 'Todavía no hay combos o dinámicos.',
     },
     feedback: {
-      loadFailed: 'No se pudieron cargar los combos',
+      loadFailed: 'No se pudieron cargar los ítems',
       created: 'Combo creado.',
-      createFailed: 'No se pudo crear el combo',
-      updated: 'Combo actualizado.',
-      updateFailed: 'No se pudo actualizar el combo',
-      deleted: 'Combo eliminado.',
-      deleteFailed: 'No se pudo eliminar el combo',
+      createFailed: 'No se pudo crear',
+      updated: 'Ítem actualizado.',
+      updateFailed: 'No se pudo actualizar',
+      deleted: 'Eliminado.',
+      deleteFailed: 'No se pudo eliminar',
     },
   },
   bases: {
