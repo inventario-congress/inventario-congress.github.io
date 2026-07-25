@@ -68,6 +68,7 @@ const es = {
       edit: 'Editar',
       delete: 'Eliminar',
       attach: 'Anexar',
+      detach: 'Separar',
       signOut: 'Cerrar sesión',
     },
     table: {
@@ -79,6 +80,9 @@ const es = {
       empty: 'Todavía no hay micrófonos.',
     },
     dialogs: {
+      detachConfirmation: {
+        title: 'Confirmar separación',
+      },
       editor: {
         titleCreate: 'Crear micrófono',
         titleEdit: 'Actualizar micrófono',

@@ -101,6 +101,13 @@ export default function MicrophonesPanel({ messages, canWrite }: MicrophonesPane
     name: string
   } | null>(null)
 
+  const [detachDialogOpen, setDetachDialogOpen] = useState(false)
+  const [detachTarget, setDetachTarget] = useState<{
+    id: number
+    identifier: number
+    base: number
+  } | null>(null)
+
 
   const sortedRows = useMemo(() => {
     const copy = [...rows]
@@ -226,6 +233,46 @@ export default function MicrophonesPanel({ messages, canWrite }: MicrophonesPane
     setAttachDialogOpen(true)
   }
 
+  async function detachMicrophone() {
+    if (!supabase) return
+    if (!canWrite) return
+    if (!detachTarget) return
+
+    setError(null)
+    setStatus(null)
+    setLoading(true)
+
+    try {
+      // Find the active attachment for this microphone
+      const { data: attachment, error: findError } = await supabase
+        .from('attachment')
+        .select('id')
+        .eq('microphone', detachTarget.id)
+        .eq('is_active', true)
+        .maybeSingle()
+
+      if (findError) throw findError
+      if (!attachment) throw new Error('No active attachment found')
+
+      // Deactivate it
+      const { error: updateError } = await supabase
+        .from('attachment')
+        .update({ is_active: false })
+        .eq('id', attachment.id)
+
+      if (updateError) throw updateError
+
+      setDetachDialogOpen(false)
+      setDetachTarget(null)
+      await loadMicrophones()
+    } catch (e) {
+      const msg = e instanceof Error ? e.message : messages.microphones.feedback.deleteFailed
+      setError(msg)
+    } finally {
+      setLoading(false)
+    }
+  }
+
   function toggleSort(column: SortColumn) {
     if (sortColumn === column) {
       const next: SortDirection = sortDirection === 'asc' ? 'desc' : 'asc'
@@ -302,6 +349,24 @@ export default function MicrophonesPanel({ messages, canWrite }: MicrophonesPane
           setDeleteDialogOpen(false)
           setDeleteTarget(null)
           await deleteMicrophone(id)
+        }}
+      />
+
+      <DeleteConfirmation
+        open={detachDialogOpen}
+        title={messages.microphones.dialogs.detachConfirmation.title}
+        messagePrefix={`${messages.microphones.actions.detach} N°${detachTarget?.identifier ?? ''} de la base ${detachTarget?.base ?? ''}`}
+        entities={[]}
+        confirmLabel={messages.microphones.actions.detach}
+        cancelLabel={messages.deleteConfirmation.actions.cancel}
+        loading={loading}
+        confirmDisabled={false}
+        onCancel={() => {
+          setDetachDialogOpen(false)
+          setDetachTarget(null)
+        }}
+        onConfirm={async () => {
+          await detachMicrophone()
         }}
       />
 
@@ -449,6 +514,19 @@ export default function MicrophonesPanel({ messages, canWrite }: MicrophonesPane
                           >
                             {messages.microphones.actions.attach}
                           </button>
+                          {row.latestAttachmentBase != null ? (
+                            <button
+                              type="button"
+                              onClick={() => {
+                                setDetachTarget({ id: row.id, identifier: row.identifier, base: row.latestAttachmentBase! })
+                                setDetachDialogOpen(true)
+                              }}
+                              disabled={loading}
+                              style={{ padding: '6px 10px', borderRadius: 6, cursor: 'pointer' }}
+                            >
+                              {messages.microphones.actions.detach}
+                            </button>
+                          ) : null}
                           <button
                             type="button"
                             onClick={() => startEdit(row)}

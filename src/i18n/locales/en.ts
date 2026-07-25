@@ -68,6 +68,7 @@ const en = {
       edit: 'Edit',
       delete: 'Delete',
       attach: 'Attach',
+      detach: 'Detach',
       signOut: 'Sign out',
     },
     table: {
@@ -79,6 +80,9 @@ const en = {
       empty: 'No microphones yet.',
     },
     dialogs: {
+      detachConfirmation: {
+        title: 'Confirm detachment',
+      },
       editor: {
         titleCreate: 'Create microphone',
         titleEdit: 'Update microphone',

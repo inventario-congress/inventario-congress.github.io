@@ -135,9 +135,9 @@ export default function DeleteConfirmation({
               setHasInteracted(true)
               onConfirm()
             }}
-            disabled={Boolean(loading) || Boolean(confirmDisabled) || items.length === 0}
+            disabled={Boolean(loading) || (items.length === 0 && confirmDisabled === undefined) || Boolean(confirmDisabled)}
             style={{ padding: '10px 14px', borderRadius: 6, cursor: 'pointer' }}
-            aria-disabled={Boolean(loading) || Boolean(confirmDisabled) || items.length === 0}
+            aria-disabled={Boolean(loading) || (items.length === 0 && confirmDisabled === undefined) || Boolean(confirmDisabled)}
           >
             {confirmLabel}
           </button>
