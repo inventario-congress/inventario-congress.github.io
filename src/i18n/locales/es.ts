@@ -145,7 +145,7 @@ const es = {
       microphones: 'Micrófonos',
       bases: 'Bases',
       locations: 'Venues',
-      combos: 'Combos',
+      combos: 'Combos y Dinámicos',
 
     },
     user: {
