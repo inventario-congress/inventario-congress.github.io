@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useMemo, useState } from 'react'
+import { useCallback, useEffect, useMemo, useState, Fragment } from 'react'
 import type { Messages } from '../i18n'
 import { supabase } from '../supabaseClient'
 import DeleteConfirmation from './DeleteConfirmation'
@@ -41,6 +41,30 @@ function SortIcon({ active, sortDirection }: { active: boolean; sortDirection: '
       }}
     >
       ▼
+    </span>
+  )
+}
+
+function TriangleIcon({
+  isOpen,
+}: {
+  isOpen: boolean
+}) {
+  return (
+    <span
+      aria-hidden="true"
+      style={{
+        display: 'inline-block',
+        width: 16,
+        textAlign: 'center',
+        marginRight: 8,
+        color: 'var(--muted)',
+        transition: 'transform 120ms ease',
+        transform: isOpen ? 'rotate(90deg)' : 'rotate(0deg)',
+        userSelect: 'none',
+      }}
+    >
+      ▶
     </span>
   )
 }
@@ -108,6 +132,7 @@ export default function MicrophonesPanel({ messages, canWrite }: MicrophonesPane
     base: number
   } | null>(null)
 
+  const [expandedMicRowId, setExpandedMicRowId] = useState<number | null>(null)
 
   const sortedRows = useMemo(() => {
     const copy = [...rows]
@@ -478,79 +503,101 @@ export default function MicrophonesPanel({ messages, canWrite }: MicrophonesPane
                     {messages.microphones.table.latestAttachmentBase}
                     <SortIcon active={sortColumn === 'latestAttachmentBase'} sortDirection={sortDirection} />
                   </th>
-
-                  {canWrite ? (
-                    <th
-                      style={{
-                        textAlign: 'left',
-                        borderBottom: '1px solid var(--border)',
-                        background: 'var(--table-header-bg)',
-                        padding: '8px 6px',
-                      }}
-                    >
-                      {messages.microphones.table.actions}
-                    </th>
-                  ) : null}
                 </tr>
               </thead>
               <tbody>
                 {sortedRows.map((row) => (
-                  <tr key={row.id}>
-                    <td style={{ borderBottom: '1px solid var(--border)', padding: '8px 6px' }}>{row.identifier}</td>
-                    <td style={{ borderBottom: '1px solid var(--border)', padding: '8px 6px' }}>{row.modelName}</td>
-                    <td style={{ borderBottom: '1px solid var(--border)', padding: '8px 6px' }}>{row.micTypeName}</td>
-                    <td style={{ borderBottom: '1px solid var(--border)', padding: '8px 6px' }}>
-                      {row.latestAttachmentBase ? row.latestAttachmentBase : null}
-                    </td>
+                  <Fragment key={row.id}>
+                    <tr
+                      style={{ cursor: canWrite ? 'pointer' : undefined }}
+                      onClick={() => {
+                        if (!canWrite) return
+                        const nextExpanded = expandedMicRowId === row.id ? null : row.id
+                        setExpandedMicRowId(nextExpanded)
+                      }}
+                    >
+                      <td style={{ borderBottom: '1px solid var(--border)', padding: '8px 6px' }}>
+                        {canWrite ? <TriangleIcon isOpen={expandedMicRowId === row.id} /> : null}
+                        {row.identifier}
+                      </td>
+                      <td style={{ borderBottom: '1px solid var(--border)', padding: '8px 6px' }}>{row.modelName}</td>
+                      <td style={{ borderBottom: '1px solid var(--border)', padding: '8px 6px' }}>{row.micTypeName}</td>
+                      <td style={{ borderBottom: '1px solid var(--border)', padding: '8px 6px' }}>
+                        {row.latestAttachmentBase ? row.latestAttachmentBase : null}
+                      </td>
+                    </tr>
 
                     {canWrite ? (
-                      <td style={{ borderBottom: '1px solid var(--border)', padding: '8px 6px' }}>
-                        <div style={{ display: 'flex', gap: 8, flexWrap: 'wrap' }}>
-                          <button
-                            type="button"
-                            onClick={() => attachMicrophone(row)}
-                            disabled={loading}
-                            style={{ padding: '6px 10px', borderRadius: 6, cursor: 'pointer' }}
-                          >
-                            {messages.microphones.actions.attach}
-                          </button>
-                          {row.latestAttachmentBase != null ? (
-                            <button
-                              type="button"
-                              onClick={() => {
-                                setDetachTarget({ id: row.id, identifier: row.identifier, base: row.latestAttachmentBase! })
-                                setDetachDialogOpen(true)
-                              }}
-                              disabled={loading}
-                              style={{ padding: '6px 10px', borderRadius: 6, cursor: 'pointer' }}
-                            >
-                              {messages.microphones.actions.detach}
-                            </button>
-                          ) : null}
-                          <button
-                            type="button"
-                            onClick={() => startEdit(row)}
-                            disabled={loading}
-                            style={{ padding: '6px 10px', borderRadius: 6, cursor: 'pointer' }}
-                          >
-                            {messages.microphones.actions.edit}
-                          </button>
-                          <button
-                            type="button"
-                            onClick={() => {
-                              setDeleteTarget({ id: row.id, identifier: row.identifier, name: row.modelName })
-                              setDeleteDialogOpen(true)
+                      <tr>
+                        <td
+                          colSpan={4}
+                          style={{ padding: 0, borderBottom: '1px solid var(--border)' }}
+                        >
+                          <div
+                            style={{
+                              overflow: 'hidden',
+                              transition: 'max-height 120ms ease, opacity 120ms ease, transform 120ms ease',
+                              maxHeight: expandedMicRowId === row.id ? 200 : 0,
+                              opacity: expandedMicRowId === row.id ? 1 : 0,
+                              transform: expandedMicRowId === row.id ? 'translateY(0px)' : 'translateY(-4px)',
+                              pointerEvents: expandedMicRowId === row.id ? 'auto' : 'none',
                             }}
-                            disabled={loading}
-                            style={{ padding: '6px 10px', borderRadius: 6, cursor: 'pointer' }}
                           >
-                            {messages.microphones.actions.delete}
-                          </button>
-
-                        </div>
-                      </td>
+                            <div style={{ display: 'flex', gap: 8, flexWrap: 'wrap', padding: '12px 6px 16px 6px' }}>
+                              <button
+                                type="button"
+                                onClick={(e) => {
+                                  e.stopPropagation()
+                                  attachMicrophone(row)
+                                }}
+                                disabled={loading}
+                                style={{ padding: '6px 10px', borderRadius: 6, cursor: 'pointer' }}
+                              >
+                                {messages.microphones.actions.attach}
+                              </button>
+                              {row.latestAttachmentBase != null ? (
+                                <button
+                                  type="button"
+                                  onClick={(e) => {
+                                    e.stopPropagation()
+                                    setDetachTarget({ id: row.id, identifier: row.identifier, base: row.latestAttachmentBase! })
+                                    setDetachDialogOpen(true)
+                                  }}
+                                  disabled={loading}
+                                  style={{ padding: '6px 10px', borderRadius: 6, cursor: 'pointer' }}
+                                >
+                                  {messages.microphones.actions.detach}
+                                </button>
+                              ) : null}
+                              <button
+                                type="button"
+                                onClick={(e) => {
+                                  e.stopPropagation()
+                                  startEdit(row)
+                                }}
+                                disabled={loading}
+                                style={{ padding: '6px 10px', borderRadius: 6, cursor: 'pointer' }}
+                              >
+                                {messages.microphones.actions.edit}
+                              </button>
+                              <button
+                                type="button"
+                                onClick={(e) => {
+                                  e.stopPropagation()
+                                  setDeleteTarget({ id: row.id, identifier: row.identifier, name: row.modelName })
+                                  setDeleteDialogOpen(true)
+                                }}
+                                disabled={loading}
+                                style={{ padding: '6px 10px', borderRadius: 6, cursor: 'pointer' }}
+                              >
+                                {messages.microphones.actions.delete}
+                              </button>
+                            </div>
+                          </div>
+                        </td>
+                      </tr>
                     ) : null}
-                  </tr>
+                  </Fragment>
                 ))}
               </tbody>
             </table>
