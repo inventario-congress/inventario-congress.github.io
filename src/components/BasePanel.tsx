@@ -427,7 +427,7 @@ export default function BasePanel({ messages, canWrite }: BasePanelProps) {
   }
 
   return (
-    <div style={{ maxWidth: 820, margin: '0 auto', padding: 16, textAlign: 'left' }}>
+    <div style={{ maxWidth: 820, margin: '0 auto', padding: 0, textAlign: 'left' }}>
       <BaseEditor
         messages={messages}
         canWrite={canWrite}

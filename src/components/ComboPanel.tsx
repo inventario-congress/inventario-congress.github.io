@@ -211,7 +211,7 @@ export default function ComboPanel({ messages, canWrite }: ComboPanelProps) {
   }
 
   return (
-    <div style={{ maxWidth: 820, margin: '0 auto', padding: 16, textAlign: 'left' }}>
+    <div style={{ maxWidth: 820, margin: '0 auto', padding: 0, textAlign: 'left' }}>
       <div style={{ display: 'flex', alignItems: 'flex-start', justifyContent: 'space-between', gap: 12, marginTop: 24 }}>
         <h2 style={{ margin: 0 }}>{messages.combos.title}</h2>
 

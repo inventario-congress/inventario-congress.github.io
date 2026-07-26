@@ -314,7 +314,7 @@ export default function MicrophonesPanel({ messages, canWrite }: MicrophonesPane
 
   return (
 
-      <div style={{ maxWidth: 820, margin: '0 auto', padding: 16, textAlign: 'left' }}>
+      <div style={{ maxWidth: 820, margin: '0 auto', padding: 0, textAlign: 'left' }}>
       <div style={{ display: 'flex', alignItems: 'flex-start', justifyContent: 'space-between', gap: 12, marginTop: 24 }}>
         <h2 style={{ margin: 0 }}>{messages.microphones.title}</h2>
 
