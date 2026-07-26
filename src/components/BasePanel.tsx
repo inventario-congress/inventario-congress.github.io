@@ -545,7 +545,11 @@ export default function BasePanel({ messages, canWrite }: BasePanelProps) {
                 {sortedRows.map((row: BaseRow) => (
                   <Fragment key={row.base_id}>
                     <tr
-                      style={{ cursor: 'pointer' }}
+                      style={{
+                        cursor: 'pointer',
+                        background: expandedBaseRowId === row.base_id ? 'color-mix(in srgb, var(--accent) 30%, transparent)' : undefined,
+                        fontWeight: expandedBaseRowId === row.base_id ? 'bold' : undefined,
+                      }}
                       onClick={() => {
 
                         const nextExpanded = expandedBaseRowId === row.base_id ? null : row.base_id
@@ -558,7 +562,6 @@ export default function BasePanel({ messages, canWrite }: BasePanelProps) {
                           void loadMicsForBase(row.base_id)
                         }
                       }}
-
                     >
                       <td style={{ borderBottom: '1px solid var(--border)', padding: '8px 6px' }}>
                         <TriangleIcon isOpen={expandedBaseRowId === row.base_id} />
@@ -566,8 +569,6 @@ export default function BasePanel({ messages, canWrite }: BasePanelProps) {
                       </td>
                       <td style={{ borderBottom: '1px solid var(--border)', padding: '8px 6px' }}>{row.model_names}</td>
                       <td style={{ borderBottom: '1px solid var(--border)', padding: '8px 6px' }}>{row.latest_location_name ?? ''}</td>
-
-
                     </tr>
 
                     <tr>
