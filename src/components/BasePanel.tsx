@@ -587,6 +587,40 @@ export default function BasePanel({ messages, canWrite }: BasePanelProps) {
                         >
                           {loadingMicsByBaseId[row.base_id] ? (
                             <div style={{ padding: '10px 6px 14px 6px' }}>
+                              {canWrite ? (
+                              <div style={{ display: 'flex', gap: 8, flexWrap: 'wrap', marginBottom: 12 }}>
+                                  <button
+                                  type="button"
+                                  onClick={() => openMoveDialog(row)}
+                                  disabled={loading}
+                                  style={{ padding: '6px 10px', borderRadius: 6, cursor: 'pointer' }}
+                                  >
+                                  {messages.bases.actions.move}
+                                  </button>
+                                  <button
+                                  type="button"
+                                  onClick={() => {
+                                      setEditingBaseId(row.base_id)
+                                      setBaseEditorOpen(true)
+                                  }}
+                                  disabled={loading}
+                                  style={{ padding: '6px 10px', borderRadius: 6, cursor: 'pointer' }}
+                                  >
+                                  {messages.bases.actions.edit}
+                                  </button>
+                                  <button
+                                  type="button"
+                                  onClick={() => {
+                                      setDeleteTarget({ id: row.base_id, name: row.base_identifier.toString() })
+                                      setDeleteDialogOpen(true)
+                                  }}
+                                  disabled={loading}
+                                  style={{ padding: '6px 10px', borderRadius: 6, cursor: 'pointer' }}
+                                  >
+                                  {messages.bases.actions.delete}
+                                  </button>
+                              </div>
+                              ) : null}
                               <div style={{ fontSize: 18, color: 'var(--muted)', fontWeight: 'bold' }}>{messages.bases.table.mics}</div>
                               <div style={{ marginTop: 10, fontSize: 12, color: 'var(--muted)' }}>{messages.bases.feedback.loading_mics}</div>
                             </div>
