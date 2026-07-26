@@ -10,8 +10,8 @@ type BaseInfo = {
 type AvailableMicOption = {
   id: number
   identifier: number
-  modelName: string
-  micTypeName: string
+  model_name: string
+  mic_type_name: string
 }
 
 type BaseMicAttacherProps = {
@@ -47,58 +47,16 @@ export default function BaseMicAttacher({
       setError(null)
 
       try {
-        // 1. Get model IDs supported by this base
-        const { data: baseModels, error: modelsError } = await supabase
-          .from('base_mic_models')
-          .select('model')
-          .eq('base', base.id)
+        // Call RPC get_available_mics_for_base(base_id) to fetch available microphones for the given base
+        const { data: availableMics, error: rpcError } = await supabase.rpc('get_available_mics_for_base', {
+          p_base_id: base.id,
+        })
 
-        if (modelsError) throw modelsError
-
-        const modelIds: number[] = (baseModels ?? []).map((bm: { model: number }) => bm.model)
-
-        if (modelIds.length === 0) {
-          if (active) setMicChoices([])
-          return
-        }
-
-        // 2. Get microphones that currently have an active attachment (to exclude them)
-        const { data: activeAttachments, error: attachError } = await supabase
-          .from('attachment')
-          .select('microphone')
-          .eq('is_active', true)
-
-        if (attachError) throw attachError
-
-        const attachedMicIds: number[] = (activeAttachments ?? []).map(
-          (a: { microphone: number }) => a.microphone
-        )
-
-        // 3. Query microphones matching the base's models, excluding already-attached ones
-        let query = supabase
-          .from('microphone')
-          .select('id, identifier, model, mic_type, model:model(name), mic_type:mic_type(name)')
-          .in('model', modelIds)
-          .order('identifier', { ascending: true })
-
-        if (attachedMicIds.length > 0) {
-          query = query.not('id', 'in', `(${attachedMicIds.join(',')})`)
-        }
-
-        const { data: mics, error: micsError } = await query
-
-        if (micsError) throw micsError
-
+        if (rpcError) throw rpcError
         if (!active) return
 
-        const options: AvailableMicOption[] = (mics ?? []).map((m: any) => ({
-          id: m.id,
-          identifier: m.identifier,
-          modelName: m.model?.name ?? '',
-          micTypeName: m.mic_type?.name ?? '',
-        }))
+        setMicChoices(availableMics as AvailableMicOption[])
 
-        setMicChoices(options)
       } catch (e) {
         if (!active) return
         const msg = e instanceof Error ? e.message : messages.microphones.feedback.loadFailed
@@ -220,7 +178,7 @@ export default function BaseMicAttacher({
             <option value="">{messages.attachments.fields.selectMicrophone}</option>
             {micChoices.map((choice) => (
               <option key={choice.id} value={choice.id}>
-                N°{choice.identifier} {choice.modelName}{choice.micTypeName ? ` (${choice.micTypeName})` : ''}
+                N°{choice.identifier} {choice.model_name}{choice.mic_type_name ? ` (${choice.mic_type_name})` : ''}
               </option>
             ))}
           </select>
