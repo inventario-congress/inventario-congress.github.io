@@ -160,6 +160,7 @@ const en = {
   deleteConfirmation: {
     title: 'Confirm deletion',
     messagePrefix: 'You are about to delete the following',
+    detachConfirmation: 'Detach mic {micIdentifier} from base {baseIdentifier}?',
     actions: {
       confirm: 'Delete',
       cancel: 'Cancel',
@@ -287,6 +288,7 @@ const en = {
       updateFailed: 'Failed to update attachment',
       deleted: 'Attachment deleted.',
       deleteFailed: 'Failed to delete attachment',
+      noMicrophonesAvailable: 'No microphones available to attach',
     },
   },
   profile: {

@@ -3,6 +3,7 @@ import { useEffect, useMemo, useState, useCallback, Fragment } from 'react'
 import type { Messages } from '../i18n'
 import { supabase } from '../supabaseClient'
 import BaseEditor from './BaseEditor'
+import BaseMicAttacher from './BaseMicAttacher'
 import DeleteConfirmation from './DeleteConfirmation'
 import EntityMover from './EntityMover'
 
@@ -97,6 +98,15 @@ export default function BasePanel({ messages, canWrite }: BasePanelProps) {
   const [deleteDialogOpen, setDeleteDialogOpen] = useState(false)
   const [deleteTarget, setDeleteTarget] = useState<{ id: number; name?: string | null } | null>(null)
   const [expandedBaseRowId, setExpandedBaseRowId] = useState<number | null>(null)
+  const [detachDialogOpen, setDetachDialogOpen] = useState(false)
+  const [detachTarget, setDetachTarget] = useState<{
+    micId: number
+    micIdentifier: number
+    baseId: number
+    baseIdentifier: number
+  } | null>(null)
+  const [attachDialogOpen, setAttachDialogOpen] = useState(false)
+  const [attachBaseRow, setAttachBaseRow] = useState<BaseRow | null>(null)
 
 
 
@@ -282,6 +292,49 @@ export default function BasePanel({ messages, canWrite }: BasePanelProps) {
     }
   }
 
+  async function detachMicrophone() {
+    if (!supabase) return
+    if (!canWrite) return
+    if (!detachTarget) return
+
+    setError(null)
+    setLoading(true)
+
+    try {
+      // Find the active attachment for this microphone and base
+      const { data: attachment, error: findError } = await supabase
+        .from('attachment')
+        .select('id')
+        .eq('microphone', detachTarget.micId)
+        .eq('base', detachTarget.baseId)
+        .eq('is_active', true)
+        .maybeSingle()
+
+      if (findError) throw findError
+      if (!attachment) throw new Error('No active attachment found')
+
+      // Deactivate it
+      const { error: updateError } = await supabase
+        .from('attachment')
+        .update({ is_active: false })
+        .eq('id', attachment.id)
+
+      if (updateError) throw updateError
+
+      setDetachDialogOpen(false)
+      setDetachTarget(null)
+      // Reload mics for the expanded base
+      if (expandedBaseRowId !== null) {
+        await loadMicsForBase(expandedBaseRowId)
+      }
+    } catch (e) {
+      const msg = e instanceof Error ? e.message : messages.microphones.feedback.deleteFailed
+      setError(msg)
+    } finally {
+      setLoading(false)
+    }
+  }
+
   const sortedRows = useMemo(() => {
     const copy = [...rows]
     const dirMul = sortDirection === 'asc' ? 1 : -1
@@ -320,6 +373,12 @@ export default function BasePanel({ messages, canWrite }: BasePanelProps) {
 
       // RPC returns an array of microphone attachment objects.
       setMicsByBaseId((prev) => ({ ...prev, [baseId]: (data ?? []) as MicAttachment[] }))
+      // Update the mic_count for the base row in the parent table so the
+      // 4th column (e.g. "2/8") reflects the new count after attach/detach.
+      const newCount = (data ?? []).length
+      setRows((prev) => prev.map((row) =>
+        row.base_id === baseId ? { ...row, mic_count: newCount } : row
+      ))
     } catch (e) {
       const msg = e instanceof Error ? e.message : messages.bases.feedback.loadFailed
       setError(msg)
@@ -760,7 +819,20 @@ export default function BasePanel({ messages, canWrite }: BasePanelProps) {
                                     </thead>
                                     <tbody>
                                       {getSortedMics(mics).map((m) => (
-                                        <tr key={m.mic_id}>
+                                        <tr
+                                          key={m.mic_id}
+                                          onClick={() => {
+                                            if (!canWrite) return
+                                            setDetachTarget({
+                                              micId: m.mic_id,
+                                              micIdentifier: m.mic_identifier,
+                                              baseId: row.base_id,
+                                              baseIdentifier: row.base_identifier,
+                                            })
+                                            setDetachDialogOpen(true)
+                                          }}
+                                          style={{ cursor: canWrite ? 'pointer' : undefined }}
+                                        >
                                           <td style={{ borderBottom: '1px solid var(--border)', padding: '6px 4px', whiteSpace: 'nowrap' }}>
                                             {m.mic_identifier}
                                           </td>
@@ -785,7 +857,15 @@ export default function BasePanel({ messages, canWrite }: BasePanelProps) {
                                       ))}
 
                                       {Array.from({ length: availableSlots }).map((_, i) => (
-                                        <tr key={`available-${i}`}>
+                                        <tr
+                                          key={`available-${i}`}
+                                          onClick={() => {
+                                            if (!canWrite) return
+                                            setAttachBaseRow(row)
+                                            setAttachDialogOpen(true)
+                                          }}
+                                          style={{ cursor: canWrite ? 'pointer' : undefined }}
+                                        >
                                           <td colSpan={4} style={{ fontSize: 14, borderBottom: '1px solid var(--border)', padding: '6px 4px', fontStyle: 'italic', color: 'var(--muted)' }}>
                                             {'<' + messages.bases.table.available + '>'}
                                           </td>
@@ -837,6 +917,48 @@ export default function BasePanel({ messages, canWrite }: BasePanelProps) {
           setDeleteDialogOpen(false)
           setDeleteTarget(null)
           await deleteBase(id)
+        }}
+      />
+
+      <DeleteConfirmation
+        open={detachDialogOpen}
+        title={messages.microphones.dialogs.detachConfirmation.title}
+        messagePrefix={
+            messages.deleteConfirmation.detachConfirmation.replace(
+                '{micIdentifier}', '' + (detachTarget?.micIdentifier ?? '')
+            ).replace(
+                '{baseIdentifier}', '' + (detachTarget?.baseIdentifier ?? '')
+            )
+        }
+        entities={[]}
+        confirmLabel={messages.microphones.actions.detach}
+        cancelLabel={messages.deleteConfirmation.actions.cancel}
+        loading={loading}
+        confirmDisabled={false}
+        onCancel={() => {
+          setDetachDialogOpen(false)
+          setDetachTarget(null)
+        }}
+        onConfirm={async () => {
+          await detachMicrophone()
+        }}
+      />
+
+      <BaseMicAttacher
+        key={attachDialogOpen ? `attach-${attachBaseRow?.base_id}` : 'closed'}
+        messages={messages}
+        canWrite={canWrite}
+        open={attachDialogOpen}
+        base={attachBaseRow ? { id: attachBaseRow.base_id, identifier: attachBaseRow.base_identifier } : null}
+        onClose={() => {
+          setAttachDialogOpen(false)
+          setAttachBaseRow(null)
+        }}
+        onAttached={async () => {
+          // Reload mics for the expanded base
+          if (expandedBaseRowId !== null) {
+            await loadMicsForBase(expandedBaseRowId)
+          }
         }}
       />
 

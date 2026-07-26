@@ -160,6 +160,7 @@ const es = {
   deleteConfirmation: {
     title: 'Confirmar eliminación',
     messagePrefix: 'Estás por eliminar lo siguiente',
+    detachConfirmation: 'Separar micrófono {micIdentifier} de base {baseIdentifier}?',
     actions: {
       confirm: 'Eliminar',
       cancel: 'Cancelar',
@@ -288,6 +289,7 @@ const es = {
       updateFailed: 'No se pudo actualizar el anexo',
       deleted: 'Anexo eliminado.',
       deleteFailed: 'No se pudo eliminar el anexo',
+      noMicrophonesAvailable: 'No hay micrófonos disponibles para anexar',
     },
   },
   profile: {
