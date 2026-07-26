@@ -11,6 +11,7 @@ import EntityMover from './EntityMover'
 type BaseRow = {
   base_id: number
   base_identifier: number
+  mic_count: number
   max_mic_count: number
   latest_location_id: number | null
   latest_location_name: string | null
@@ -538,38 +539,41 @@ export default function BasePanel({ messages, canWrite }: BasePanelProps) {
                     <SortIcon active={sortColumn === 'latest_location_name'} sortDirection={sortDirection} />
                   </th>
 
-                  {canWrite ? (
-                    <th
-                      style={{
-                        textAlign: 'left',
-                        borderBottom: '1px solid var(--border)',
-                        background: 'var(--table-header-bg)',
-                        padding: '8px 6px',
-                      }}
-                    >
-                      {messages.bases.table.actions}
-                    </th>
-                  ) : null}
+                  <th
+                    style={{
+                      textAlign: 'left',
+                      borderBottom: '1px solid var(--border)',
+                      background: 'var(--table-header-bg)',
+                      padding: '8px 6px',
+                      whiteSpace: 'nowrap',
+                    }}
+                  >
+                    {messages.bases.table.mics}
+                  </th>
+
                 </tr>
               </thead>
               <tbody>
                 {sortedRows.map((row: BaseRow) => (
                   <Fragment key={row.base_id}>
                     <tr
-                      style={{ cursor: 'pointer' }}
+                      style={{
+                        cursor: 'pointer',
+                        background: expandedBaseRowId === row.base_id ? 'color-mix(in srgb, var(--accent) 30%, transparent)' : undefined,
+                        fontWeight: expandedBaseRowId === row.base_id ? 'bold' : undefined,
+                      }}
                       onClick={() => {
 
                         const nextExpanded = expandedBaseRowId === row.base_id ? null : row.base_id
 
-                        // Clicking on action buttons should not toggle; those handlers stop propagation.
+                        // Clicking on the row toggles the expandable panel below it.
                         setExpandedBaseRowId(nextExpanded)
 
                         // Lazy-load microphones only for the expanded base.
-                        if (nextExpanded !== null) {
+                        if (nextExpanded !== null && row.mic_count > 0) {
                           void loadMicsForBase(row.base_id)
                         }
                       }}
-
                     >
                       <td style={{ borderBottom: '1px solid var(--border)', padding: '8px 6px' }}>
                         <TriangleIcon isOpen={expandedBaseRowId === row.base_id} />
@@ -577,55 +581,12 @@ export default function BasePanel({ messages, canWrite }: BasePanelProps) {
                       </td>
                       <td style={{ borderBottom: '1px solid var(--border)', padding: '8px 6px' }}>{row.model_names}</td>
                       <td style={{ borderBottom: '1px solid var(--border)', padding: '8px 6px' }}>{row.latest_location_name ?? ''}</td>
-
-                      {canWrite ? (
-                        <td style={{ borderBottom: '1px solid var(--border)', padding: '8px 6px' }}>
-                          <div style={{ display: 'flex', gap: 8, flexWrap: 'wrap' }}>
-                            <button
-                              type="button"
-                              onClick={(e) => {
-                                e.stopPropagation()
-                                openMoveDialog(row)
-                              }}
-                              disabled={loading}
-                              style={{ padding: '6px 10px', borderRadius: 6, cursor: 'pointer' }}
-                            >
-                              {messages.bases.actions.move}
-                            </button>
-
-                            <button
-                              type="button"
-                              onClick={(e) => {
-                                e.stopPropagation()
-                                setEditingBaseId(row.base_id)
-                                setBaseEditorOpen(true)
-                              }}
-                              disabled={loading}
-                              style={{ padding: '6px 10px', borderRadius: 6, cursor: 'pointer' }}
-                            >
-                              {messages.bases.actions.edit}
-                            </button>
-
-                            <button
-                              type="button"
-                              onClick={(e) => {
-                                e.stopPropagation()
-                                setDeleteTarget({ id: row.base_id, name: row.base_identifier.toString() })
-                                setDeleteDialogOpen(true)
-                              }}
-                              disabled={loading}
-                              style={{ padding: '6px 10px', borderRadius: 6, cursor: 'pointer' }}
-                            >
-                              {messages.bases.actions.delete}
-                            </button>
-                          </div>
-                        </td>
-                      ) : null}
+                      <td style={{ borderBottom: '1px solid var(--border)', padding: '8px 6px', textAlign: 'center' }}>{row.mic_count}/{row.max_mic_count}</td>
                     </tr>
 
                     <tr>
                       <td
-                        colSpan={canWrite ? 4 : 3}
+                        colSpan={4}
                         style={{ padding: 0, borderBottom: '1px solid var(--border)' }}
                       >
                         <div
@@ -640,7 +601,41 @@ export default function BasePanel({ messages, canWrite }: BasePanelProps) {
                         >
                           {loadingMicsByBaseId[row.base_id] ? (
                             <div style={{ padding: '10px 6px 14px 6px' }}>
-                              <div style={{ fontSize: 16, color: 'var(--muted)' }}>{messages.bases.table.mics}</div>
+                              {canWrite ? (
+                              <div style={{ display: 'flex', gap: 8, flexWrap: 'wrap', marginBottom: 12 }}>
+                                  <button
+                                  type="button"
+                                  onClick={() => openMoveDialog(row)}
+                                  disabled={loading}
+                                  style={{ padding: '6px 10px', borderRadius: 6, cursor: 'pointer' }}
+                                  >
+                                  {messages.bases.actions.move}
+                                  </button>
+                                  <button
+                                  type="button"
+                                  onClick={() => {
+                                      setEditingBaseId(row.base_id)
+                                      setBaseEditorOpen(true)
+                                  }}
+                                  disabled={loading}
+                                  style={{ padding: '6px 10px', borderRadius: 6, cursor: 'pointer' }}
+                                  >
+                                  {messages.bases.actions.edit}
+                                  </button>
+                                  <button
+                                  type="button"
+                                  onClick={() => {
+                                      setDeleteTarget({ id: row.base_id, name: row.base_identifier.toString() })
+                                      setDeleteDialogOpen(true)
+                                  }}
+                                  disabled={loading}
+                                  style={{ padding: '6px 10px', borderRadius: 6, cursor: 'pointer' }}
+                                  >
+                                  {messages.bases.actions.delete}
+                                  </button>
+                              </div>
+                              ) : null}
+                              <div style={{ fontSize: 18, color: 'var(--muted)', fontWeight: 'bold' }}>{messages.bases.table.mics}</div>
                               <div style={{ marginTop: 10, fontSize: 12, color: 'var(--muted)' }}>{messages.bases.feedback.loading_mics}</div>
                             </div>
                           ) : (
@@ -656,7 +651,41 @@ export default function BasePanel({ messages, canWrite }: BasePanelProps) {
 
                               return (
                                 <div style={{ padding: '10px 6px 14px 6px' }}>
-                                  <div style={{ fontSize: 16, color: 'var(--muted)' }}>{messages.bases.table.mics}</div>
+                                  {canWrite ? (
+                                    <div style={{ display: 'flex', gap: 8, flexWrap: 'wrap', marginBottom: 12 }}>
+                                      <button
+                                        type="button"
+                                        onClick={() => openMoveDialog(row)}
+                                        disabled={loading}
+                                        style={{ padding: '6px 10px', borderRadius: 6, cursor: 'pointer' }}
+                                      >
+                                        {messages.bases.actions.move}
+                                      </button>
+                                      <button
+                                        type="button"
+                                        onClick={() => {
+                                          setEditingBaseId(row.base_id)
+                                          setBaseEditorOpen(true)
+                                        }}
+                                        disabled={loading}
+                                        style={{ padding: '6px 10px', borderRadius: 6, cursor: 'pointer' }}
+                                      >
+                                        {messages.bases.actions.edit}
+                                      </button>
+                                      <button
+                                        type="button"
+                                        onClick={() => {
+                                          setDeleteTarget({ id: row.base_id, name: row.base_identifier.toString() })
+                                          setDeleteDialogOpen(true)
+                                        }}
+                                        disabled={loading}
+                                        style={{ padding: '6px 10px', borderRadius: 6, cursor: 'pointer' }}
+                                      >
+                                        {messages.bases.actions.delete}
+                                      </button>
+                                    </div>
+                                  ) : null}
+                                  <div style={{ fontSize: 18, color: 'var(--muted)', fontWeight: 'bold' }}>{messages.bases.table.mics}</div>
                                   <table style={{ width: '100%', borderCollapse: 'collapse', marginTop: 8 }}>
                                     <thead>
                                       <tr>
