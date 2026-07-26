@@ -917,7 +917,7 @@ export default function BasePanel({ messages, canWrite }: BasePanelProps) {
       <DeleteConfirmation
         open={detachDialogOpen}
         title={messages.microphones.dialogs.detachConfirmation.title}
-        messagePrefix={`${messages.microphones.actions.detach} N°${detachTarget?.micIdentifier ?? ''} ${messages.bases.table.identifier} N°${detachTarget?.baseIdentifier ?? ''}`}
+        messagePrefix={messages.deleteConfirmation.detachConfirmation.replace('{micIdentifier}', detachTarget?.micIdentifier ?? '').replace('{baseIdentifier}', detachTarget?.baseIdentifier ?? '')}
         entities={[]}
         confirmLabel={messages.microphones.actions.detach}
         cancelLabel={messages.deleteConfirmation.actions.cancel}

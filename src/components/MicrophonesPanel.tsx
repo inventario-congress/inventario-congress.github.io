@@ -380,7 +380,7 @@ export default function MicrophonesPanel({ messages, canWrite }: MicrophonesPane
       <DeleteConfirmation
         open={detachDialogOpen}
         title={messages.microphones.dialogs.detachConfirmation.title}
-        messagePrefix={`${messages.microphones.actions.detach} N°${detachTarget?.identifier ?? ''} de la base ${detachTarget?.base ?? ''}`}
+        messagePrefix={messages.deleteConfirmation.detachConfirmation.replace('{micIdentifier}', detachTarget?.identifier.toString() ?? '').replace('{baseIdentifier}', detachTarget?.base.toString() ?? '')}
         entities={[]}
         confirmLabel={messages.microphones.actions.detach}
         cancelLabel={messages.deleteConfirmation.actions.cancel}

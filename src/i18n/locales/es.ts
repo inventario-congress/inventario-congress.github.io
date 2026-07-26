@@ -160,6 +160,7 @@ const es = {
   deleteConfirmation: {
     title: 'Confirmar eliminación',
     messagePrefix: 'Estás por eliminar lo siguiente',
+    detachConfirmation: 'Separar micrófono {micIdentifier} de base {baseIdentifier}?',
     actions: {
       confirm: 'Eliminar',
       cancel: 'Cancelar',
