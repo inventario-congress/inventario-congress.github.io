@@ -287,6 +287,7 @@ const en = {
       updateFailed: 'Failed to update attachment',
       deleted: 'Attachment deleted.',
       deleteFailed: 'Failed to delete attachment',
+      noMicrophonesAvailable: 'No microphones available to attach',
     },
   },
   profile: {

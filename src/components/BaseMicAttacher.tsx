@@ -186,7 +186,7 @@ export default function BaseMicAttacher({
 
         {base ? (
           <div style={{ marginBottom: 10, opacity: 0.9 }}>
-            {messages.bases.table.identifier} N°{base.identifier}
+            {messages.attachments.fields.base} {messages.bases.table.identifier}{base.identifier}
           </div>
         ) : null}
 
@@ -195,12 +195,12 @@ export default function BaseMicAttacher({
         </label>
 
         {loading ? (
-          <div style={{ marginTop: 8, fontSize: 13, color: 'var(--muted)' }}>
+          <div style={{ marginTop: 8, fontSize: 14, color: 'var(--muted)' }}>
             {messages.bases.feedback.loading_mics}
           </div>
         ) : micChoices.length === 0 ? (
-          <div style={{ marginTop: 8, fontSize: 13, color: 'var(--muted)' }}>
-            {messages.attachments.fields.selectMicrophone}
+          <div style={{ marginTop: 8, fontSize: 16, color: 'red', fontWeight: 'bold' }}>
+            {messages.attachments.feedback.noMicrophonesAvailable}
           </div>
         ) : (
           <select
