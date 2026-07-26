@@ -31,7 +31,7 @@ export default function BaseMicAttacher({
   onClose,
   onAttached,
 }: BaseMicAttacherProps) {
-  const [loading, setLoading] = useState(false)
+  const [loading, setLoading] = useState(true)
   const [micChoices, setMicChoices] = useState<AvailableMicOption[]>([])
   const [micId, setMicId] = useState('')
   const [error, setError] = useState<string | null>(null)
