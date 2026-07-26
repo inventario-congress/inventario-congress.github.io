@@ -570,7 +570,7 @@ export default function BasePanel({ messages, canWrite }: BasePanelProps) {
                         setExpandedBaseRowId(nextExpanded)
 
                         // Lazy-load microphones only for the expanded base.
-                        if (nextExpanded !== null) {
+                        if (nextExpanded !== null && row.mic_count > 0) {
                           void loadMicsForBase(row.base_id)
                         }
                       }}
