@@ -76,7 +76,6 @@ const en = {
       identifier: 'Identifier',
       micTypeName: 'Type',
       latestAttachmentBase: 'Base',
-      actions: 'Actions',
       empty: 'No microphones yet.',
     },
     dialogs: {
@@ -445,7 +444,6 @@ const en = {
       date: 'Date',
       user: 'User',
       latestLocation: 'Location',
-      actions: 'Actions',
       available: 'Available',
       empty: 'No bases yet.',
     },

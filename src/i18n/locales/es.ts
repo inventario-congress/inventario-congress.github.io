@@ -76,7 +76,6 @@ const es = {
       identifier: 'N°',
       micTypeName: 'Tipo',
       latestAttachmentBase: 'Base',
-      actions: 'Acciones',
       empty: 'Todavía no hay micrófonos.',
     },
     dialogs: {
@@ -445,7 +444,6 @@ const es = {
       date: 'Fecha',
       user: 'Usuario',
       latestLocation: 'Venue y Sala',
-      actions: 'Acciones',
       available: 'Disponible',
       empty: 'Todavía no hay bases.',
     },
