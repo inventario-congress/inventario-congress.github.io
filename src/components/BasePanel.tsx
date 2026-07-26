@@ -11,6 +11,7 @@ import EntityMover from './EntityMover'
 type BaseRow = {
   base_id: number
   base_identifier: number
+  mic_count: number
   max_mic_count: number
   latest_location_id: number | null
   latest_location_name: string | null
@@ -538,6 +539,17 @@ export default function BasePanel({ messages, canWrite }: BasePanelProps) {
                     <SortIcon active={sortColumn === 'latest_location_name'} sortDirection={sortDirection} />
                   </th>
 
+                  <th
+                    style={{
+                      textAlign: 'left',
+                      borderBottom: '1px solid var(--border)',
+                      background: 'var(--table-header-bg)',
+                      padding: '8px 6px',
+                      whiteSpace: 'nowrap',
+                    }}
+                  >
+                    {messages.bases.table.mics}
+                  </th>
 
                 </tr>
               </thead>
@@ -569,11 +581,12 @@ export default function BasePanel({ messages, canWrite }: BasePanelProps) {
                       </td>
                       <td style={{ borderBottom: '1px solid var(--border)', padding: '8px 6px' }}>{row.model_names}</td>
                       <td style={{ borderBottom: '1px solid var(--border)', padding: '8px 6px' }}>{row.latest_location_name ?? ''}</td>
+                      <td style={{ borderBottom: '1px solid var(--border)', padding: '8px 6px', textAlign: 'center' }}>{row.mic_count}/{row.max_mic_count}</td>
                     </tr>
 
                     <tr>
                       <td
-                        colSpan={3}
+                        colSpan={4}
                         style={{ padding: 0, borderBottom: '1px solid var(--border)' }}
                       >
                         <div

@@ -437,7 +437,7 @@ const en = {
     table: {
       identifier: 'Identifier',
       maxMicCount: 'Max mic count',
-      mics: 'Microphones',
+      mics: 'Mics',
       micModelNames: 'Models',
       model: 'Model',
       type: 'Type',

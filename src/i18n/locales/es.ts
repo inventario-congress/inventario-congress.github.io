@@ -437,7 +437,7 @@ const es = {
     },
     table: {
       identifier: 'N°',
-      mics: 'Micrófonos',
+      mics: 'Mics',
       micModelNames: 'Modelos',
       model: 'Modelo',
       type: 'Tipo',
