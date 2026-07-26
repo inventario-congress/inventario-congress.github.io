@@ -354,17 +354,21 @@ export default function BasePanel({ messages, canWrite }: BasePanelProps) {
     }
   }
 
-  function formatDateTime(value: string | null): string {
-    if (!value) return ''
+  function formatDateTime(value: string | null): [string, string] {
+    if (!value) return ['', '']
     const d = new Date(value)
-    if (Number.isNaN(d.getTime())) return ''
-    return d.toLocaleString([], {
+    if (Number.isNaN(d.getTime())) return ['', '']
+    // Return date on one line and time on its own line, using the user's locale and 24-hour format if applicable.
+    const datePart = d.toLocaleDateString([], {
       year: 'numeric',
       month: 'numeric',
       day: 'numeric',
-      hour: '2-digit',
-      minute: '2-digit'
     })
+    const timePart = d.toLocaleTimeString([], {
+      hour: '2-digit',
+      minute: '2-digit',
+    })
+    return [datePart, timePart]
   }
 
   function parseDateOrNull(value: string | null): number | null {
@@ -764,7 +768,15 @@ export default function BasePanel({ messages, canWrite }: BasePanelProps) {
                                             {m.mic_type_name}
                                           </td>
                                           <td style={{ borderBottom: '1px solid var(--border)', padding: '6px 4px', whiteSpace: 'nowrap' }}>
-                                            {formatDateTime(m.mic_attachment_date)}
+                                            {(() => {
+                                              const [datePart, timePart] = formatDateTime(m.mic_attachment_date)
+                                              return (
+                                                <>
+                                                  <div>{datePart}</div>
+                                                  <div>{timePart}</div>
+                                                </>
+                                              )
+                                            })()}
                                           </td>
                                           <td style={{ borderBottom: '1px solid var(--border)', padding: '6px 4px' }}>
                                             {m.mic_attachment_user_name ?? ''}
