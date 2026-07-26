@@ -373,6 +373,12 @@ export default function BasePanel({ messages, canWrite }: BasePanelProps) {
 
       // RPC returns an array of microphone attachment objects.
       setMicsByBaseId((prev) => ({ ...prev, [baseId]: (data ?? []) as MicAttachment[] }))
+      // Update the mic_count for the base row in the parent table so the
+      // 4th column (e.g. "2/8") reflects the new count after attach/detach.
+      const newCount = (data ?? []).length
+      setRows((prev) => prev.map((row) =>
+        row.base_id === baseId ? { ...row, mic_count: newCount } : row
+      ))
     } catch (e) {
       const msg = e instanceof Error ? e.message : messages.bases.feedback.loadFailed
       setError(msg)
