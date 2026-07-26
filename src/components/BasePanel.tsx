@@ -592,7 +592,9 @@ export default function BasePanel({ messages, canWrite }: BasePanelProps) {
                         <div
                           style={{
                             overflow: 'hidden',
-                            transition: 'max-height 120ms ease, opacity 120ms ease, transform 120ms ease',
+                            border: expandedBaseRowId === row.base_id ? '2px solid var(--accent-border)' : '0px solid transparent',
+                            borderRadius: 12,
+                            transition: 'max-height 120ms ease, opacity 120ms ease, transform 120ms ease, border 120ms ease',
                             maxHeight: expandedBaseRowId === row.base_id ? 1000 : 0,
                             opacity: expandedBaseRowId === row.base_id ? 1 : 0,
                             transform: expandedBaseRowId === row.base_id ? 'translateY(0px)' : 'translateY(-4px)',
