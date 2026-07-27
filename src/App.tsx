@@ -151,7 +151,7 @@ function App() {
       active = false
       subscription.unsubscribe()
     }
-  }, [])
+  }, [activePanel])
 
   useEffect(() => {
     document.documentElement.lang = 'es'

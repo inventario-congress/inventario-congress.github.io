@@ -150,16 +150,8 @@ export default function BulkMovePanel({ messages, canWrite }: BulkMovePanelProps
     [messages.bulkMove.feedback.loadFailed]
   )
 
-  // Reset sort when location changes
-  useEffect(() => {
-    setSortColumn('item_identifier')
-    setSortDirection('asc')
-  }, [selectedLocationId])
-
   useEffect(() => {
     if (selectedLocationId === '' || typeof selectedLocationId !== 'number') {
-      setRoomGroups([])
-      setSelection({})
       return
     }
 
@@ -278,7 +270,14 @@ export default function BulkMovePanel({ messages, canWrite }: BulkMovePanelProps
           value={selectedLocationId}
           onChange={(e) => {
             const value = e.target.value
-            setSelectedLocationId(value === '' ? '' : Number.parseInt(value, 10))
+            const newId = value === '' ? '' : Number.parseInt(value, 10)
+            setSelectedLocationId(newId)
+            setSortColumn('item_identifier')
+            setSortDirection('asc')
+            if (newId === '') {
+              setRoomGroups([])
+              setSelection({})
+            }
           }}
           disabled={locationsLoading || locations.length === 0}
           style={{
