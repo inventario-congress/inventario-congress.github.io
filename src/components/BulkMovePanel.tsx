@@ -26,9 +26,31 @@ type RoomGroup = {
 
 type SelectionMap = Record<string, boolean> // key: `${item_type}-${item_id}`
 
+type SortColumn = 'item_identifier' | 'item_model' | 'item_type'
+type SortDirection = 'asc' | 'desc'
+
 type BulkMovePanelProps = {
   messages: Messages
   canWrite: boolean
+}
+
+function SortIcon({ active, sortDirection }: { active: boolean; sortDirection: 'asc' | 'desc' }) {
+  return (
+    <span
+      aria-hidden="true"
+      style={{
+        display: 'inline-block',
+        width: 14,
+        textAlign: 'center',
+        marginLeft: 6,
+        transform: active && sortDirection === 'asc' ? 'rotate(180deg)' : 'rotate(0deg)',
+        transition: 'transform 120ms ease',
+        visibility: active ? 'visible' : 'hidden',
+      }}
+    >
+      ▼
+    </span>
+  )
 }
 
 export default function BulkMovePanel({ messages, canWrite }: BulkMovePanelProps) {
@@ -40,6 +62,8 @@ export default function BulkMovePanel({ messages, canWrite }: BulkMovePanelProps
   const [selection, setSelection] = useState<SelectionMap>({})
   const [error, setError] = useState<string | null>(null)
   const [moveDialogOpen, setMoveDialogOpen] = useState(false)
+  const [sortColumn, setSortColumn] = useState<SortColumn>('item_identifier')
+  const [sortDirection, setSortDirection] = useState<SortDirection>('asc')
 
   const loadLocations = useCallback(async () => {
     if (!supabase) return
@@ -126,6 +150,12 @@ export default function BulkMovePanel({ messages, canWrite }: BulkMovePanelProps
     [messages.bulkMove.feedback.loadFailed]
   )
 
+  // Reset sort when location changes
+  useEffect(() => {
+    setSortColumn('item_identifier')
+    setSortDirection('asc')
+  }, [selectedLocationId])
+
   useEffect(() => {
     if (selectedLocationId === '' || typeof selectedLocationId !== 'number') {
       setRoomGroups([])
@@ -198,6 +228,37 @@ export default function BulkMovePanel({ messages, canWrite }: BulkMovePanelProps
     return `${item.item_type}-${item.item_id}`
   }
 
+  function toggleSort(column: SortColumn) {
+    if (sortColumn === column) {
+      setSortDirection((prev) => (prev === 'asc' ? 'desc' : 'asc'))
+    } else {
+      setSortColumn(column)
+      setSortDirection('asc')
+    }
+  }
+
+  const sortedRoomGroups = useMemo(() => {
+    const dirMul = sortDirection === 'asc' ? 1 : -1
+    return roomGroups.map((group) => {
+      const sorted = [...group.items].sort((a, b) => {
+        switch (sortColumn) {
+          case 'item_identifier':
+            return (a.item_identifier - b.item_identifier) * dirMul
+          case 'item_model':
+            return a.item_model.localeCompare(b.item_model) * dirMul
+          case 'item_type': {
+            const aType = a.item_type === 'base' ? 0 : 1
+            const bType = b.item_type === 'base' ? 0 : 1
+            return (aType - bType) * dirMul
+          }
+          default:
+            return 0
+        }
+      })
+      return { ...group, items: sorted }
+    })
+  }, [roomGroups, sortColumn, sortDirection])
+
   return (
     <div style={{ maxWidth: 820, margin: '0 auto', padding: 0, textAlign: 'left' }}>
       <h2 style={{ margin: '24px 0 0 0' }}>{messages.bulkMove.title}</h2>
@@ -252,7 +313,7 @@ export default function BulkMovePanel({ messages, canWrite }: BulkMovePanelProps
         ) : roomGroups.length === 0 ? (
           <div style={{ color: 'var(--muted)' }}>{messages.bulkMove.noItems}</div>
         ) : (
-          roomGroups.map((group) => {
+          sortedRoomGroups.map((group) => {
             const fullySelected = isRoomFullySelected(group.room_id)
             const partiallySelected = isRoomPartiallySelected(group.room_id)
 
@@ -301,34 +362,49 @@ export default function BulkMovePanel({ messages, canWrite }: BulkMovePanelProps
                         }}
                       />
                       <th
+                        onClick={() => toggleSort('item_identifier')}
                         style={{
+                          cursor: 'pointer',
+                          userSelect: 'none',
                           textAlign: 'left',
                           borderBottom: '1px solid var(--border)',
                           padding: '6px 4px',
                           background: 'var(--table-header-bg)',
+                          whiteSpace: 'nowrap',
                         }}
                       >
                         {messages.combos.table.identifier}
+                        <SortIcon active={sortColumn === 'item_identifier'} sortDirection={sortDirection} />
                       </th>
                       <th
+                        onClick={() => toggleSort('item_model')}
                         style={{
+                          cursor: 'pointer',
+                          userSelect: 'none',
                           textAlign: 'left',
                           borderBottom: '1px solid var(--border)',
                           padding: '6px 4px',
                           background: 'var(--table-header-bg)',
+                          whiteSpace: 'nowrap',
                         }}
                       >
                         {messages.combos.table.model}
+                        <SortIcon active={sortColumn === 'item_model'} sortDirection={sortDirection} />
                       </th>
                       <th
+                        onClick={() => toggleSort('item_type')}
                         style={{
+                          cursor: 'pointer',
+                          userSelect: 'none',
                           textAlign: 'left',
                           borderBottom: '1px solid var(--border)',
                           padding: '6px 4px',
                           background: 'var(--table-header-bg)',
+                          whiteSpace: 'nowrap',
                         }}
                       >
                         {messages.microphones.fields.micTypeName}
+                        <SortIcon active={sortColumn === 'item_type'} sortDirection={sortDirection} />
                       </th>
                     </tr>
                   </thead>
