@@ -504,7 +504,7 @@ export default function BasePanel({ messages, canWrite }: BasePanelProps) {
         }}
       />
 
-      <div style={{ display: 'flex', alignItems: 'flex-start', justifyContent: 'space-between', gap: 12, marginTop: 24 }}>
+      <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 0, marginTop: 0 }}>
         <h2 style={{ margin: 0 }}>{messages.bases.title}</h2>
 
         {canWrite ? (
@@ -545,7 +545,7 @@ export default function BasePanel({ messages, canWrite }: BasePanelProps) {
         </div>
       ) : null}
 
-      <div style={{ marginTop: 24, textAlign: 'left' }}>
+      <div style={{ marginTop: 2, textAlign: 'left' }}>
 
         {rows.length === 0 ? (
           <div>{messages.bases.table.empty}</div>
