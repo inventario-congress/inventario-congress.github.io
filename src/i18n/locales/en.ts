@@ -212,6 +212,7 @@ const en = {
           loadingRooms: 'Loading rooms...',
           noneAssociated: 'No rooms associated with this location yet.',
           tableDeleteLabel: 'Delete',
+          addRoomDialogOpen: '',
         },
         addRoomDialog: {
           title: 'Add new room',
@@ -385,6 +386,39 @@ const en = {
       deleteFailed: 'Failed to delete combo',
     },
   },
+  bulkMove: {
+    systemMenuLabel: 'Bulk Moves',
+    title: 'Bulk Moves',
+    venueLabel: 'Venue',
+    venuePlaceholder: 'Select a venue...',
+    venueEmpty: 'No venues available.',
+    roomTableHeader: 'Room: {roomName}',
+    selectAllLabel: 'Select all',
+    itemTypeBase: 'Base',
+    itemTypeCombo: 'Combo',
+    selectedCount: '{count} item{plural} selected',
+    moveButton: 'Move selected items',
+    moveButtonDisabled: 'Select items to move',
+    noItems: 'Select a venue to see available items.',
+    loadingItems: 'Loading items...',
+    dialogs: {
+      moveSelection: {
+        title: 'Bulk move items',
+        searchLabel: 'Destination venue',
+        searchPlaceholder: 'Select a venue...',
+        roomLabel: 'Destination room',
+        roomSearchPlaceholder: 'Select a room...',
+        roomsNoneAssociated: 'No rooms associated with this venue.',
+        moveDisabledReason: 'Select a venue and room to enable move',
+        empty: 'No venues available.',
+      },
+    },
+    feedback: {
+      loadFailed: 'Failed to load items',
+      moved: 'Items moved successfully.',
+      moveFailed: 'Failed to move items.',
+    },
+  },
   bases: {
     title: 'Bases',
     fields: {
@@ -438,7 +472,6 @@ const en = {
     },
     table: {
       identifier: 'Identifier',
-      maxMicCount: 'Max mic count',
       mics: 'Mics',
       micModelNames: 'Models',
       model: 'Model',
