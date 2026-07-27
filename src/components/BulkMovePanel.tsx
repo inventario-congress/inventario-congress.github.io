@@ -256,10 +256,7 @@ export default function BulkMovePanel({ messages, canWrite }: BulkMovePanelProps
         </div>
       ) : null}
 
-      <div style={{ marginTop: 16, textAlign: 'left' }}>
-        <label htmlFor="bulk-move-location" style={{ display: 'block', marginBottom: 6 }}>
-          {messages.bulkMove.venueLabel}
-        </label>
+      <div style={{ marginTop: 2, textAlign: 'left' }}>
         <select
           id="bulk-move-location"
           value={selectedLocationId}
@@ -299,7 +296,7 @@ export default function BulkMovePanel({ messages, canWrite }: BulkMovePanelProps
         </select>
       </div>
 
-      <div style={{ marginTop: 20 }}>
+      <div style={{ marginTop: 2 }}>
         {selectedLocationId === '' || typeof selectedLocationId !== 'number' ? (
           <div style={{ color: 'var(--muted)' }}>{messages.bulkMove.noItems}</div>
         ) : itemsLoading ? (
