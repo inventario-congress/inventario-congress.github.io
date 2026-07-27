@@ -212,6 +212,7 @@ const en = {
           loadingRooms: 'Loading rooms...',
           noneAssociated: 'No rooms associated with this location yet.',
           tableDeleteLabel: 'Delete',
+          addRoomDialogOpen: '',
         },
         addRoomDialog: {
           title: 'Add new room',
@@ -471,7 +472,6 @@ const en = {
     },
     table: {
       identifier: 'Identifier',
-      maxMicCount: 'Max mic count',
       mics: 'Mics',
       micModelNames: 'Models',
       model: 'Model',
