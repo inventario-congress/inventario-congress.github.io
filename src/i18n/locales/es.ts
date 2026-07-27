@@ -396,7 +396,7 @@ const es = {
     selectAllLabel: 'Seleccionar todo',
     itemTypeBase: 'Base',
     itemTypeCombo: 'Combo',
-    selectedCount: '{count} elemento(s) seleccionados',
+    selectedCount: '{count} elemento{plural} seleccionado{plural}',
     moveButton: 'Mover elementos seleccionados',
     moveButtonDisabled: 'Selecciona elementos para mover',
     noItems: 'Selecciona un venue para ver los elementos disponibles.',

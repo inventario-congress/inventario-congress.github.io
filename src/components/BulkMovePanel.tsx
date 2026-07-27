@@ -470,7 +470,13 @@ export default function BulkMovePanel({ messages, canWrite }: BulkMovePanelProps
           }}
         >
           <span style={{ fontSize: 14, color: 'var(--muted)' }}>
-            {messages.bulkMove.selectedCount.replace('{count}', String(selectionCount))}
+            {
+              messages.bulkMove.selectedCount.replace(
+                '{count}', String(selectionCount)
+              ).replace(
+                /\{plural\}/g, selectionCount === 1 ? '' : 's'
+              )
+            }
           </span>
           <button
             type="button"
