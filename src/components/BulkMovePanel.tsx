@@ -62,7 +62,7 @@ export default function BulkMovePanel({ messages, canWrite }: BulkMovePanelProps
   const [selection, setSelection] = useState<SelectionMap>({})
   const [error, setError] = useState<string | null>(null)
   const [moveDialogOpen, setMoveDialogOpen] = useState(false)
-  const [sortColumn, setSortColumn] = useState<SortColumn>('item_identifier')
+  const [sortColumn, setSortColumn] = useState<SortColumn>('item_type')
   const [sortDirection, setSortDirection] = useState<SortDirection>('asc')
 
   const loadLocations = useCallback(async () => {
@@ -267,7 +267,7 @@ export default function BulkMovePanel({ messages, canWrite }: BulkMovePanelProps
             const value = e.target.value
             const newId = value === '' ? '' : Number.parseInt(value, 10)
             setSelectedLocationId(newId)
-            setSortColumn('item_identifier')
+            setSortColumn('item_type')
             setSortDirection('asc')
             if (newId === '') {
               setRoomGroups([])
