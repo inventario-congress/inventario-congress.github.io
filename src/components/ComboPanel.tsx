@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useMemo, useState } from 'react'
+import { useCallback, useEffect, useMemo, useState, Fragment } from 'react'
 import type { Messages } from '../i18n'
 import { supabase } from '../supabaseClient'
 import DeleteConfirmation from './DeleteConfirmation'
@@ -41,6 +41,26 @@ function SortIcon({ active, sortDirection }: { active: boolean; sortDirection: '
   )
 }
 
+function TriangleIcon({ isOpen }: { isOpen: boolean }) {
+  return (
+    <span
+      aria-hidden="true"
+      style={{
+        display: 'inline-block',
+        width: 16,
+        textAlign: 'center',
+        marginRight: 8,
+        color: 'var(--muted)',
+        transition: 'transform 120ms ease',
+        transform: isOpen ? 'rotate(90deg)' : 'rotate(0deg)',
+        userSelect: 'none',
+      }}
+    >
+      ▶
+    </span>
+  )
+}
+
 export default function ComboPanel({ messages, canWrite }: ComboPanelProps) {
   const [rows, setRows] = useState<ComboRow[]>([])
   const [loading, setLoading] = useState(false)
@@ -51,6 +71,7 @@ export default function ComboPanel({ messages, canWrite }: ComboPanelProps) {
   const [deleteTarget, setDeleteTarget] = useState<{ id: number; name: string } | null>(null)
 
   const [error, setError] = useState<string | null>(null)
+  const [expandedComboRowId, setExpandedComboRowId] = useState<number | null>(null)
   const [moveDialogOpen, setMoveDialogOpen] = useState(false)
   const [moveComboId, setMoveComboId] = useState<number | null>(null)
   const [moveLocationId, setMoveLocationId] = useState<number | null>(null)
@@ -367,60 +388,84 @@ export default function ComboPanel({ messages, canWrite }: ComboPanelProps) {
                   {messages.combos.table.latestLocationRoom}
                   <SortIcon active={sortColumn === 'latest_location_room'} sortDirection={sortDirection} />
                 </th>
-                {canWrite ? (
-                  <th
-                    style={{
-                      textAlign: 'left',
-                      borderBottom: '1px solid var(--border)',
-                      background: 'var(--table-header-bg)',
-                      padding: '8px 6px',
-                    }}
-                  >
-                    {messages.combos.table.actions}
-                  </th>
-                ) : null}
               </tr>
             </thead>
             <tbody>
               {sortedRows.map((row) => (
-                <tr key={row.id}>
-                  <td style={{ borderBottom: '1px solid var(--border)', padding: '8px 6px' }}>{row.identifier}</td>
-                  <td style={{ borderBottom: '1px solid var(--border)', padding: '8px 6px' }}>{row.model}</td>
-                  <td style={{ borderBottom: '1px solid var(--border)', padding: '8px 6px' }}>{row.latest_location_room ?? ''}</td>
-                  {canWrite ? (
+                <Fragment key={row.id}>
+                  <tr
+                    style={{ cursor: canWrite ? 'pointer' : undefined }}
+                    onClick={() => {
+                      if (!canWrite) return
+                      const nextExpanded = expandedComboRowId === row.id ? null : row.id
+                      setExpandedComboRowId(nextExpanded)
+                    }}
+                  >
                     <td style={{ borderBottom: '1px solid var(--border)', padding: '8px 6px' }}>
-                      <div style={{ display: 'flex', gap: 8, flexWrap: 'wrap' }}>
-                        <button
-                          type="button"
-                          onClick={() => openMoveDialog(row)}
-                          disabled={loading}
-                          style={{ padding: '6px 10px', borderRadius: 6, cursor: 'pointer' }}
-                        >
-                          {messages.combos.actions.move}
-                        </button>
-                        <button
-                          type="button"
-                          onClick={() => startEdit(row)}
-                          disabled={loading}
-                          style={{ padding: '6px 10px', borderRadius: 6, cursor: 'pointer' }}
-                        >
-                          {messages.combos.actions.edit}
-                        </button>
-                        <button
-                          type="button"
-                          onClick={() => {
-                            setDeleteTarget({ id: row.id, name: `${row.identifier}` })
-                            setDeleteDialogOpen(true)
-                          }}
-                          disabled={loading}
-                          style={{ padding: '6px 10px', borderRadius: 6, cursor: 'pointer' }}
-                        >
-                          {messages.combos.actions.delete}
-                        </button>
-                      </div>
+                      {canWrite ? <TriangleIcon isOpen={expandedComboRowId === row.id} /> : null}
+                      {row.identifier}
                     </td>
+                    <td style={{ borderBottom: '1px solid var(--border)', padding: '8px 6px' }}>{row.model}</td>
+                    <td style={{ borderBottom: '1px solid var(--border)', padding: '8px 6px' }}>{row.latest_location_room ?? ''}</td>
+                  </tr>
+
+                  {canWrite ? (
+                    <tr>
+                      <td
+                        colSpan={3}
+                        style={{ padding: 0, borderBottom: '1px solid var(--border)' }}
+                      >
+                        <div
+                          style={{
+                            overflow: 'hidden',
+                            transition: 'max-height 120ms ease, opacity 120ms ease, transform 120ms ease',
+                            maxHeight: expandedComboRowId === row.id ? 200 : 0,
+                            opacity: expandedComboRowId === row.id ? 1 : 0,
+                            transform: expandedComboRowId === row.id ? 'translateY(0px)' : 'translateY(-4px)',
+                            pointerEvents: expandedComboRowId === row.id ? 'auto' : 'none',
+                          }}
+                        >
+                          <div style={{ display: 'flex', gap: 8, flexWrap: 'wrap', padding: '12px 6px 16px 6px' }}>
+                            <button
+                              type="button"
+                              onClick={(e) => {
+                                e.stopPropagation()
+                                openMoveDialog(row)
+                              }}
+                              disabled={loading}
+                              style={{ padding: '6px 10px', borderRadius: 6, cursor: 'pointer' }}
+                            >
+                              {messages.combos.actions.move}
+                            </button>
+                            <button
+                              type="button"
+                              onClick={(e) => {
+                                e.stopPropagation()
+                                startEdit(row)
+                              }}
+                              disabled={loading}
+                              style={{ padding: '6px 10px', borderRadius: 6, cursor: 'pointer' }}
+                            >
+                              {messages.combos.actions.edit}
+                            </button>
+                            <button
+                              type="button"
+                              onClick={(e) => {
+                                e.stopPropagation()
+                                setDeleteTarget({ id: row.id, name: `${row.identifier}` })
+                                setDeleteDialogOpen(true)
+                              }}
+                              disabled={loading}
+                              style={{ padding: '6px 10px', borderRadius: 6, cursor: 'pointer' }}
+                            >
+                              {messages.combos.actions.delete}
+                            </button>
+                          </div>
+                        </div>
+                      </td>
+                    </tr>
                   ) : null}
-                </tr>
+                </Fragment>
               ))}
             </tbody>
           </table>
