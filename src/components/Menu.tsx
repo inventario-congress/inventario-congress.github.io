@@ -1,11 +1,12 @@
 import type { Messages } from '../i18n'
 
-export type AppPanel = 'microphones' | 'bases' | 'locations' | 'combos' | 'profile'
+export type AppPanel = 'microphones' | 'bases' | 'locations' | 'combos' | 'profile' | 'bulkmoves'
 
 
 type MenuProps = {
   messages: Messages
   activePanel: AppPanel
+  canWrite: boolean
   onSelectPanel: (panel: AppPanel) => void
   onSignOut: () => void
 }
@@ -30,7 +31,7 @@ function MenuButton({
   )
 }
 
-export default function Menu({ messages, activePanel, onSelectPanel, onSignOut }: MenuProps) {
+export default function Menu({ messages, activePanel, canWrite, onSelectPanel, onSignOut }: MenuProps) {
   return (
     <nav aria-label={messages.menu.ariaLabel} className="menu-panel">
       <section className="menu-section">
@@ -56,6 +57,13 @@ export default function Menu({ messages, activePanel, onSelectPanel, onSignOut }
             selected={activePanel === 'locations'}
             onClick={() => onSelectPanel('locations')}
           />
+          {canWrite ? (
+            <MenuButton
+              label={messages.bulkMove.systemMenuLabel}
+              selected={activePanel === 'bulkmoves'}
+              onClick={() => onSelectPanel('bulkmoves')}
+            />
+          ) : null}
         </div>
       </section>
 

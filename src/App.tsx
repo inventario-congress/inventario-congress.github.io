@@ -14,6 +14,7 @@ const BasePanel = lazy(() => import('./components/BasePanel'))
 const LocationsPanel = lazy(() => import('./components/LocationsPanel'))
 const ComboPanel = lazy(() => import('./components/ComboPanel'))
 const ProfilePanel = lazy(() => import('./components/ProfilePanel'))
+const BulkMovePanel = lazy(() => import('./components/BulkMovePanel'))
 
 type Theme = 'light' | 'dark'
 
@@ -61,7 +62,7 @@ function App() {
 
     try {
       const raw = window.localStorage.getItem(ACTIVE_PANEL_STORAGE_KEY)
-      if (raw === 'microphones' || raw === 'bases' || raw === 'locations' || raw === 'combos' || raw === 'profile') {
+      if (raw === 'microphones' || raw === 'bases' || raw === 'locations' || raw === 'combos' || raw === 'profile' || raw === 'bulkmoves') {
         return raw
       }
     } catch {
@@ -112,7 +113,13 @@ function App() {
         | string
         | undefined
 
-      setIsWriter((tokenRole ?? metadataRole) === 'writer')
+      const isWriterUser = (tokenRole ?? metadataRole) === 'writer'
+      setIsWriter(isWriterUser)
+
+      // If user no longer has write access but is on bulkmoves panel, redirect
+      if (!isWriterUser && activePanel === 'bulkmoves') {
+        setActivePanel('microphones')
+      }
     }
 
     ;(async () => {
@@ -278,6 +285,9 @@ function App() {
       return <ComboPanel messages={messages} canWrite={isWriter} />
     }
 
+    if (activePanel === 'bulkmoves') {
+      return <BulkMovePanel messages={messages} canWrite={isWriter} />
+    }
 
     if (activePanel === 'profile') {
       return (
@@ -338,6 +348,7 @@ function App() {
             <Suspense fallback={<div style={{ padding: 32, textAlign: 'center', opacity: 0.6 }}>{messages.menu.loading}</div>}>
               <Menu
                 messages={messages}
+                canWrite={isWriter}
                 activePanel={activePanel}
                 onSelectPanel={handleSelectPanel}
                 onSignOut={handleSignOut}

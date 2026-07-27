@@ -24,12 +24,18 @@ type MoveDialogStrings = {
   empty: string
 }
 
+type BulkItem = {
+  entityId: number
+  entityType: 'base' | 'combo'
+}
+
 type EntityMoverProps = {
   messages: Messages
   canWrite: boolean
   open: boolean
-  entityId: number | null
-  entityType: 'base' | 'combo'
+  entityId?: number | null
+  entityType?: 'base' | 'combo'
+  items?: BulkItem[] | null
   locationId: number | null
   roomId: number | null
   dialogStrings: MoveDialogStrings
@@ -37,7 +43,7 @@ type EntityMoverProps = {
   onMoved: () => Promise<void> | void
 }
 
-export default function EntityMover({ messages, canWrite, open, entityId, entityType, locationId, roomId, dialogStrings, onClose, onMoved }: EntityMoverProps) {
+export default function EntityMover({ messages, canWrite, open, entityId, entityType, items, locationId, roomId, dialogStrings, onClose, onMoved }: EntityMoverProps) {
   const [loading, setLoading] = useState(false)
   const [error, setError] = useState<string | null>(null)
 
@@ -187,20 +193,27 @@ export default function EntityMover({ messages, canWrite, open, entityId, entity
     }
   }, [canWrite, loadRoomsForLocation, open, roomId, selectedLocationId])
 
+  const activeItems = useMemo(() => {
+    // If `items` is provided (bulk mode), use it; otherwise fall back to single entity.
+    if (items && items.length > 0) return items
+    if (entityId && entityType) return [{ entityId, entityType }]
+    return []
+  }, [items, entityId, entityType])
+
   const submitDisabled = useMemo(() => {
     if (!canWrite) return true
     if (!supabase) return true
-    if (!entityId) return true
+    if (activeItems.length === 0) return true
     if (loading) return true
     if (locationsLoading || roomsLoading) return true
     if (selectedLocationId === '' || selectedRoomId === '') return true
     return false
-  }, [entityId, canWrite, locationsLoading, loading, roomsLoading, selectedLocationId, selectedRoomId])
+  }, [activeItems, canWrite, locationsLoading, loading, roomsLoading, selectedLocationId, selectedRoomId])
 
   const handleSubmit = useCallback(async () => {
     if (!supabase) return
     if (!canWrite) return
-    if (!entityId) return
+    if (activeItems.length === 0) return
     if (selectedLocationId === '' || selectedRoomId === '') return
 
     setError(null)
@@ -216,19 +229,23 @@ export default function EntityMover({ messages, canWrite, open, entityId, entity
         throw new Error(messages.microphones.feedback.authRequired)
       }
 
-      const payload: Record<string, number | string> = {
-        location: selectedLocationId,
-        room: selectedRoomId,
-        user: userId,
-      }
+      const payloads: Record<string, number | string>[] = activeItems.map((item) => {
+        const payload: Record<string, number | string> = {
+          location: selectedLocationId,
+          room: selectedRoomId,
+          user: userId,
+        }
 
-      if (entityType === 'base') {
-        payload.base = entityId
-      } else {
-        payload.combo = entityId
-      }
+        if (item.entityType === 'base') {
+          payload.base = item.entityId
+        } else {
+          payload.combo = item.entityId
+        }
 
-      const { error: createError } = await supabase.from('movement').insert(payload)
+        return payload
+      })
+
+      const { error: createError } = await supabase.from('movement').insert(payloads)
       if (createError) throw createError
 
       await onMoved()
@@ -239,7 +256,7 @@ export default function EntityMover({ messages, canWrite, open, entityId, entity
     } finally {
       setLoading(false)
     }
-  }, [entityId, entityType, canWrite, close, messages.microphones.feedback.authRequired, onMoved, selectedLocationId, selectedRoomId, messages.bases.feedback.loadFailed])
+  }, [activeItems, canWrite, close, messages.microphones.feedback.authRequired, onMoved, selectedLocationId, selectedRoomId, messages.bases.feedback.loadFailed])
 
   if (!open) return null
 
