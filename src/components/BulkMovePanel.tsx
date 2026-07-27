@@ -79,12 +79,7 @@ export default function BulkMovePanel({ messages, canWrite }: BulkMovePanelProps
 
       if (locError) throw locError
 
-      setLocations(
-        (data ?? []).map((l) => ({
-          id: l.id as number,
-          name: l.name as string,
-        }))
-      )
+      setLocations((data ?? []) as LocationChoice[])
     } catch (e) {
       setError(e instanceof Error ? e.message : messages.bulkMove.feedback.loadFailed)
     } finally {
