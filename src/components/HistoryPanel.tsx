@@ -335,8 +335,8 @@ export default function HistoryPanel({ messages }: HistoryPanelProps) {
               boxShadow: '0 4px 12px rgba(0,0,0,0.15)',
             }}
           >
-            {/* Search input */}
-            <div style={{ padding: 8, borderBottom: '1px solid var(--border)' }}>
+            {/* Search input. Make this not scroll with the dropdown */}
+            <div style={{ position: 'sticky', top: 0, padding: 0, borderBottom: '1px solid var(--border)', background: 'var(--bg)', zIndex: 10 }}>
               <input
                 type="text"
                 value={searchTerm}
