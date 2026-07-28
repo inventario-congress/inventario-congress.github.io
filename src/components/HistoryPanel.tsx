@@ -275,7 +275,7 @@ export default function HistoryPanel({ messages }: HistoryPanelProps) {
 
   return (
     <div style={{ maxWidth: 820, margin: '0 auto', padding: 0, textAlign: 'left' }}>
-      <h2 style={{ margin: '24px 0 0 0' }}>{messages.history.title}</h2>
+      <h2 style={{ margin: 0 }}>{messages.history.title}</h2>
 
       {error ? (
         <div style={{ marginTop: 12, color: 'crimson', textAlign: 'left' }}>
@@ -325,7 +325,8 @@ export default function HistoryPanel({ messages }: HistoryPanelProps) {
               left: 0,
               right: 0,
               maxWidth: 400,
-              maxHeight: 320,
+              // Set maxHeight to the height of the viewport minus the top offset of the dropdown, minus some margin
+              maxHeight: `calc(100vh - ${dropdownRef.current?.getBoundingClientRect().top ?? 0}px - 80px)`,
               overflowY: 'auto',
               marginTop: 4,
               border: '1px solid var(--border)',
