@@ -398,7 +398,9 @@ export default function HistoryPanel({ messages }: HistoryPanelProps) {
       {/* History sections */}
       <div style={{ marginTop: 20 }}>
         {selectedItems.length === 0 ? (
-          <div style={{ color: 'var(--muted)' }}>{messages.history.loadingItems}</div>
+          itemsLoading ? (
+            <div style={{ color: 'var(--muted)' }}>{messages.history.loadingItems}</div>
+          ) : null
         ) : (
           selectedItems.map((item) => {
             const key = getItemKey(item)
