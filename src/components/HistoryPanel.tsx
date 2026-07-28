@@ -31,7 +31,7 @@ export default function HistoryPanel({ messages }: HistoryPanelProps) {
   const [items, setItems] = useState<HistoryItem[]>([])
   const [itemsLoading, setItemsLoading] = useState(false)
   const [error, setError] = useState<string | null>(null)
-  const [selectedIds, setSelectedIds] = useState<Set<number>>(new Set())
+  const [selectedKeys, setSelectedKeys] = useState<Set<string>>(new Set())
   const [dropdownOpen, setDropdownOpen] = useState(false)
   const [searchTerm, setSearchTerm] = useState('')
   const [historyData, setHistoryData] = useState<Record<string, MovementRecord[] | AttachmentRecord[]>>({})
@@ -98,16 +98,16 @@ export default function HistoryPanel({ messages }: HistoryPanelProps) {
   }, [items, searchTerm])
 
   const selectedItems = useMemo(() => {
-    return items.filter((item) => selectedIds.has(item.id))
-  }, [items, selectedIds])
+    return items.filter((item) => selectedKeys.has(getItemKey(item)))
+  }, [items, selectedKeys])
 
-  function toggleItem(id: number) {
-    setSelectedIds((prev) => {
+  function toggleItem(key: string) {
+    setSelectedKeys((prev) => {
       const next = new Set(prev)
-      if (next.has(id)) {
-        next.delete(id)
+      if (next.has(key)) {
+        next.delete(key)
       } else {
-        next.add(id)
+        next.add(key)
       }
       return next
     })
@@ -332,36 +332,39 @@ export default function HistoryPanel({ messages }: HistoryPanelProps) {
             ) : filteredItems.length === 0 ? (
               <div style={{ padding: 12, color: 'var(--muted)' }}>{messages.history.noItems}</div>
             ) : (
-              filteredItems.map((item) => (
-                <label
-                  key={item.id}
-                  style={{
-                    display: 'flex',
-                    alignItems: 'center',
-                    gap: 8,
-                    padding: '8px 12px',
-                    cursor: 'pointer',
-                    borderBottom: '1px solid var(--border)',
-                    background: selectedIds.has(item.id) ? 'color-mix(in srgb, var(--accent) 20%, transparent)' : undefined,
-                  }}
-                >
-                  <input
-                    type="checkbox"
-                    checked={selectedIds.has(item.id)}
-                    onChange={() => toggleItem(item.id)}
-                  />
-                  <span style={{ display: 'flex', justifyContent: 'space-between', width: '100%' }}>
-                    <span>
-                      <strong>{item.item_type === 'microphone' ? `Mic ${item.identifier}` : `#${item.identifier}`}</strong>
-                      {' — '}
-                      <span style={{ color: 'var(--muted)' }}>{item.model_name}</span>
+              filteredItems.map((item) => {
+                const itemKey = getItemKey(item)
+                return (
+                  <label
+                    key={itemKey}
+                    style={{
+                      display: 'flex',
+                      alignItems: 'center',
+                      gap: 8,
+                      padding: '8px 12px',
+                      cursor: 'pointer',
+                      borderBottom: '1px solid var(--border)',
+                      background: selectedKeys.has(itemKey) ? 'color-mix(in srgb, var(--accent) 20%, transparent)' : undefined,
+                    }}
+                  >
+                    <input
+                      type="checkbox"
+                      checked={selectedKeys.has(itemKey)}
+                      onChange={() => toggleItem(itemKey)}
+                    />
+                    <span style={{ display: 'flex', justifyContent: 'space-between', width: '100%' }}>
+                      <span>
+                        <strong>{item.item_type === 'microphone' ? `Mic ${item.identifier}` : `#${item.identifier}`}</strong>
+                        {' — '}
+                        <span style={{ color: 'var(--muted)' }}>{item.model_name}</span>
+                      </span>
+                      <span style={{ color: 'var(--muted)', fontSize: 12, alignSelf: 'center' }}>
+                        {getItemTypeLabel(item.item_type)}
+                      </span>
                     </span>
-                    <span style={{ color: 'var(--muted)', fontSize: 12, alignSelf: 'center' }}>
-                      {getItemTypeLabel(item.item_type)}
-                    </span>
-                  </span>
-                </label>
-              ))
+                  </label>
+                )
+              })
             )}
           </div>
         )}
