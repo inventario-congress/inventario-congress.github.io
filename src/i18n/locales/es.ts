@@ -427,7 +427,10 @@ const es = {
     noItems: 'No hay elementos disponibles.',
     loadingItems: 'Cargando elementos...',
     selectedCount: '{count} elemento{plural} seleccionado{plural}',
-    historyTitle: '{identifier} — {modelName}',
+    historyTitle: '{identifier} {modelName}',
+    microphone: 'Mic',
+    attached: 'Anexado',
+    detached: 'Separado',
     table: {
       date: 'Fecha',
       user: 'Usuario',

@@ -141,7 +141,8 @@ export default function HistoryPanel({ messages }: HistoryPanelProps) {
         .select(`
           created_at,
           user,
-          base!inner(identifier)
+          base!inner(identifier),
+          is_active
         `)
         .eq('microphone', item.id)
         .order('created_at', { ascending: false })
@@ -156,6 +157,7 @@ export default function HistoryPanel({ messages }: HistoryPanelProps) {
         created_at: r.created_at,
         user_name: userNames[r.user] ?? null,
         base_identifier: (r.base as unknown as { identifier: number }).identifier,
+        is_active: r.is_active,
       }))
     } else {
       // base or combo
@@ -265,7 +267,7 @@ export default function HistoryPanel({ messages }: HistoryPanelProps) {
       case 'combo':
         return messages.bulkMove.itemTypeCombo
       case 'microphone':
-        return messages.microphones.title
+        return messages.history.microphone
       default:
         return itemType
     }
@@ -380,7 +382,7 @@ export default function HistoryPanel({ messages }: HistoryPanelProps) {
                     <span style={{ display: 'flex', justifyContent: 'space-between', width: '100%' }}>
                       <span>
                         <strong>{`N°${item.identifier}`}</strong>
-                        {' — '}
+                        {' '}
                         <span style={{ color: 'var(--muted)' }}>{item.model_name}</span>
                       </span>
                       <span style={{ color: 'var(--muted)', fontSize: 12, alignSelf: 'center' }}>
@@ -425,12 +427,17 @@ export default function HistoryPanel({ messages }: HistoryPanelProps) {
                     fontWeight: 600,
                   }}
                 >
-                  {messages.history.historyTitle
-                    .replace('{identifier}', item.item_type === 'microphone' ? `N°${item.identifier}` : `N°${item.identifier}`)
-                    .replace('{modelName}', item.model_name)}
-                  <span style={{ fontSize: 12, fontWeight: 400, color: 'var(--muted)', marginLeft: 8 }}>
-                    ({getItemTypeLabel(item.item_type)})
-                  </span>
+                  {
+                    getItemTypeLabel(item.item_type) + ' ' +
+                    messages.history.historyTitle
+                      .replace('{identifier}', `N°${item.identifier}`)
+                      .replace('{modelName}', item.model_name) +
+                    (item.item_type === 'microphone' && records && records.length > 0
+                      ? records[0].is_active
+                        ? ' (' + messages.history.attached + ')'
+                        : ' (' + messages.history.detached + ')'
+                      : '')
+                }
                 </div>
 
                 {isLoading ? (

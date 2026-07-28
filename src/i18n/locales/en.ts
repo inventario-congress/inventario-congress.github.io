@@ -428,6 +428,9 @@ const en = {
     loadingItems: 'Loading items...',
     selectedCount: '{count} item{plural} selected',
     historyTitle: '{identifier} — {modelName}',
+    microphone: 'Mic',
+    attached: 'Attached',
+    detached: 'Detached',
     table: {
       date: 'Date',
       user: 'User',
