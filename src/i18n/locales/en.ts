@@ -419,6 +419,26 @@ const en = {
       moveFailed: 'Failed to move items.',
     },
   },
+  history: {
+    systemMenuLabel: 'History',
+    title: 'History',
+    itemDropdownLabel: 'Select items',
+    itemDropdownPlaceholder: 'Search and select items...',
+    noItems: 'No items available.',
+    loadingItems: 'Loading items...',
+    selectedCount: '{count} item{plural} selected',
+    historyTitle: '{identifier} — {modelName}',
+    microphone: 'Mic',
+    attached: 'Attached',
+    detached: 'Detached',
+    table: {
+      date: 'Date',
+      user: 'User',
+      destination: 'Destination',
+      empty: 'No history records found for this item.',
+    },
+    loadingHistory: 'Loading history...',
+  },
   bases: {
     title: 'Bases',
     fields: {
