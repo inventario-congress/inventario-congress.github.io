@@ -15,12 +15,14 @@ type MovementRecord = {
   user_name: string | null
   location_name: string
   room_name: string
+  is_active: boolean
 }
 
 type AttachmentRecord = {
   created_at: string
   user_name: string | null
   base_identifier: number
+  is_active: boolean
 }
 
 type HistoryPanelProps = {
@@ -183,6 +185,7 @@ export default function HistoryPanel({ messages }: HistoryPanelProps) {
         user_name: userNames[r.user] ?? null,
         location_name: (r.location as unknown as { name: string }).name,
         room_name: (r.room as unknown as { name: string }).name,
+        is_active: false, // Not applicable for movement records
       }))
     }
   }
