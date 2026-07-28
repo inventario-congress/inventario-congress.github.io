@@ -419,6 +419,23 @@ const es = {
       moveFailed: 'No se pudieron mover los elementos.',
     },
   },
+  history: {
+    systemMenuLabel: 'Historial',
+    title: 'Historial',
+    itemDropdownLabel: 'Seleccionar elementos',
+    itemDropdownPlaceholder: 'Buscar y seleccionar elementos...',
+    noItems: 'No hay elementos disponibles.',
+    loadingItems: 'Cargando elementos...',
+    selectedCount: '{count} elemento{plural} seleccionado{plural}',
+    historyTitle: '{identifier} — {modelName}',
+    table: {
+      date: 'Fecha',
+      user: 'Usuario',
+      destination: 'Destino',
+      empty: 'No se encontraron registros de historial para este elemento.',
+    },
+    loadingHistory: 'Cargando historial...',
+  },
   bases: {
     title: 'Bases',
     fields: {
