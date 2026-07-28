@@ -132,76 +132,56 @@ export default function HistoryPanel({ messages }: HistoryPanelProps) {
     return [datePart, timePart]
   }
 
-  async function loadHistory(item: HistoryItem) {
-    if (!supabase) return
+  async function fetchItemHistory(item: HistoryItem): Promise<MovementRecord[] | AttachmentRecord[]> {
+    if (!supabase) return []
 
-    const key = getItemKey(item)
-    if (historyData[key]) return // already loaded
+    if (item.item_type === 'microphone') {
+      const { data, error: queryError } = await supabase
+        .from('attachment')
+        .select(`
+          created_at,
+          user,
+          base!inner(identifier)
+        `)
+        .eq('microphone', item.id)
+        .order('created_at', { ascending: false })
 
-    setHistoryLoading((prev) => new Set(prev).add(key))
-    setError(null)
+      if (queryError) throw queryError
 
-    try {
-      if (item.item_type === 'microphone') {
-        const { data, error: queryError } = await supabase
-          .from('attachment')
-          .select(`
-            created_at,
-            user,
-            base!inner(identifier)
-          `)
-          .eq('microphone', item.id)
-          .order('created_at', { ascending: false })
+      // Fetch display names for users
+      const userIds = [...new Set((data ?? []).map((r) => r.user).filter(Boolean))]
+      const userNames = await fetchUserDisplayNames(userIds)
 
-        if (queryError) throw queryError
+      return (data ?? []).map((r) => ({
+        created_at: r.created_at,
+        user_name: userNames[r.user] ?? null,
+        base_identifier: (r.base as unknown as { identifier: number }).identifier,
+      }))
+    } else {
+      // base or combo
+      const column = item.item_type === 'base' ? 'base' : 'combo'
+      const { data, error: queryError } = await supabase
+        .from('movement')
+        .select(`
+          created_at,
+          user,
+          location!inner(name),
+          room!inner(name)
+        `)
+        .eq(column, item.id)
+        .order('created_at', { ascending: false })
 
-        // Fetch display names for users
-        const userIds = [...new Set((data ?? []).map((r) => r.user).filter(Boolean))]
-        const userNames = await fetchUserDisplayNames(userIds)
+      if (queryError) throw queryError
 
-        const records: AttachmentRecord[] = (data ?? []).map((r) => ({
-          created_at: r.created_at,
-          user_name: userNames[r.user] ?? null,
-          base_identifier: (r.base as unknown as { identifier: number }).identifier,
-        }))
+      const userIds = [...new Set((data ?? []).map((r) => r.user).filter(Boolean))]
+      const userNames = await fetchUserDisplayNames(userIds)
 
-        setHistoryData((prev) => ({ ...prev, [key]: records }))
-      } else {
-        // base or combo
-        const column = item.item_type === 'base' ? 'base' : 'combo'
-        const { data, error: queryError } = await supabase
-          .from('movement')
-          .select(`
-            created_at,
-            user,
-            location!inner(name),
-            room!inner(name)
-          `)
-          .eq(column, item.id)
-          .order('created_at', { ascending: false })
-
-        if (queryError) throw queryError
-
-        const userIds = [...new Set((data ?? []).map((r) => r.user).filter(Boolean))]
-        const userNames = await fetchUserDisplayNames(userIds)
-
-        const records: MovementRecord[] = (data ?? []).map((r) => ({
-          created_at: r.created_at,
-          user_name: userNames[r.user] ?? null,
-          location_name: (r.location as unknown as { name: string }).name,
-          room_name: (r.room as unknown as { name: string }).name,
-        }))
-
-        setHistoryData((prev) => ({ ...prev, [key]: records }))
-      }
-    } catch (e) {
-      setError(e instanceof Error ? e.message : messages.history.loadingHistory)
-    } finally {
-      setHistoryLoading((prev) => {
-        const next = new Set(prev)
-        next.delete(key)
-        return next
-      })
+      return (data ?? []).map((r) => ({
+        created_at: r.created_at,
+        user_name: userNames[r.user] ?? null,
+        location_name: (r.location as unknown as { name: string }).name,
+        room_name: (r.room as unknown as { name: string }).name,
+      }))
     }
   }
 
@@ -228,9 +208,54 @@ export default function HistoryPanel({ messages }: HistoryPanelProps) {
 
   // Load history for newly selected items
   useEffect(() => {
-    for (const item of selectedItems) {
-      void loadHistory(item)
-    }
+    if (!supabase) return
+
+    // Defer all setState calls outside the synchronous effect body
+    Promise.resolve().then(() => {
+      const keys = new Set(selectedItems.map(getItemKey))
+      const loadingKeys = new Set<string>()
+
+      // Mark selected keys as loading (skip already-loaded ones)
+      for (const key of keys) {
+        if (!historyData[key]) {
+          loadingKeys.add(key)
+        }
+      }
+
+      if (loadingKeys.size === 0) return
+
+      setHistoryLoading((prev) => {
+        const next = new Set(prev)
+        for (const k of loadingKeys) next.add(k)
+        return next
+      })
+
+      for (const item of selectedItems) {
+        const key = getItemKey(item)
+        if (historyData[key]) continue
+
+        Promise.resolve().then(async () => {
+          try {
+            const records = await fetchItemHistory(item)
+            // Check if this item is still selected
+            if (keys.has(key)) {
+              setHistoryData((prev) => ({ ...prev, [key]: records }))
+            }
+          } catch (e) {
+            setError(e instanceof Error ? e.message : messages.history.loadingHistory)
+          } finally {
+            // Only update loading state if item is still selected
+            if (keys.has(key)) {
+              setHistoryLoading((prev) => {
+                const next = new Set(prev)
+                next.delete(key)
+                return next
+              })
+            }
+          }
+        })
+      }
+    })
   }, [selectedItems]) // eslint-disable-line react-hooks/exhaustive-deps
 
   function getItemTypeLabel(itemType: string): string {
@@ -354,7 +379,7 @@ export default function HistoryPanel({ messages }: HistoryPanelProps) {
                     />
                     <span style={{ display: 'flex', justifyContent: 'space-between', width: '100%' }}>
                       <span>
-                        <strong>{item.item_type === 'microphone' ? `Mic ${item.identifier}` : `#${item.identifier}`}</strong>
+                        <strong>{`N°${item.identifier}`}</strong>
                         {' — '}
                         <span style={{ color: 'var(--muted)' }}>{item.model_name}</span>
                       </span>
@@ -399,7 +424,7 @@ export default function HistoryPanel({ messages }: HistoryPanelProps) {
                   }}
                 >
                   {messages.history.historyTitle
-                    .replace('{identifier}', item.item_type === 'microphone' ? `Mic ${item.identifier}` : `#${item.identifier}`)
+                    .replace('{identifier}', item.item_type === 'microphone' ? `N°${item.identifier}` : `N°${item.identifier}`)
                     .replace('{modelName}', item.model_name)}
                   <span style={{ fontSize: 12, fontWeight: 400, color: 'var(--muted)', marginLeft: 8 }}>
                     ({getItemTypeLabel(item.item_type)})
@@ -453,9 +478,9 @@ export default function HistoryPanel({ messages }: HistoryPanelProps) {
                         let destination: string
 
                         if ('base_identifier' in record) {
-                          destination = `Base #${record.base_identifier}`
+                          destination = `Base N°${record.base_identifier}`
                         } else {
-                          destination = `${(record as MovementRecord).location_name} / ${(record as MovementRecord).room_name}`
+                          destination = `${(record as MovementRecord).location_name}, ${(record as MovementRecord).room_name}`
                         }
 
                         return (
