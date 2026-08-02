@@ -3,6 +3,7 @@ import { useCallback, useEffect, useMemo, useState } from 'react'
 import type { Messages } from '../i18n'
 import { supabase } from '../supabaseClient'
 import EntityMover from './EntityMover'
+import DeleteConfirmation, { type DeleteEntityDescriptor } from './DeleteConfirmation'
 
 type LocationChoice = {
   id: number
@@ -62,6 +63,10 @@ export default function BulkMovePanel({ messages, canWrite }: BulkMovePanelProps
   const [selection, setSelection] = useState<SelectionMap>({})
   const [error, setError] = useState<string | null>(null)
   const [moveDialogOpen, setMoveDialogOpen] = useState(false)
+  const [detachDialogOpen, setDetachDialogOpen] = useState(false)
+  const [detachDialogLoading, setDetachDialogLoading] = useState(false)
+  const [detachEntities, setDetachEntities] = useState<DeleteEntityDescriptor[]>([])
+  const [detachBaseIds, setDetachBaseIds] = useState<number[]>([])
   const [sortColumn, setSortColumn] = useState<SortColumn>('item_type')
   const [sortDirection, setSortDirection] = useState<SortDirection>('asc')
 
@@ -176,6 +181,18 @@ export default function BulkMovePanel({ messages, canWrite }: BulkMovePanelProps
       })
   }, [selection])
 
+  const selectedBaseItems = useMemo(
+    () => selectedItems.filter((item) => item.entityType === 'base'),
+    [selectedItems]
+  )
+
+  const selectedBaseIds = useMemo(
+    () => selectedBaseItems.map((item) => item.entityId),
+    [selectedBaseItems]
+  )
+
+  const canDetachSelectedBases = canWrite && selectionCount > 0 && selectedBaseItems.length === selectionCount
+
   function toggleItem(key: string) {
     setSelection((prev) => ({ ...prev, [key]: !prev[key] }))
   }
@@ -209,6 +226,89 @@ export default function BulkMovePanel({ messages, canWrite }: BulkMovePanelProps
   function handleMoveClick() {
     if (!canWrite || selectionCount === 0) return
     setMoveDialogOpen(true)
+  }
+
+  async function handleDetachClick() {
+    if (!canDetachSelectedBases || selectedBaseIds.length === 0 || !supabase) return
+
+    setError(null)
+    setDetachDialogLoading(true)
+
+    try {
+      const { data: attachmentRows, error: attachmentError } = await supabase
+        .from('attachment')
+        .select('microphone')
+        .in('base', selectedBaseIds)
+        .eq('is_active', true)
+
+      if (attachmentError) throw attachmentError
+
+      const microphoneIds = Array.from(
+        new Set(
+          (attachmentRows ?? [])
+            .map((row) => row.microphone)
+            .filter((value): value is number => typeof value === 'number')
+        )
+      )
+
+      if (microphoneIds.length === 0) {
+        throw new Error(messages.bulkMove.feedback.noMicrophonesToDetach)
+      }
+
+      const { data: microphoneRows, error: microphoneError } = await supabase
+        .from('microphone')
+        .select('id, identifier')
+        .in('id', microphoneIds)
+        .order('identifier', { ascending: true })
+
+      if (microphoneError) throw microphoneError
+
+      const entities = ((microphoneRows ?? []) as Array<{ id: number; identifier: number }>)
+        .map((row) => ({ id: row.id, identifier: row.identifier }))
+        .sort((a, b) => a.identifier - b.identifier)
+
+      setDetachBaseIds(selectedBaseIds)
+      setDetachEntities(entities)
+      setDetachDialogOpen(true)
+    } catch (e) {
+      const msg = e instanceof Error ? e.message : messages.bulkMove.feedback.loadFailed
+      setError(msg)
+    } finally {
+      setDetachDialogLoading(false)
+    }
+  }
+
+  async function detachSelectedBases() {
+    if (!supabase) return
+    if (!canWrite) return
+    if (detachBaseIds.length === 0) return
+
+    setError(null)
+    setDetachDialogLoading(true)
+
+    try {
+      const { error: detachError } = await supabase
+        .from('attachment')
+        .update({ is_active: false })
+        .in('base', detachBaseIds)
+        .eq('is_active', true)
+
+      if (detachError) throw detachError
+
+      setDetachDialogOpen(false)
+      setDetachEntities([])
+      setDetachBaseIds([])
+      setSelection({})
+
+      if (typeof selectedLocationId === 'number') {
+        await loadItemsForLocation(selectedLocationId)
+      }
+    } catch (e) {
+      const msg = e instanceof Error ? e.message : messages.bulkMove.feedback.detachFailed
+      setError(msg)
+    } finally {
+      setDetachDialogLoading(false)
+    }
   }
 
   function keyForItem(item: RoomItem): string {
@@ -469,19 +569,36 @@ export default function BulkMovePanel({ messages, canWrite }: BulkMovePanelProps
               )
             }
           </span>
-          <button
-            type="button"
-            onClick={handleMoveClick}
-            disabled={selectionCount === 0}
-            style={{
-              padding: '10px 18px',
-              borderRadius: 6,
-              cursor: selectionCount === 0 ? 'not-allowed' : 'pointer',
-              fontWeight: 600,
-            }}
-          >
-            {messages.bulkMove.moveButton}
-          </button>
+          <div style={{ display: 'flex', gap: 10, flexWrap: 'wrap', alignItems: 'center' }}>
+            {canDetachSelectedBases ? (
+              <button
+                type="button"
+                onClick={handleDetachClick}
+                disabled={detachDialogLoading}
+                style={{
+                  padding: '10px 18px',
+                  borderRadius: 6,
+                  cursor: detachDialogLoading ? 'not-allowed' : 'pointer',
+                  fontWeight: 600,
+                }}
+              >
+                {messages.bulkMove.detachButton}
+              </button>
+            ) : null}
+            <button
+              type="button"
+              onClick={handleMoveClick}
+              disabled={selectionCount === 0}
+              style={{
+                padding: '10px 18px',
+                borderRadius: 6,
+                cursor: selectionCount === 0 ? 'not-allowed' : 'pointer',
+                fontWeight: 600,
+              }}
+            >
+              {messages.bulkMove.moveButton}
+            </button>
+          </div>
         </div>
       ) : null}
 
@@ -501,6 +618,24 @@ export default function BulkMovePanel({ messages, canWrite }: BulkMovePanelProps
           if (typeof selectedLocationId === 'number') {
             await loadItemsForLocation(selectedLocationId)
           }
+        }}
+      />
+
+      <DeleteConfirmation
+        open={detachDialogOpen}
+        title={messages.bulkMove.dialogs.detachSelection.title}
+        messagePrefix={messages.bulkMove.dialogs.detachSelection.messagePrefix}
+        entities={detachEntities}
+        confirmLabel={messages.bulkMove.detachButton}
+        cancelLabel={messages.deleteConfirmation.actions.cancel}
+        loading={detachDialogLoading}
+        onCancel={() => {
+          setDetachDialogOpen(false)
+          setDetachEntities([])
+          setDetachBaseIds([])
+        }}
+        onConfirm={async () => {
+          await detachSelectedBases()
         }}
       />
     </div>

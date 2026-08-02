@@ -397,7 +397,8 @@ const en = {
     itemTypeBase: 'Base',
     itemTypeCombo: 'Combo',
     selectedCount: '{count} item{plural} selected',
-    moveButton: 'Move selected items',
+    moveButton: 'Move',
+    detachButton: 'Detach',
     moveButtonDisabled: 'Select items to move',
     noItems: 'Select a venue to see available items.',
     loadingItems: 'Loading items...',
@@ -412,11 +413,17 @@ const en = {
         moveDisabledReason: 'Select a venue and room to enable move',
         empty: 'No venues available.',
       },
+      detachSelection: {
+        title: 'Detach microphones',
+        messagePrefix: 'You are about to detach the following microphones from the selected bases',
+      },
     },
     feedback: {
       loadFailed: 'Failed to load items',
       moved: 'Items moved successfully.',
       moveFailed: 'Failed to move items.',
+      detachFailed: 'Failed to detach microphones.',
+      noMicrophonesToDetach: 'No microphones are currently attached to the selected bases.',
     },
   },
   history: {
