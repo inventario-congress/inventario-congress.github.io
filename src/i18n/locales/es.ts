@@ -397,7 +397,8 @@ const es = {
     itemTypeBase: 'Base',
     itemTypeCombo: 'Combo',
     selectedCount: '{count} elemento{plural} seleccionado{plural}',
-    moveButton: 'Mover elementos seleccionados',
+    moveButton: 'Mover',
+    detachButton: 'Separar',
     moveButtonDisabled: 'Selecciona elementos para mover',
     noItems: 'Selecciona un venue para ver los elementos disponibles.',
     loadingItems: 'Cargando elementos...',
@@ -412,11 +413,17 @@ const es = {
         moveDisabledReason: 'Selecciona un venue y una sala para habilitar mover',
         empty: 'No hay venues disponibles.',
       },
+      detachSelection: {
+        title: 'Separar micrófonos',
+        messagePrefix: 'Separar los siguientes micrófonos de las bases seleccionadas',
+      },
     },
     feedback: {
       loadFailed: 'No se pudieron cargar los elementos',
       moved: 'Elementos movidos correctamente.',
       moveFailed: 'No se pudieron mover los elementos.',
+      detachFailed: 'No se pudieron separar los micrófonos.',
+      noMicrophonesToDetach: 'No hay micrófonos actualmente conectados a las bases seleccionadas.',
     },
   },
   history: {
