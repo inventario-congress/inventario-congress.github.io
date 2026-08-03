@@ -237,7 +237,7 @@ export default function BulkMovePanel({ messages, canWrite }: BulkMovePanelProps
     try {
       const { data: attachmentRows, error: attachmentError } = await supabase
         .from('attachment')
-        .select('microphone')
+        .select('microphone:microphone(id, identifier)')
         .in('base', selectedBaseIds)
         .eq('is_active', true)
 
@@ -247,7 +247,8 @@ export default function BulkMovePanel({ messages, canWrite }: BulkMovePanelProps
         new Set(
           (attachmentRows ?? [])
             .map((row) => row.microphone)
-            .filter((value): value is number => typeof value === 'number')
+            .filter((value): value is { id: number; identifier: number } => Boolean(value))
+            .map((value) => value.id)
         )
       )
 
@@ -255,16 +256,11 @@ export default function BulkMovePanel({ messages, canWrite }: BulkMovePanelProps
         throw new Error(messages.bulkMove.feedback.noMicrophonesToDetach)
       }
 
-      const { data: microphoneRows, error: microphoneError } = await supabase
-        .from('microphone')
-        .select('id, identifier')
-        .in('id', microphoneIds)
-        .order('identifier', { ascending: true })
-
-      if (microphoneError) throw microphoneError
-
-      const entities = ((microphoneRows ?? []) as Array<{ id: number; identifier: number }>)
+      const entities = (attachmentRows ?? [])
+        .map((row) => row.microphone)
+        .filter((value): value is { id: number; identifier: number } => Boolean(value))
         .map((row) => ({ id: row.id, identifier: row.identifier }))
+        .filter((entity, index, arr) => arr.findIndex((candidate) => candidate.id === entity.id) === index)
         .sort((a, b) => a.identifier - b.identifier)
 
       setDetachBaseIds(selectedBaseIds)
