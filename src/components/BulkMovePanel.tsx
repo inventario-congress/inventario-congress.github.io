@@ -25,6 +25,13 @@ type RoomGroup = {
   items: RoomItem[]
 }
 
+type AttachedMic = {
+  microphone: Array<{
+    id: number
+    identifier: number
+  }> | null
+}
+
 type SelectionMap = Record<string, boolean> // key: `${item_type}-${item_id}`
 
 type SortColumn = 'item_identifier' | 'item_model' | 'item_type'
@@ -243,12 +250,12 @@ export default function BulkMovePanel({ messages, canWrite }: BulkMovePanelProps
 
       if (attachmentError) throw attachmentError
 
+      const attachedMics = (attachmentRows ?? []) as AttachedMic[]
+      const microphones = attachedMics.flatMap((row) => row.microphone ?? [])
+
       const microphoneIds = Array.from(
         new Set(
-          (attachmentRows ?? [])
-            .map((row) => row.microphone)
-            .filter((value): value is { id: number; identifier: number } => Boolean(value))
-            .map((value) => value.id)
+          microphones.map((value) => value.id)
         )
       )
 
@@ -256,9 +263,7 @@ export default function BulkMovePanel({ messages, canWrite }: BulkMovePanelProps
         throw new Error(messages.bulkMove.feedback.noMicrophonesToDetach)
       }
 
-      const entities = (attachmentRows ?? [])
-        .map((row) => row.microphone)
-        .filter((value): value is { id: number; identifier: number } => Boolean(value))
+      const entities = microphones
         .map((row) => ({ id: row.id, identifier: row.identifier }))
         .filter((entity, index, arr) => arr.findIndex((candidate) => candidate.id === entity.id) === index)
         .sort((a, b) => a.identifier - b.identifier)
