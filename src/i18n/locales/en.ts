@@ -445,6 +445,7 @@ const en = {
       empty: 'No history records found for this item.',
     },
     loadingHistory: 'Loading history...',
+    loadMore: 'See more',
   },
   bases: {
     title: 'Bases',
