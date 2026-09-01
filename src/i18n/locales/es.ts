@@ -445,6 +445,7 @@ const es = {
       empty: 'No se encontraron registros de historial para este elemento.',
     },
     loadingHistory: 'Cargando historial...',
+    loadMore: 'Ver más',
   },
   bases: {
     title: 'Bases',

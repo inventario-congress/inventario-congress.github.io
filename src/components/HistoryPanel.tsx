@@ -25,9 +25,13 @@ type AttachmentRecord = {
   is_active: boolean
 }
 
+type HistoryRecord = MovementRecord | AttachmentRecord
+
 type HistoryPanelProps = {
   messages: Messages
 }
+
+const HISTORY_WINDOW_DAYS = 30
 
 export default function HistoryPanel({ messages }: HistoryPanelProps) {
   const [items, setItems] = useState<HistoryItem[]>([])
@@ -36,7 +40,8 @@ export default function HistoryPanel({ messages }: HistoryPanelProps) {
   const [selectedKeys, setSelectedKeys] = useState<Set<string>>(new Set())
   const [dropdownOpen, setDropdownOpen] = useState(false)
   const [searchTerm, setSearchTerm] = useState('')
-  const [historyData, setHistoryData] = useState<Record<string, MovementRecord[] | AttachmentRecord[]>>({})
+  const [historyData, setHistoryData] = useState<Record<string, HistoryRecord[]>>({})
+  const [historyNextWindowEnd, setHistoryNextWindowEnd] = useState<Record<string, string | null>>({})
   const [historyLoading, setHistoryLoading] = useState<Set<string>>(new Set())
   const dropdownRef = useRef<HTMLDivElement | null>(null)
 
@@ -134,11 +139,19 @@ export default function HistoryPanel({ messages }: HistoryPanelProps) {
     return [datePart, timePart]
   }
 
-  async function fetchItemHistory(item: HistoryItem): Promise<MovementRecord[] | AttachmentRecord[]> {
-    if (!supabase) return []
+  async function fetchItemHistoryWindow(
+    item: HistoryItem,
+    before?: string,
+  ): Promise<{ records: HistoryRecord[]; nextWindowEnd: string | null }> {
+    if (!supabase) return { records: [], nextWindowEnd: null }
+
+    const windowEnd = before ? new Date(before) : new Date()
+    const windowStart = new Date(windowEnd)
+    windowStart.setDate(windowStart.getDate() - HISTORY_WINDOW_DAYS)
+    const windowStartIso = windowStart.toISOString()
 
     if (item.item_type === 'microphone') {
-      const { data, error: queryError } = await supabase
+      let query = supabase
         .from('attachment')
         .select(`
           created_at,
@@ -147,24 +160,40 @@ export default function HistoryPanel({ messages }: HistoryPanelProps) {
           is_active
         `)
         .eq('microphone', item.id)
+        .gte('created_at', windowStartIso)
         .order('created_at', { ascending: false })
 
+      if (before) query = query.lt('created_at', before)
+
+      const { data, error: queryError } = await query
       if (queryError) throw queryError
+
+      const { data: olderRecords, error: olderRecordsError } = await supabase
+        .from('attachment')
+        .select('created_at')
+        .eq('microphone', item.id)
+        .lt('created_at', windowStartIso)
+        .limit(1)
+
+      if (olderRecordsError) throw olderRecordsError
 
       // Fetch display names for users
       const userIds = [...new Set((data ?? []).map((r) => r.user).filter(Boolean))]
       const userNames = await fetchUserDisplayNames(userIds)
 
-      return (data ?? []).map((r) => ({
-        created_at: r.created_at,
-        user_name: userNames[r.user] ?? null,
-        base_identifier: (r.base as unknown as { identifier: number }).identifier,
-        is_active: r.is_active,
-      }))
+      return {
+        records: (data ?? []).map((r) => ({
+          created_at: r.created_at,
+          user_name: userNames[r.user] ?? null,
+          base_identifier: (r.base as unknown as { identifier: number }).identifier,
+          is_active: r.is_active,
+        })),
+        nextWindowEnd: olderRecords && olderRecords.length > 0 ? windowStartIso : null,
+      }
     } else {
       // base or combo
       const column = item.item_type === 'base' ? 'base' : 'combo'
-      const { data, error: queryError } = await supabase
+      let query = supabase
         .from('movement')
         .select(`
           created_at,
@@ -173,20 +202,36 @@ export default function HistoryPanel({ messages }: HistoryPanelProps) {
           room!inner(name)
         `)
         .eq(column, item.id)
+        .gte('created_at', windowStartIso)
         .order('created_at', { ascending: false })
 
+      if (before) query = query.lt('created_at', before)
+
+      const { data, error: queryError } = await query
       if (queryError) throw queryError
+
+      const { data: olderRecords, error: olderRecordsError } = await supabase
+        .from('movement')
+        .select('created_at')
+        .eq(column, item.id)
+        .lt('created_at', windowStartIso)
+        .limit(1)
+
+      if (olderRecordsError) throw olderRecordsError
 
       const userIds = [...new Set((data ?? []).map((r) => r.user).filter(Boolean))]
       const userNames = await fetchUserDisplayNames(userIds)
 
-      return (data ?? []).map((r) => ({
-        created_at: r.created_at,
-        user_name: userNames[r.user] ?? null,
-        location_name: (r.location as unknown as { name: string }).name,
-        room_name: (r.room as unknown as { name: string }).name,
-        is_active: false, // Not applicable for movement records
-      }))
+      return {
+        records: (data ?? []).map((r) => ({
+          created_at: r.created_at,
+          user_name: userNames[r.user] ?? null,
+          location_name: (r.location as unknown as { name: string }).name,
+          room_name: (r.room as unknown as { name: string }).name,
+          is_active: false, // Not applicable for movement records
+        })),
+        nextWindowEnd: olderRecords && olderRecords.length > 0 ? windowStartIso : null,
+      }
     }
   }
 
@@ -241,10 +286,11 @@ export default function HistoryPanel({ messages }: HistoryPanelProps) {
 
         Promise.resolve().then(async () => {
           try {
-            const records = await fetchItemHistory(item)
+            const { records, nextWindowEnd } = await fetchItemHistoryWindow(item)
             // Check if this item is still selected
             if (keys.has(key)) {
               setHistoryData((prev) => ({ ...prev, [key]: records }))
+              setHistoryNextWindowEnd((prev) => ({ ...prev, [key]: nextWindowEnd }))
             }
           } catch (e) {
             setError(e instanceof Error ? e.message : messages.history.loadingHistory)
@@ -262,6 +308,29 @@ export default function HistoryPanel({ messages }: HistoryPanelProps) {
       }
     })
   }, [selectedItems]) // eslint-disable-line react-hooks/exhaustive-deps
+
+  async function loadMoreHistory(item: HistoryItem) {
+    const key = getItemKey(item)
+    const before = historyNextWindowEnd[key]
+    if (!before || historyLoading.has(key)) return
+
+    setHistoryLoading((prev) => new Set(prev).add(key))
+    setError(null)
+
+    try {
+      const { records, nextWindowEnd } = await fetchItemHistoryWindow(item, before)
+      setHistoryData((prev) => ({ ...prev, [key]: [...(prev[key] ?? []), ...records] }))
+      setHistoryNextWindowEnd((prev) => ({ ...prev, [key]: nextWindowEnd }))
+    } catch (e) {
+      setError(e instanceof Error ? e.message : messages.history.loadingHistory)
+    } finally {
+      setHistoryLoading((prev) => {
+        const next = new Set(prev)
+        next.delete(key)
+        return next
+      })
+    }
+  }
 
   function getItemTypeLabel(itemType: string): string {
     switch (itemType) {
@@ -444,7 +513,7 @@ export default function HistoryPanel({ messages }: HistoryPanelProps) {
                 }
                 </div>
 
-                {isLoading ? (
+                {isLoading && !records ? (
                   <div style={{ padding: 16, color: 'var(--muted)' }}>{messages.history.loadingHistory}</div>
                 ) : !records || (Array.isArray(records) && records.length === 0) ? (
                   <div style={{ padding: 16, color: 'var(--muted)' }}>{messages.history.table.empty}</div>
@@ -486,7 +555,7 @@ export default function HistoryPanel({ messages }: HistoryPanelProps) {
                       </tr>
                     </thead>
                     <tbody>
-                      {(records as (MovementRecord | AttachmentRecord)[]).map((record, idx) => {
+                      {records.map((record, idx) => {
                         const [datePart, timePart] = formatDateTime(record.created_at)
                         let destination: string
 
@@ -517,6 +586,27 @@ export default function HistoryPanel({ messages }: HistoryPanelProps) {
                           </tr>
                         )
                       })}
+                      {historyNextWindowEnd[key] ? (
+                        <tr>
+                          <td colSpan={3} style={{ padding: 0 }}>
+                            <button
+                              type="button"
+                              onClick={() => void loadMoreHistory(item)}
+                              disabled={isLoading}
+                              style={{
+                                width: '100%',
+                                padding: '8px',
+                                border: 0,
+                                background: 'var(--table-header-bg)',
+                                color: 'var(--text-h)',
+                                cursor: isLoading ? 'wait' : 'pointer',
+                              }}
+                            >
+                              {isLoading ? messages.history.loadingHistory : messages.history.loadMore}
+                            </button>
+                          </td>
+                        </tr>
+                      ) : null}
                     </tbody>
                   </table>
                 )}
