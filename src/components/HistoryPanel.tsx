@@ -551,16 +551,6 @@ export default function HistoryPanel({ messages }: HistoryPanelProps) {
                             background: 'var(--table-header-bg)',
                           }}
                         >
-                          {messages.history.table.user}
-                        </th>
-                        <th
-                          style={{
-                            textAlign: 'left',
-                            borderBottom: '1px solid var(--border)',
-                            padding: '6px 8px',
-                            background: 'var(--table-header-bg)',
-                          }}
-                        >
                           {messages.history.table.destination}
                         </th>
                         {item.item_type !== 'microphone' ? (
@@ -600,9 +590,6 @@ export default function HistoryPanel({ messages }: HistoryPanelProps) {
                             >
                               <div>{datePart}</div>
                               <div style={{ fontSize: 12, color: 'var(--muted)' }}>{timePart}</div>
-                            </td>
-                            <td style={{ borderBottom: '1px solid var(--border)', padding: '6px 8px' }}>
-                              {record.user_name ?? ''}
                             </td>
                             <td style={{ borderBottom: '1px solid var(--border)', padding: '6px 8px' }}>
                               {destination}
