@@ -18,6 +18,7 @@ type MoveDialogStrings = {
   searchLabel: string
   searchPlaceholder: string
   roomLabel: string
+  returnDateLabel: string
   roomSearchPlaceholder: string
   roomsNoneAssociated: string
   moveDisabledReason: string
@@ -55,6 +56,7 @@ export default function EntityMover({ messages, canWrite, open, entityId, entity
 
   const [selectedLocationId, setSelectedLocationId] = useState<number | ''>('')
   const [selectedRoomId, setSelectedRoomId] = useState<number | ''>('')
+  const [returnDate, setReturnDate] = useState('')
 
   const close = useCallback(() => {
     if (loading) return
@@ -66,6 +68,7 @@ export default function EntityMover({ messages, canWrite, open, entityId, entity
     setRoomsLoading(false)
     setSelectedLocationId('')
     setSelectedRoomId('')
+    setReturnDate('')
     onClose()
   }, [loading, onClose])
 
@@ -236,6 +239,8 @@ export default function EntityMover({ messages, canWrite, open, entityId, entity
           user: userId,
         }
 
+        if (returnDate) payload.return_date = returnDate
+
         if (item.entityType === 'base') {
           payload.base = item.entityId
         } else {
@@ -256,7 +261,7 @@ export default function EntityMover({ messages, canWrite, open, entityId, entity
     } finally {
       setLoading(false)
     }
-  }, [activeItems, canWrite, close, messages.microphones.feedback.authRequired, onMoved, selectedLocationId, selectedRoomId, messages.bases.feedback.loadFailed])
+  }, [activeItems, canWrite, close, messages.microphones.feedback.authRequired, onMoved, returnDate, selectedLocationId, selectedRoomId, messages.bases.feedback.loadFailed])
 
   if (!open) return null
 
@@ -392,6 +397,32 @@ export default function EntityMover({ messages, canWrite, open, entityId, entity
               ))
             )}
           </select>
+
+          <label htmlFor="entity-mover-return-date" style={{ textAlign: 'left' }}>
+            {dialogStrings.returnDateLabel}
+          </label>
+
+          <input
+            id="entity-mover-return-date"
+            type="date"
+            value={returnDate}
+            onChange={(e) => setReturnDate(e.target.value)}
+            onClick={(e) => {
+              try {
+                e.currentTarget.showPicker()
+              } catch {
+                // showPicker can throw when unsupported; native behavior remains.
+              }
+            }}
+            disabled={loading}
+            style={{
+              width: '100%',
+              boxSizing: 'border-box',
+              padding: 10,
+              borderRadius: 6,
+              border: '1px solid var(--border)',
+            }}
+          />
 
           {error ? (
             <div style={{ color: 'crimson' }}>
