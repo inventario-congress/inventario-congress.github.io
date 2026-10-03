@@ -444,6 +444,7 @@ const en = {
       date: 'Date',
       user: 'User',
       destination: 'Destination',
+      returnDate: 'Return Date',
       empty: 'No history records found for this item.',
     },
     loadingHistory: 'Loading history...',

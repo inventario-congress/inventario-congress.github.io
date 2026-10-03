@@ -15,6 +15,7 @@ type MovementRecord = {
   user_name: string | null
   location_name: string
   room_name: string
+  return_date: string | null
   is_active: boolean
 }
 
@@ -139,6 +140,14 @@ export default function HistoryPanel({ messages }: HistoryPanelProps) {
     return [datePart, timePart]
   }
 
+  function formatDateOnly(value: string | null): string {
+    if (!value) return ''
+    const [y, m, d] = value.split('-').map(Number)
+    const date = new Date(y, m - 1, d)
+    if (Number.isNaN(date.getTime())) return ''
+    return date.toLocaleDateString([], { year: 'numeric', month: 'numeric', day: 'numeric' })
+  }
+
   async function fetchItemHistoryWindow(
     item: HistoryItem,
     before?: string,
@@ -199,7 +208,8 @@ export default function HistoryPanel({ messages }: HistoryPanelProps) {
           created_at,
           user,
           location!inner(name),
-          room!inner(name)
+          room!inner(name),
+          return_date
         `)
         .eq(column, item.id)
         .gte('created_at', windowStartIso)
@@ -228,6 +238,7 @@ export default function HistoryPanel({ messages }: HistoryPanelProps) {
           user_name: userNames[r.user] ?? null,
           location_name: (r.location as unknown as { name: string }).name,
           room_name: (r.room as unknown as { name: string }).name,
+          return_date: (r.return_date as string | null) ?? null,
           is_active: false, // Not applicable for movement records
         })),
         nextWindowEnd: olderRecords && olderRecords.length > 0 ? windowStartIso : null,
@@ -552,6 +563,19 @@ export default function HistoryPanel({ messages }: HistoryPanelProps) {
                         >
                           {messages.history.table.destination}
                         </th>
+                        {item.item_type !== 'microphone' ? (
+                          <th
+                            style={{
+                              textAlign: 'left',
+                              borderBottom: '1px solid var(--border)',
+                              padding: '6px 8px',
+                              whiteSpace: 'nowrap',
+                              background: 'var(--table-header-bg)',
+                            }}
+                          >
+                            {messages.history.table.returnDate}
+                          </th>
+                        ) : null}
                       </tr>
                     </thead>
                     <tbody>
@@ -583,12 +607,17 @@ export default function HistoryPanel({ messages }: HistoryPanelProps) {
                             <td style={{ borderBottom: '1px solid var(--border)', padding: '6px 8px' }}>
                               {destination}
                             </td>
+                            {item.item_type !== 'microphone' ? (
+                              <td style={{ borderBottom: '1px solid var(--border)', padding: '6px 8px', whiteSpace: 'nowrap' }}>
+                                {formatDateOnly((record as MovementRecord).return_date)}
+                              </td>
+                            ) : null}
                           </tr>
                         )
                       })}
                       {historyNextWindowEnd[key] ? (
                         <tr>
-                          <td colSpan={3} style={{ padding: 0 }}>
+                          <td colSpan={item.item_type === 'microphone' ? 3 : 4} style={{ padding: 0 }}>
                             <button
                               type="button"
                               onClick={() => void loadMoreHistory(item)}

@@ -444,6 +444,7 @@ const es = {
       date: 'Fecha',
       user: 'Usuario',
       destination: 'Destino',
+      returnDate: 'Fecha de Vuelta',
       empty: 'No se encontraron registros de historial para este elemento.',
     },
     loadingHistory: 'Cargando historial...',
