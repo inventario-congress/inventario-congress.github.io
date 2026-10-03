@@ -12,9 +12,10 @@ type ComboRow = {
   latest_location_room: string | null
   latest_location_id: number | null
   latest_room_id: number | null
+  latest_return_date: string | null
 }
 
-type SortColumn = 'identifier' | 'model' | 'latest_location_room'
+type SortColumn = 'identifier' | 'model' | 'latest_location_room' | 'latest_return_date'
 type SortDirection = 'asc' | 'desc'
 
 type ComboPanelProps = {
@@ -61,6 +62,14 @@ function TriangleIcon({ isOpen }: { isOpen: boolean }) {
   )
 }
 
+function formatDateOnly(value: string | null): string {
+  if (!value) return ''
+  const [year, month, day] = value.split('-').map(Number)
+  const date = new Date(year, month - 1, day)
+  if (Number.isNaN(date.getTime())) return ''
+  return date.toLocaleDateString([], { year: 'numeric', month: 'numeric', day: 'numeric' })
+}
+
 export default function ComboPanel({ messages, canWrite }: ComboPanelProps) {
   const [rows, setRows] = useState<ComboRow[]>([])
   const [loading, setLoading] = useState(false)
@@ -85,7 +94,12 @@ export default function ComboPanel({ messages, canWrite }: ComboPanelProps) {
       if (!raw) return 'identifier'
       const parsed = JSON.parse(raw) as { sortColumn?: unknown; sortDirection?: unknown }
       const candidate = parsed.sortColumn
-      if (candidate === 'identifier' || candidate === 'model' || candidate === 'latest_location_room') return candidate
+      if (
+        candidate === 'identifier' ||
+        candidate === 'model' ||
+        candidate === 'latest_location_room' ||
+        candidate === 'latest_return_date'
+      ) return candidate
     } catch {
       // ignore
     }
@@ -163,6 +177,12 @@ export default function ComboPanel({ messages, canWrite }: ComboPanelProps) {
           const av = a.latest_location_room ?? ''
           const bv = b.latest_location_room ?? ''
           return av.localeCompare(bv) * dirMul
+        }
+        case 'latest_return_date': {
+          if (a.latest_return_date === null && b.latest_return_date === null) return 0
+          if (a.latest_return_date === null) return 1
+          if (b.latest_return_date === null) return -1
+          return a.latest_return_date.localeCompare(b.latest_return_date) * dirMul
         }
         default:
           return 0
@@ -388,6 +408,21 @@ export default function ComboPanel({ messages, canWrite }: ComboPanelProps) {
                   {messages.combos.table.latestLocationRoom}
                   <SortIcon active={sortColumn === 'latest_location_room'} sortDirection={sortDirection} />
                 </th>
+                <th
+                  onClick={() => toggleSort('latest_return_date')}
+                  style={{
+                    cursor: 'pointer',
+                    userSelect: 'none',
+                    textAlign: 'left',
+                    borderBottom: '1px solid var(--border)',
+                    background: 'var(--table-header-bg)',
+                    padding: '8px 6px',
+                    whiteSpace: 'nowrap',
+                  }}
+                >
+                  {messages.combos.table.latestReturnDate}
+                  <SortIcon active={sortColumn === 'latest_return_date'} sortDirection={sortDirection} />
+                </th>
               </tr>
             </thead>
             <tbody>
@@ -407,12 +442,13 @@ export default function ComboPanel({ messages, canWrite }: ComboPanelProps) {
                     </td>
                     <td style={{ borderBottom: '1px solid var(--border)', padding: '8px 6px' }}>{row.model}</td>
                     <td style={{ borderBottom: '1px solid var(--border)', padding: '8px 6px' }}>{row.latest_location_room ?? ''}</td>
+                    <td style={{ borderBottom: '1px solid var(--border)', padding: '8px 6px' }}>{formatDateOnly(row.latest_return_date)}</td>
                   </tr>
 
                   {canWrite ? (
                     <tr>
                       <td
-                        colSpan={3}
+                        colSpan={4}
                         style={{ padding: 0, borderBottom: '1px solid var(--border)' }}
                       >
                         <div

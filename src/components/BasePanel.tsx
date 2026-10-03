@@ -17,7 +17,26 @@ type BaseRow = {
   latest_location_id: number | null
   latest_location_name: string | null
   latest_room_id: number | null
+  latest_return_date: string | null
   model_names: string // comma-delimited, already sorted; never null
+}
+
+function parseDateOrNull(value: string | null): number | null {
+  if (!value) return null
+  const date = new Date(value)
+  if (Number.isNaN(date.getTime())) return null
+  return date.getTime()
+}
+
+function compareNullableDates(a: string | null, b: string | null, dirMul: number): number {
+  const at = parseDateOrNull(a)
+  const bt = parseDateOrNull(b)
+
+  if (at === null && bt === null) return 0
+  if (at === null) return 1 * dirMul
+  if (bt === null) return -1 * dirMul
+
+  return (at - bt) * dirMul
 }
 
 
@@ -110,7 +129,7 @@ export default function BasePanel({ messages, canWrite }: BasePanelProps) {
 
 
 
-  type SortColumn = 'base_identifier' | 'latest_location_name' | 'model_names'
+  type SortColumn = 'base_identifier' | 'latest_location_name' | 'latest_return_date' | 'model_names'
   type SortDirection = 'asc' | 'desc'
 
   type MicSortColumn = 'mic_identifier' | 'mic_type_name' | 'mic_attachment_date' | 'mic_attachment_user_name'
@@ -126,7 +145,12 @@ export default function BasePanel({ messages, canWrite }: BasePanelProps) {
       if (!raw) return 'base_identifier'
       const parsed = JSON.parse(raw) as { sortColumn?: unknown; sortDirection?: unknown }
       const candidate = parsed.sortColumn
-      if (candidate === 'base_identifier' || candidate === 'latest_location_name' || candidate === 'model_names') return candidate
+      if (
+        candidate === 'base_identifier' ||
+        candidate === 'latest_location_name' ||
+        candidate === 'latest_return_date' ||
+        candidate === 'model_names'
+      ) return candidate
 
     } catch {
       // ignore
@@ -348,6 +372,8 @@ export default function BasePanel({ messages, canWrite }: BasePanelProps) {
           const bv = b.latest_location_name ?? ''
           return av.localeCompare(bv) * dirMul
         }
+        case 'latest_return_date':
+          return compareNullableDates(a.latest_return_date, b.latest_return_date, dirMul)
         case 'model_names': {
           return a.model_names.localeCompare(b.model_names) * dirMul
         }
@@ -430,28 +456,18 @@ export default function BasePanel({ messages, canWrite }: BasePanelProps) {
     return [datePart, timePart]
   }
 
-  function parseDateOrNull(value: string | null): number | null {
-    if (!value) return null
-    const d = new Date(value)
-    if (Number.isNaN(d.getTime())) return null
-    return d.getTime()
+  function formatDateOnly(value: string | null): string {
+    if (!value) return ''
+    const [year, month, day] = value.split('-').map(Number)
+    const date = new Date(year, month - 1, day)
+    if (Number.isNaN(date.getTime())) return ''
+    return date.toLocaleDateString([], { year: 'numeric', month: 'numeric', day: 'numeric' })
   }
 
   function compareNullableStrings(a: string | null, b: string | null, dirMul: number): number {
     const av = a ?? ''
     const bv = b ?? ''
     return av.localeCompare(bv) * dirMul
-  }
-
-  function compareNullableDates(a: string | null, b: string | null, dirMul: number): number {
-    const at = parseDateOrNull(a)
-    const bt = parseDateOrNull(b)
-
-    if (at === null && bt === null) return 0
-    if (at === null) return 1 * dirMul
-    if (bt === null) return -1 * dirMul
-
-    return (at - bt) * dirMul
   }
 
   function getSortedMics(mics: MicAttachment[]): MicAttachment[] {
@@ -603,7 +619,10 @@ export default function BasePanel({ messages, canWrite }: BasePanelProps) {
                   </th>
 
                   <th
+                    onClick={() => toggleSort('latest_return_date')}
                     style={{
+                      cursor: 'pointer',
+                      userSelect: 'none',
                       textAlign: 'left',
                       borderBottom: '1px solid var(--border)',
                       background: 'var(--table-header-bg)',
@@ -611,7 +630,8 @@ export default function BasePanel({ messages, canWrite }: BasePanelProps) {
                       whiteSpace: 'nowrap',
                     }}
                   >
-                    {messages.bases.table.mics}
+                    {messages.bases.table.latestReturnDate}
+                    <SortIcon active={sortColumn === 'latest_return_date'} sortDirection={sortDirection} />
                   </th>
 
                 </tr>
@@ -644,12 +664,12 @@ export default function BasePanel({ messages, canWrite }: BasePanelProps) {
                       </td>
                       <td style={{ borderBottom: '1px solid var(--border)', padding: '8px 6px' }}>{row.model_names}</td>
                       <td style={{ borderBottom: '1px solid var(--border)', padding: '8px 6px' }}>{row.latest_location_name ?? ''}</td>
-                      <td style={{ borderBottom: '1px solid var(--border)', padding: '8px 6px', textAlign: 'center' }}>{row.mic_count}/{row.max_mic_count}</td>
+                      <td style={{ borderBottom: '1px solid var(--border)', padding: '8px 6px' }}>{formatDateOnly(row.latest_return_date)}</td>
                     </tr>
 
                     <tr>
                       <td
-                        colSpan={4}
+                        colSpan={5}
                         style={{ padding: 0, borderBottom: '1px solid var(--border)' }}
                       >
                         <div
