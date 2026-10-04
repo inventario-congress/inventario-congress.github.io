@@ -23,6 +23,8 @@ type MoveDialogStrings = {
   roomsNoneAssociated: string
   moveDisabledReason: string
   empty: string
+  returnDateMustBeFuture: string
+  returnDateMustChange: string
 }
 
 type BulkItem = {
@@ -39,12 +41,13 @@ type EntityMoverProps = {
   items?: BulkItem[] | null
   locationId: number | null
   roomId: number | null
+  latestReturnDate?: string | null
   dialogStrings: MoveDialogStrings
   onClose: () => void
   onMoved: () => Promise<void> | void
 }
 
-export default function EntityMover({ messages, canWrite, open, entityId, entityType, items, locationId, roomId, dialogStrings, onClose, onMoved }: EntityMoverProps) {
+export default function EntityMover({ messages, canWrite, open, entityId, entityType, items, locationId, roomId, latestReturnDate, dialogStrings, onClose, onMoved }: EntityMoverProps) {
   const [loading, setLoading] = useState(false)
   const [error, setError] = useState<string | null>(null)
 
@@ -112,7 +115,7 @@ export default function EntityMover({ messages, canWrite, open, entityId, entity
 
 
   const loadRoomsForLocation = useCallback(
-    async (locationId: number, isActive: () => boolean, latestRoomId: number | null) => {
+    async (locationId: number, isActive: () => boolean) => {
       if (!supabase) return
       if (!isActive()) return
 
@@ -133,9 +136,7 @@ export default function EntityMover({ messages, canWrite, open, entityId, entity
       const mapped: RoomChoice[] = (rpcData as RoomChoice[]).sort((a, b) => a.room_name.localeCompare(b.room_name))
       if (!isActive()) return
 
-      const filtered =
-        typeof latestRoomId === 'number' ? mapped.filter((r) => r.room_id !== latestRoomId) : mapped
-      setRooms(filtered)
+      setRooms(mapped)
       setRoomsLoading(false)
     },
     []
@@ -154,7 +155,8 @@ export default function EntityMover({ messages, canWrite, open, entityId, entity
       if (!active) return
       setError(null)
       setSelectedLocationId(typeof locationId === 'number' ? locationId : '')
-      setSelectedRoomId(typeof roomId === 'number' ? roomId : '')
+      setSelectedRoomId(typeof locationId === 'number' && typeof roomId === 'number' ? roomId : '')
+      setReturnDate(latestReturnDate ?? '')
       setRooms([])
     })
 
@@ -166,7 +168,7 @@ export default function EntityMover({ messages, canWrite, open, entityId, entity
     return () => {
       active = false
     }
-  }, [canWrite, loadLocations, locationId, open, roomId])
+  }, [canWrite, latestReturnDate, loadLocations, locationId, open, roomId])
 
 
 
@@ -180,21 +182,20 @@ export default function EntityMover({ messages, canWrite, open, entityId, entity
       if (!active) return
       if (selectedLocationId === '' || typeof selectedLocationId !== 'number') {
         setRooms([])
-        setSelectedRoomId('')
       }
     })
 
     if (selectedLocationId !== '' && typeof selectedLocationId === 'number') {
       queueMicrotask(() => {
         if (!active) return
-        void loadRoomsForLocation(selectedLocationId, () => active, roomId)
+        void loadRoomsForLocation(selectedLocationId, () => active)
       })
     }
 
     return () => {
       active = false
     }
-  }, [canWrite, loadRoomsForLocation, open, roomId, selectedLocationId])
+  }, [canWrite, loadRoomsForLocation, open, selectedLocationId])
 
   const activeItems = useMemo(() => {
     // If `items` is provided (bulk mode), use it; otherwise fall back to single entity.
@@ -202,6 +203,11 @@ export default function EntityMover({ messages, canWrite, open, entityId, entity
     if (entityId && entityType) return [{ entityId, entityType }]
     return []
   }, [items, entityId, entityType])
+  const isBulkMove = Boolean(items && items.length > 0)
+  const hasChanges =
+    selectedLocationId !== (typeof locationId === 'number' ? locationId : '') ||
+    selectedRoomId !== (typeof locationId === 'number' && typeof roomId === 'number' ? roomId : '') ||
+    returnDate !== (isBulkMove ? '' : latestReturnDate ?? '')
 
   const submitDisabled = useMemo(() => {
     if (!canWrite) return true
@@ -210,8 +216,9 @@ export default function EntityMover({ messages, canWrite, open, entityId, entity
     if (loading) return true
     if (locationsLoading || roomsLoading) return true
     if (selectedLocationId === '' || selectedRoomId === '') return true
+    if (!hasChanges) return true
     return false
-  }, [activeItems, canWrite, locationsLoading, loading, roomsLoading, selectedLocationId, selectedRoomId])
+  }, [activeItems, canWrite, hasChanges, locationsLoading, loading, roomsLoading, selectedLocationId, selectedRoomId])
 
   const handleSubmit = useCallback(async () => {
     if (!supabase) return
@@ -232,6 +239,90 @@ export default function EntityMover({ messages, canWrite, open, entityId, entity
         throw new Error(messages.microphones.feedback.authRequired)
       }
 
+      if (!isBulkMove) {
+        const today = new Date()
+        const todayDate = `${today.getFullYear()}-${String(today.getMonth() + 1).padStart(2, '0')}-${String(today.getDate()).padStart(2, '0')}`
+        if (returnDate && returnDate <= todayDate) {
+          throw new Error(dialogStrings.returnDateMustBeFuture)
+        }
+
+        const latestMovements = new Map<string, { location: number; room: number; return_date: string | null }>()
+        const baseIds = activeItems.filter((item) => item.entityType === 'base').map((item) => item.entityId)
+        const comboIds = activeItems.filter((item) => item.entityType === 'combo').map((item) => item.entityId)
+
+        if (baseIds.length > 0) {
+          let offset = 0
+          while (true) {
+            const { data, error: movementError } = await supabase
+              .from('movement')
+              .select('id, base, location, room, return_date')
+              .in('base', baseIds)
+              .order('created_at', { ascending: false })
+              .order('id', { ascending: false })
+              .range(offset, offset + 999)
+
+            if (movementError) throw movementError
+
+            for (const movement of data ?? []) {
+              const key = `base:${movement.base}`
+              if (!latestMovements.has(key)) {
+                latestMovements.set(key, {
+                  location: movement.location,
+                  room: movement.room,
+                  return_date: movement.return_date,
+                })
+              }
+            }
+
+            if (baseIds.every((id) => latestMovements.has(`base:${id}`)) || (data?.length ?? 0) < 1000) break
+            offset += data.length
+          }
+        }
+
+        if (comboIds.length > 0) {
+          let offset = 0
+          while (true) {
+            const { data, error: movementError } = await supabase
+              .from('movement')
+              .select('id, combo, location, room, return_date')
+              .in('combo', comboIds)
+              .order('created_at', { ascending: false })
+              .order('id', { ascending: false })
+              .range(offset, offset + 999)
+
+            if (movementError) throw movementError
+
+            for (const movement of data ?? []) {
+              const key = `combo:${movement.combo}`
+              if (!latestMovements.has(key)) {
+                latestMovements.set(key, {
+                  location: movement.location,
+                  room: movement.room,
+                  return_date: movement.return_date,
+                })
+              }
+            }
+
+            if (comboIds.every((id) => latestMovements.has(`combo:${id}`)) || (data?.length ?? 0) < 1000) break
+            offset += data.length
+          }
+        }
+
+        for (const item of activeItems) {
+          const key = `${item.entityType}:${item.entityId}`
+          const latestMovement = latestMovements.get(key)
+          if (
+            latestMovement &&
+            latestMovement.location === selectedLocationId &&
+            latestMovement.room === selectedRoomId &&
+            latestMovement.return_date !== null &&
+            (!returnDate || returnDate === latestMovement.return_date)
+          ) {
+            throw new Error(dialogStrings.returnDateMustChange)
+          }
+        }
+      }
+
       const payloads: Record<string, number | string>[] = activeItems.map((item) => {
         const payload: Record<string, number | string> = {
           location: selectedLocationId,
@@ -239,7 +330,7 @@ export default function EntityMover({ messages, canWrite, open, entityId, entity
           user: userId,
         }
 
-        if (returnDate) payload.return_date = returnDate
+        if (!isBulkMove && returnDate) payload.return_date = returnDate
 
         if (item.entityType === 'base') {
           payload.base = item.entityId
@@ -261,7 +352,7 @@ export default function EntityMover({ messages, canWrite, open, entityId, entity
     } finally {
       setLoading(false)
     }
-  }, [activeItems, canWrite, close, messages.microphones.feedback.authRequired, onMoved, returnDate, selectedLocationId, selectedRoomId, messages.bases.feedback.loadFailed])
+  }, [activeItems, canWrite, close, dialogStrings.returnDateMustBeFuture, dialogStrings.returnDateMustChange, isBulkMove, messages.microphones.feedback.authRequired, onMoved, returnDate, selectedLocationId, selectedRoomId, messages.bases.feedback.loadFailed])
 
   if (!open) return null
 
@@ -398,31 +489,35 @@ export default function EntityMover({ messages, canWrite, open, entityId, entity
             )}
           </select>
 
-          <label htmlFor="entity-mover-return-date" style={{ textAlign: 'left' }}>
-            {dialogStrings.returnDateLabel}
-          </label>
+          {!isBulkMove ? (
+            <>
+              <label htmlFor="entity-mover-return-date" style={{ textAlign: 'left' }}>
+                {dialogStrings.returnDateLabel}
+              </label>
 
-          <input
-            id="entity-mover-return-date"
-            type="date"
-            value={returnDate}
-            onChange={(e) => setReturnDate(e.target.value)}
-            onClick={(e) => {
-              try {
-                e.currentTarget.showPicker()
-              } catch {
-                // showPicker can throw when unsupported; native behavior remains.
-              }
-            }}
-            disabled={loading}
-            style={{
-              width: '100%',
-              boxSizing: 'border-box',
-              padding: 10,
-              borderRadius: 6,
-              border: '1px solid var(--border)',
-            }}
-          />
+              <input
+                id="entity-mover-return-date"
+                type="date"
+                value={returnDate}
+                onChange={(e) => setReturnDate(e.target.value)}
+                onClick={(e) => {
+                  try {
+                    e.currentTarget.showPicker()
+                  } catch {
+                    // showPicker can throw when unsupported; native behavior remains.
+                  }
+                }}
+                disabled={loading}
+                style={{
+                  width: '100%',
+                  boxSizing: 'border-box',
+                  padding: 10,
+                  borderRadius: 6,
+                  border: '1px solid var(--border)',
+                }}
+              />
+            </>
+          ) : null}
 
           {error ? (
             <div style={{ color: 'crimson' }}>
@@ -448,4 +543,3 @@ export default function EntityMover({ messages, canWrite, open, entityId, entity
     </div>
   )
 }
-
