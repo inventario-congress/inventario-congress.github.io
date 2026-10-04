@@ -85,6 +85,7 @@ export default function ComboPanel({ messages, canWrite }: ComboPanelProps) {
   const [moveComboId, setMoveComboId] = useState<number | null>(null)
   const [moveLocationId, setMoveLocationId] = useState<number | null>(null)
   const [moveRoomId, setMoveRoomId] = useState<number | null>(null)
+  const [moveReturnDate, setMoveReturnDate] = useState<string | null>(null)
 
   const SORT_STORAGE_KEY = 'inventario_congress:combos:sort'
 
@@ -236,6 +237,7 @@ export default function ComboPanel({ messages, canWrite }: ComboPanelProps) {
     setMoveComboId(null)
     setMoveLocationId(null)
     setMoveRoomId(null)
+    setMoveReturnDate(null)
   }, [])
 
   function openMoveDialog(row: ComboRow) {
@@ -245,6 +247,7 @@ export default function ComboPanel({ messages, canWrite }: ComboPanelProps) {
     setMoveComboId(row.id)
     setMoveLocationId(row.latest_location_id)
     setMoveRoomId(row.latest_room_id)
+    setMoveReturnDate(row.latest_return_date)
   }
 
   function cancelMoveDialog() {
@@ -341,6 +344,7 @@ export default function ComboPanel({ messages, canWrite }: ComboPanelProps) {
         entityType="combo"
         locationId={moveLocationId}
         roomId={moveRoomId}
+        latestReturnDate={moveReturnDate}
         dialogStrings={messages.combos.dialogs.moveCombo}
         onClose={() => cancelMoveDialog()}
         onMoved={async () => {

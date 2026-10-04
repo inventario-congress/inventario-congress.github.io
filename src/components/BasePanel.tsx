@@ -114,6 +114,7 @@ export default function BasePanel({ messages, canWrite }: BasePanelProps) {
   const [moveBaseId, setMoveBaseId] = useState<number | null>(null)
   const [moveLocationId, setMoveLocationId] = useState<number | null>(null)
   const [moveRoomId, setMoveRoomId] = useState<number | null>(null)
+  const [moveReturnDate, setMoveReturnDate] = useState<string | null>(null)
   const [deleteDialogOpen, setDeleteDialogOpen] = useState(false)
   const [deleteTarget, setDeleteTarget] = useState<{ id: number; name?: string | null } | null>(null)
   const [expandedBaseRowId, setExpandedBaseRowId] = useState<number | null>(null)
@@ -210,6 +211,7 @@ export default function BasePanel({ messages, canWrite }: BasePanelProps) {
     setMoveBaseId(null)
     setMoveLocationId(null)
     setMoveRoomId(null)
+    setMoveReturnDate(null)
   }, [])
 
 
@@ -279,6 +281,7 @@ export default function BasePanel({ messages, canWrite }: BasePanelProps) {
     setMoveBaseId(row.base_id)
     setMoveLocationId(row.latest_location_id)
     setMoveRoomId(row.latest_room_id)
+    setMoveReturnDate(row.latest_return_date)
   }
 
 
@@ -990,6 +993,7 @@ export default function BasePanel({ messages, canWrite }: BasePanelProps) {
         entityType="base"
         locationId={moveLocationId}
         roomId={moveRoomId}
+        latestReturnDate={moveReturnDate}
         dialogStrings={messages.bases.dialogs.moveBase}
         onClose={() => cancelMoveDialog()}
         onMoved={async () => {
