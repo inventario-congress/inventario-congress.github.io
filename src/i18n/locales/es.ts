@@ -433,6 +433,20 @@ const es = {
       noMicrophonesToDetach: 'No hay micrófonos actualmente conectados a las bases seleccionadas.',
     },
   },
+  returns: {
+    systemMenuLabel: 'Devoluciones',
+    title: 'Devoluciones',
+    table: {
+      identifier: 'N°',
+      name: 'Nombre',
+      location: 'Ubicación',
+      returnDate: 'Fecha de Vuelta',
+      empty: 'No hay devoluciones próximas o vencidas.',
+    },
+    feedback: {
+      loadFailed: 'Error al cargar las devoluciones',
+    },
+  },
   history: {
     systemMenuLabel: 'Historial',
     title: 'Historial',

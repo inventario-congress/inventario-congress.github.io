@@ -433,6 +433,20 @@ const en = {
       noMicrophonesToDetach: 'No microphones are currently attached to the selected bases.',
     },
   },
+  returns: {
+    systemMenuLabel: 'Returns',
+    title: 'Returns',
+    table: {
+      identifier: 'Identifier',
+      name: 'Name',
+      location: 'Location',
+      returnDate: 'Return Date',
+      empty: 'No upcoming or overdue returns.',
+    },
+    feedback: {
+      loadFailed: 'Failed to load returns',
+    },
+  },
   history: {
     systemMenuLabel: 'History',
     title: 'History',
