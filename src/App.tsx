@@ -16,6 +16,7 @@ const ComboPanel = lazy(() => import('./components/ComboPanel'))
 const ProfilePanel = lazy(() => import('./components/ProfilePanel'))
 const BulkMovePanel = lazy(() => import('./components/BulkMovePanel'))
 const HistoryPanel = lazy(() => import('./components/HistoryPanel'))
+const ReturnsPanel = lazy(() => import('./components/ReturnsPanel'))
 
 type Theme = 'light' | 'dark'
 
@@ -63,7 +64,7 @@ function App() {
 
     try {
       const raw = window.localStorage.getItem(ACTIVE_PANEL_STORAGE_KEY)
-      if (raw === 'microphones' || raw === 'bases' || raw === 'locations' || raw === 'combos' || raw === 'profile' || raw === 'bulkmoves' || raw === 'history') {
+      if (raw === 'microphones' || raw === 'bases' || raw === 'locations' || raw === 'combos' || raw === 'profile' || raw === 'bulkmoves' || raw === 'history' || raw === 'returns') {
         return raw
       }
     } catch {
@@ -292,6 +293,10 @@ function App() {
 
     if (activePanel === 'history') {
       return <HistoryPanel messages={messages} />
+    }
+
+    if (activePanel === 'returns') {
+      return <ReturnsPanel messages={messages} />
     }
 
     if (activePanel === 'profile') {
