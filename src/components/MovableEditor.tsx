@@ -3,18 +3,21 @@ import { useCallback, useEffect, useMemo, useState } from 'react'
 import type { Messages } from '../i18n'
 import { supabase } from '../supabaseClient'
 
-type ComboEditorProps = {
+export type MovableType = 'combo' | 'console'
+
+type MovableEditorProps = {
+  type: MovableType
   messages: Messages
   canWrite: boolean
   isOpen: boolean
-  comboId?: number | null
+  movableId?: number | null
   onClose: () => void
   onSaved?: () => void
 }
 
-export default function ComboEditor({ messages, canWrite, isOpen, onClose, onSaved, comboId }: ComboEditorProps) {
-  const isEditMode = typeof comboId === 'number' && comboId > 0
-  const strings = messages.combos
+export default function MovableEditor({ type, messages, canWrite, isOpen, onClose, onSaved, movableId }: MovableEditorProps) {
+  const isEditMode = typeof movableId === 'number' && movableId > 0
+  const strings = (type === 'combo' ? messages.combos : messages.consoles)
 
   const editorStrings = {
     title: isEditMode ? strings.dialogs.editor.titleEdit : strings.dialogs.editor.titleCreate,
@@ -44,16 +47,16 @@ export default function ComboEditor({ messages, canWrite, isOpen, onClose, onSav
 
   const loadForEdit = useCallback(async () => {
     if (!supabase) return
-    if (!isEditMode || !comboId) return
+    if (!isEditMode || !movableId) return
 
     setError(null)
     setLoading(true)
 
     try {
       const { data, error: loadError } = await supabase
-        .from('combo')
+        .from(type)
         .select('id, identifier, model')
-        .eq('id', comboId)
+        .eq('id', movableId)
         .single()
 
       if (loadError) throw loadError
@@ -65,7 +68,7 @@ export default function ComboEditor({ messages, canWrite, isOpen, onClose, onSav
     } finally {
       setLoading(false)
     }
-  }, [comboId, isEditMode, strings.feedback.loadFailed])
+  }, [movableId, isEditMode, type, strings.feedback.loadFailed])
 
   useEffect(() => {
     if (!isOpen || !canWrite) return
@@ -107,16 +110,16 @@ export default function ComboEditor({ messages, canWrite, isOpen, onClose, onSav
         model: model.trim(),
       }
 
-      if (isEditMode && comboId) {
+      if (isEditMode && movableId) {
         const { error: updateError } = await supabase
-          .from('combo')
+          .from(type)
           .update(payload)
-          .eq('id', comboId)
+          .eq('id', movableId)
 
         if (updateError) throw updateError
       } else {
         const { error: createError } = await supabase
-          .from('combo')
+          .from(type)
           .insert(payload)
 
         if (createError) throw createError
@@ -135,7 +138,7 @@ export default function ComboEditor({ messages, canWrite, isOpen, onClose, onSav
     } finally {
       setLoading(false)
     }
-  }, [canWrite, close, comboId, editorStrings.feedback.createFailed, editorStrings.feedback.updateFailed, identifier, isEditMode, model, onSaved])
+  }, [canWrite, close, type, movableId, editorStrings.feedback.createFailed, editorStrings.feedback.updateFailed, identifier, isEditMode, model, onSaved])
 
   if (!isOpen) return null
 
@@ -201,11 +204,11 @@ export default function ComboEditor({ messages, canWrite, isOpen, onClose, onSav
           }}
           style={{ display: 'grid', gap: 10, marginTop: 14 }}
         >
-          <label htmlFor="combo-editor-identifier" style={{ textAlign: 'left' }}>
+          <label htmlFor={`${type}-editor-identifier`} style={{ textAlign: 'left' }}>
             {editorStrings.fields.identifier}
           </label>
           <input
-            id="combo-editor-identifier"
+            id={`${type}-editor-identifier`}
             value={identifier}
             onChange={(e) => setIdentifier(e.target.value)}
             type="number"
@@ -221,11 +224,11 @@ export default function ComboEditor({ messages, canWrite, isOpen, onClose, onSav
             }}
           />
 
-          <label htmlFor="combo-editor-model" style={{ textAlign: 'left' }}>
+          <label htmlFor={`${type}-editor-model`} style={{ textAlign: 'left' }}>
             {editorStrings.fields.model}
           </label>
           <input
-            id="combo-editor-model"
+            id={`${type}-editor-model`}
             value={model}
             onChange={(e) => setModel(e.target.value)}
             type="text"

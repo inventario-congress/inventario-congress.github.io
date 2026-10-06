@@ -13,11 +13,13 @@ type LocationChoice = {
 type RoomItem = {
   room_id: number
   room_name: string
-  item_type: 'base' | 'combo'
+  item_type: 'base' | 'combo' | 'console'
   item_id: number
   item_identifier: number
   item_model: string
 }
+
+const ITEM_TYPE_ORDER: Record<RoomItem['item_type'], number> = { base: 0, combo: 1, console: 2 }
 
 type RoomGroup = {
   room_id: number
@@ -182,7 +184,7 @@ export default function BulkMovePanel({ messages, canWrite }: BulkMovePanelProps
       .map(([key]) => {
         const [itemType, itemIdStr] = key.split('-')
         return {
-          entityType: itemType as 'base' | 'combo',
+          entityType: itemType as RoomItem['item_type'],
           entityId: Number.parseInt(itemIdStr, 10),
         }
       })
@@ -335,8 +337,8 @@ export default function BulkMovePanel({ messages, canWrite }: BulkMovePanelProps
           case 'item_model':
             return a.item_model.localeCompare(b.item_model) * dirMul
           case 'item_type': {
-            const aType = a.item_type === 'base' ? 0 : 1
-            const bType = b.item_type === 'base' ? 0 : 1
+            const aType = ITEM_TYPE_ORDER[a.item_type]
+            const bType = ITEM_TYPE_ORDER[b.item_type]
             return (aType - bType) * dirMul
           }
           default:
@@ -532,7 +534,9 @@ export default function BulkMovePanel({ messages, canWrite }: BulkMovePanelProps
                           <td style={{ borderBottom: '1px solid var(--border)', padding: '6px 4px' }}>
                             {item.item_type === 'base'
                               ? messages.bulkMove.itemTypeBase
-                              : messages.bulkMove.itemTypeCombo}
+                              : item.item_type === 'console'
+                                ? messages.bulkMove.itemTypeConsole
+                                : messages.bulkMove.itemTypeCombo}
                           </td>
                         </tr>
                       )

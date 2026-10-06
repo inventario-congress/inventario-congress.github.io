@@ -4,13 +4,16 @@ import type { Messages } from '../i18n'
 import { supabase } from '../supabaseClient'
 
 type ReturnRow = {
-  type: 'Base' | 'Combo'
+  type: 'Base' | 'Combo' | 'Console'
   base_id: number | null
   base_identifier: number | null
   base_mic_model_name: string | null
   combo_id: number | null
   combo_identifier: number | null
   combo_model: string | null
+  console_id: number | null
+  console_identifier: number | null
+  console_model: string | null
   return_date: string | null
   location: string | null
 }
@@ -24,12 +27,50 @@ type SortDirection = 'asc' | 'desc'
 
 const SORT_STORAGE_KEY = 'inventario_congress:returns:sort'
 
+function getEntityId(row: ReturnRow): number | null {
+  switch (row.type) {
+    case 'Base':
+      return row.base_id
+    case 'Console':
+      return row.console_id
+    default:
+      return row.combo_id
+  }
+}
+
 function getIdentifier(row: ReturnRow): number | null {
-  return row.type === 'Base' ? row.base_identifier : row.combo_identifier
+  switch (row.type) {
+    case 'Base':
+      return row.base_identifier
+    case 'Console':
+      return row.console_identifier
+    default:
+      return row.combo_identifier
+  }
 }
 
 function getName(row: ReturnRow): string {
-  return (row.type === 'Base' ? row.base_mic_model_name : row.combo_model) ?? ''
+  switch (row.type) {
+    case 'Base':
+      return row.base_mic_model_name ?? ''
+    case 'Console':
+      return row.console_model ?? ''
+    default:
+      return row.combo_model ?? ''
+  }
+}
+
+function getType(row: ReturnRow, messages: Messages): string {
+  switch (row.type) {
+    case 'Base':
+      return messages.returns.itemTypes.base ?? ''
+    case 'Console':
+      return messages.returns.itemTypes.console ?? ''
+    case 'Combo':
+      return messages.returns.itemTypes.combo ?? ''
+    default:
+      return ''
+  }
 }
 
 function parseDateOnly(value: string | null): Date | null {
@@ -206,14 +247,14 @@ export default function ReturnsPanel({ messages }: ReturnsPanelProps) {
                   const cellStyle = { borderBottom: '1px solid var(--border)', padding: '8px 6px' }
                   return (
                     <tr
-                      key={`${row.type}-${row.type === 'Base' ? row.base_id : row.combo_id}-${row.return_date}`}
+                      key={`${row.type}-${getEntityId(row)}-${row.return_date}`}
                       style={isDueOrOverdue(row.return_date) ? { color: 'red' } : undefined}
                     >
                       <td style={cellStyle}>
                         <div>{getIdentifier(row) ?? ''}</div>
                       </td>
                       <td style={cellStyle}>
-                        <div style={{ fontSize: 12, color: 'var(--muted)' }}>{row.type ?? ''}</div>
+                        <div style={{ fontSize: 12, color: 'var(--muted)' }}>{getType(row, messages)}</div>
                         <div>{getName(row)}</div>
                       </td>
                       <td style={cellStyle}>{row.location ?? ''}</td>
