@@ -239,12 +239,13 @@ export default function EntityMover({ messages, canWrite, open, entityId, entity
         throw new Error(messages.microphones.feedback.authRequired)
       }
 
+      const today = new Date()
+      const todayDate = `${today.getFullYear()}-${String(today.getMonth() + 1).padStart(2, '0')}-${String(today.getDate()).padStart(2, '0')}`
+      if (returnDate && returnDate <= todayDate) {
+        throw new Error(dialogStrings.returnDateMustBeFuture)
+      }
+
       if (!isBulkMove) {
-        const today = new Date()
-        const todayDate = `${today.getFullYear()}-${String(today.getMonth() + 1).padStart(2, '0')}-${String(today.getDate()).padStart(2, '0')}`
-        if (returnDate && returnDate <= todayDate) {
-          throw new Error(dialogStrings.returnDateMustBeFuture)
-        }
 
         const latestMovements = new Map<string, { location: number; room: number; return_date: string | null }>()
         const baseIds = activeItems.filter((item) => item.entityType === 'base').map((item) => item.entityId)
@@ -332,7 +333,7 @@ export default function EntityMover({ messages, canWrite, open, entityId, entity
           user: userId,
         }
 
-        if (!isBulkMove && returnDate) payload.return_date = returnDate
+        if (returnDate) payload.return_date = returnDate
 
         if (item.entityType === 'base') {
           payload.base = item.entityId
@@ -493,8 +494,7 @@ export default function EntityMover({ messages, canWrite, open, entityId, entity
             )}
           </select>
 
-          {!isBulkMove ? (
-            <>
+          <>
               <label htmlFor="entity-mover-return-date" style={{ textAlign: 'left' }}>
                 {dialogStrings.returnDateLabel}
               </label>
@@ -520,8 +520,7 @@ export default function EntityMover({ messages, canWrite, open, entityId, entity
                   border: '1px solid var(--border)',
                 }}
               />
-            </>
-          ) : null}
+          </>
 
           {error ? (
             <div style={{ color: 'crimson' }}>
