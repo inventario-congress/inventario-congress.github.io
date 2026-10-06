@@ -469,6 +469,7 @@ const en = {
     selectAllLabel: 'Select all',
     itemTypeBase: 'Base',
     itemTypeCombo: 'Combo',
+    itemTypeConsole: 'Console',
     selectedCount: '{count} item{plural} selected',
     moveButton: 'Move',
     detachButton: 'Detach',

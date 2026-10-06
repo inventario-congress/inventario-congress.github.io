@@ -6,7 +6,7 @@ import { supabase } from '../supabaseClient'
 type HistoryItem = {
   id: number
   identifier: number
-  item_type: 'base' | 'combo' | 'microphone'
+  item_type: 'base' | 'combo' | 'microphone' | 'console'
   model_name: string
 }
 
@@ -53,7 +53,7 @@ export default function HistoryPanel({ messages }: HistoryPanelProps) {
     setError(null)
 
     try {
-      const { data, error: rpcError } = await supabase.rpc('get_bases_combos_mics')
+      const { data, error: rpcError } = await supabase.rpc('get_entities')
 
       if (rpcError) throw rpcError
 
@@ -200,8 +200,8 @@ export default function HistoryPanel({ messages }: HistoryPanelProps) {
         nextWindowEnd: olderRecords && olderRecords.length > 0 ? windowStartIso : null,
       }
     } else {
-      // base or combo
-      const column = item.item_type === 'base' ? 'base' : 'combo'
+      // base, combo or console
+      const column = item.item_type
       let query = supabase
         .from('movement')
         .select(`
@@ -349,6 +349,8 @@ export default function HistoryPanel({ messages }: HistoryPanelProps) {
         return messages.bulkMove.itemTypeBase
       case 'combo':
         return messages.bulkMove.itemTypeCombo
+      case 'console':
+        return messages.bulkMove.itemTypeConsole
       case 'microphone':
         return messages.history.microphone
       default:

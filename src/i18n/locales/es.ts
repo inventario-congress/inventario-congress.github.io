@@ -469,6 +469,7 @@ const es = {
     selectAllLabel: 'Seleccionar todo',
     itemTypeBase: 'Base',
     itemTypeCombo: 'Combo',
+    itemTypeConsole: 'Consola',
     selectedCount: '{count} elemento{plural} seleccionado{plural}',
     moveButton: 'Mover',
     detachButton: 'Separar',
