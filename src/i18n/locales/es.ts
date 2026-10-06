@@ -513,6 +513,11 @@ const es = {
       returnDate: 'Fecha de Vuelta',
       empty: 'No hay devoluciones próximas o vencidas.',
     },
+    itemTypes: {
+      base: 'Base',
+      combo: 'Combo',
+      console: 'Consola',
+    },
     feedback: {
       loadFailed: 'Error al cargar las devoluciones',
     },
