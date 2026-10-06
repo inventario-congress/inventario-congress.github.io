@@ -2,10 +2,10 @@ import { useCallback, useEffect, useMemo, useState, Fragment } from 'react'
 import type { Messages } from '../i18n'
 import { supabase } from '../supabaseClient'
 import DeleteConfirmation from './DeleteConfirmation'
-import ComboEditor from './ComboEditor'
+import MovableEditor, { type MovableType } from './MovableEditor'
 import EntityMover from './EntityMover'
 
-type ComboRow = {
+type MovableRow = {
   id: number
   identifier: number
   model: string
@@ -18,7 +18,8 @@ type ComboRow = {
 type SortColumn = 'identifier' | 'model' | 'latest_location_room' | 'latest_return_date'
 type SortDirection = 'asc' | 'desc'
 
-type ComboPanelProps = {
+type MovablePanelProps = {
+  type: MovableType
   messages: Messages
   canWrite: boolean
 }
@@ -70,24 +71,26 @@ function formatDateOnly(value: string | null): string {
   return date.toLocaleDateString([], { year: 'numeric', month: 'numeric', day: 'numeric' })
 }
 
-export default function ComboPanel({ messages, canWrite }: ComboPanelProps) {
-  const [rows, setRows] = useState<ComboRow[]>([])
+export default function MovablePanel({ type, messages, canWrite }: MovablePanelProps) {
+  const strings = type === 'combo' ? messages.combos : messages.consoles
+  const moveDialogStrings = type === 'combo' ? messages.combos.dialogs.moveCombo : messages.consoles.dialogs.moveConsole
+  const [rows, setRows] = useState<MovableRow[]>([])
   const [loading, setLoading] = useState(false)
-  const [comboEditorOpen, setComboEditorOpen] = useState(false)
-  const [editingComboId, setEditingComboId] = useState<number | null>(null)
+  const [movableEditorOpen, setMovableEditorOpen] = useState(false)
+  const [editingMovableId, setEditingMovableId] = useState<number | null>(null)
 
   const [deleteDialogOpen, setDeleteDialogOpen] = useState(false)
   const [deleteTarget, setDeleteTarget] = useState<{ id: number; name: string } | null>(null)
 
   const [error, setError] = useState<string | null>(null)
-  const [expandedComboRowId, setExpandedComboRowId] = useState<number | null>(null)
+  const [expandedMovableRowId, setExpandedMovableRowId] = useState<number | null>(null)
   const [moveDialogOpen, setMoveDialogOpen] = useState(false)
-  const [moveComboId, setMoveComboId] = useState<number | null>(null)
+  const [moveMovableId, setMoveMovableId] = useState<number | null>(null)
   const [moveLocationId, setMoveLocationId] = useState<number | null>(null)
   const [moveRoomId, setMoveRoomId] = useState<number | null>(null)
   const [moveReturnDate, setMoveReturnDate] = useState<string | null>(null)
 
-  const SORT_STORAGE_KEY = 'inventario_congress:combos:sort'
+  const SORT_STORAGE_KEY = `inventario_congress:${type}s:sort`
 
   const [sortColumn, setSortColumn] = useState<SortColumn>(() => {
     try {
@@ -120,7 +123,7 @@ export default function ComboPanel({ messages, canWrite }: ComboPanelProps) {
     return 'asc'
   })
 
-  const loadCombos = useCallback(async () => {
+  const loadMovables = useCallback(async () => {
     if (!supabase) {
       return
     }
@@ -130,17 +133,17 @@ export default function ComboPanel({ messages, canWrite }: ComboPanelProps) {
 
     try {
       const { data, error: loadError } = await supabase
-        .rpc('get_items_with_latest_location_room', { type: 'combo' })
+        .rpc('get_items_with_latest_location_room', { type })
 
       if (loadError) throw loadError
 
-      setRows((data ?? []) as ComboRow[])
+      setRows((data ?? []) as MovableRow[])
     } catch (e) {
-      setError(e instanceof Error ? e.message : messages.combos.feedback.loadFailed)
+      setError(e instanceof Error ? e.message : strings.feedback.loadFailed)
     } finally {
       setLoading(false)
     }
-  }, [messages.combos.feedback.loadFailed])
+  }, [strings.feedback.loadFailed, type])
 
   useEffect(() => {
     if (!supabase) {
@@ -156,13 +159,13 @@ export default function ComboPanel({ messages, canWrite }: ComboPanelProps) {
         return
       }
 
-      await loadCombos()
+      await loadMovables()
     })()
 
     return () => {
       active = false
     }
-  }, [loadCombos])
+  }, [loadMovables])
 
   const sortedRows = useMemo(() => {
     const copy = [...rows]
@@ -206,13 +209,13 @@ export default function ComboPanel({ messages, canWrite }: ComboPanelProps) {
     }
   }
 
-  function startEdit(row: ComboRow) {
+  function startEdit(row: MovableRow) {
     if (!canWrite) return
-    setEditingComboId(row.id)
-    setComboEditorOpen(true)
+    setEditingMovableId(row.id)
+    setMovableEditorOpen(true)
   }
 
-  async function deleteCombo(id: number) {
+  async function deleteMovable(id: number) {
     if (!supabase || !canWrite) {
       return
     }
@@ -221,12 +224,12 @@ export default function ComboPanel({ messages, canWrite }: ComboPanelProps) {
     setError(null)
 
     try {
-      const { error: deleteError } = await supabase.from('combo').delete().eq('id', id)
+      const { error: deleteError } = await supabase.from(type).delete().eq('id', id)
       if (deleteError) throw deleteError
 
-      await loadCombos()
+      await loadMovables()
     } catch (e) {
-      setError(e instanceof Error ? e.message : messages.combos.feedback.deleteFailed)
+      setError(e instanceof Error ? e.message : strings.feedback.deleteFailed)
     } finally {
       setLoading(false)
     }
@@ -234,17 +237,17 @@ export default function ComboPanel({ messages, canWrite }: ComboPanelProps) {
 
   const resetMoveDialog = useCallback(() => {
     setMoveDialogOpen(false)
-    setMoveComboId(null)
+    setMoveMovableId(null)
     setMoveLocationId(null)
     setMoveRoomId(null)
     setMoveReturnDate(null)
   }, [])
 
-  function openMoveDialog(row: ComboRow) {
+  function openMoveDialog(row: MovableRow) {
     if (!canWrite) return
     setError(null)
     setMoveDialogOpen(true)
-    setMoveComboId(row.id)
+    setMoveMovableId(row.id)
     setMoveLocationId(row.latest_location_id)
     setMoveRoomId(row.latest_room_id)
     setMoveReturnDate(row.latest_return_date)
@@ -257,17 +260,17 @@ export default function ComboPanel({ messages, canWrite }: ComboPanelProps) {
   return (
     <div style={{ maxWidth: 820, margin: '0 auto', padding: 0, textAlign: 'left' }}>
       <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 0, marginTop: 0 }}>
-        <h2 style={{ margin: 0 }}>{messages.combos.title}</h2>
+        <h2 style={{ margin: 0 }}>{strings.title}</h2>
 
         {canWrite ? (
           <button
             type="button"
             onClick={() => {
-              setEditingComboId(null)
-              setComboEditorOpen(true)
+              setEditingMovableId(null)
+              setMovableEditorOpen(true)
             }}
-            aria-label={messages.combos.actions.create}
-            title={messages.combos.actions.create}
+            aria-label={strings.actions.create}
+            title={strings.actions.create}
             style={{
               width: 44,
               height: 44,
@@ -315,24 +318,25 @@ export default function ComboPanel({ messages, canWrite }: ComboPanelProps) {
           const id = deleteTarget.id
           setDeleteDialogOpen(false)
           setDeleteTarget(null)
-          await deleteCombo(id)
+          await deleteMovable(id)
         }}
       />
 
-      <ComboEditor
+      <MovableEditor
+        type={type}
         messages={messages}
         canWrite={canWrite}
-        isOpen={comboEditorOpen}
-        comboId={editingComboId}
+        isOpen={movableEditorOpen}
+        movableId={editingMovableId}
         onClose={() => {
-          setComboEditorOpen(false)
-          setEditingComboId(null)
+          setMovableEditorOpen(false)
+          setEditingMovableId(null)
         }}
         onSaved={async () => {
           setError(null)
-          setComboEditorOpen(false)
-          setEditingComboId(null)
-          await loadCombos()
+          setMovableEditorOpen(false)
+          setEditingMovableId(null)
+          await loadMovables()
         }}
       />
 
@@ -340,16 +344,16 @@ export default function ComboPanel({ messages, canWrite }: ComboPanelProps) {
         messages={messages}
         canWrite={canWrite}
         open={moveDialogOpen}
-        entityId={moveComboId}
-        entityType="combo"
+        entityId={moveMovableId}
+        entityType={type}
         locationId={moveLocationId}
         roomId={moveRoomId}
         latestReturnDate={moveReturnDate}
-        dialogStrings={messages.combos.dialogs.moveCombo}
+        dialogStrings={moveDialogStrings}
         onClose={() => cancelMoveDialog()}
         onMoved={async () => {
           setError(null)
-          await loadCombos()
+          await loadMovables()
         }}
       />
 
@@ -361,7 +365,7 @@ export default function ComboPanel({ messages, canWrite }: ComboPanelProps) {
 
       <div style={{ marginTop: 2, textAlign: 'left' }}>
       {rows.length === 0 ? (
-        <div>{messages.combos.table.empty}</div>
+        <div>{strings.table.empty}</div>
       ) : (
         <div style={{ overflowX: 'auto' }}>
           <table style={{ width: '100%', borderCollapse: 'collapse' }}>
@@ -379,7 +383,7 @@ export default function ComboPanel({ messages, canWrite }: ComboPanelProps) {
                     whiteSpace: 'nowrap',
                   }}
                 >
-                  {messages.combos.table.identifier}
+                  {strings.table.identifier}
                   <SortIcon active={sortColumn === 'identifier'} sortDirection={sortDirection} />
                 </th>
                 <th
@@ -394,7 +398,7 @@ export default function ComboPanel({ messages, canWrite }: ComboPanelProps) {
                     whiteSpace: 'nowrap',
                   }}
                 >
-                  {messages.combos.table.model}
+                  {strings.table.model}
                   <SortIcon active={sortColumn === 'model'} sortDirection={sortDirection} />
                 </th>
                 <th
@@ -409,7 +413,7 @@ export default function ComboPanel({ messages, canWrite }: ComboPanelProps) {
                     whiteSpace: 'nowrap',
                   }}
                 >
-                  {messages.combos.table.latestLocationRoom}
+                  {strings.table.latestLocationRoom}
                   <SortIcon active={sortColumn === 'latest_location_room'} sortDirection={sortDirection} />
                 </th>
                 <th
@@ -424,7 +428,7 @@ export default function ComboPanel({ messages, canWrite }: ComboPanelProps) {
                     whiteSpace: 'nowrap',
                   }}
                 >
-                  {messages.combos.table.latestReturnDate}
+                  {strings.table.latestReturnDate}
                   <SortIcon active={sortColumn === 'latest_return_date'} sortDirection={sortDirection} />
                 </th>
               </tr>
@@ -436,12 +440,12 @@ export default function ComboPanel({ messages, canWrite }: ComboPanelProps) {
                     style={{ cursor: canWrite ? 'pointer' : undefined }}
                     onClick={() => {
                       if (!canWrite) return
-                      const nextExpanded = expandedComboRowId === row.id ? null : row.id
-                      setExpandedComboRowId(nextExpanded)
+                      const nextExpanded = expandedMovableRowId === row.id ? null : row.id
+                      setExpandedMovableRowId(nextExpanded)
                     }}
                   >
                     <td style={{ borderBottom: '1px solid var(--border)', padding: '8px 6px' }}>
-                      {canWrite ? <TriangleIcon isOpen={expandedComboRowId === row.id} /> : null}
+                      {canWrite ? <TriangleIcon isOpen={expandedMovableRowId === row.id} /> : null}
                       {row.identifier}
                     </td>
                     <td style={{ borderBottom: '1px solid var(--border)', padding: '8px 6px' }}>{row.model}</td>
@@ -459,10 +463,10 @@ export default function ComboPanel({ messages, canWrite }: ComboPanelProps) {
                           style={{
                             overflow: 'hidden',
                             transition: 'max-height 120ms ease, opacity 120ms ease, transform 120ms ease',
-                            maxHeight: expandedComboRowId === row.id ? 200 : 0,
-                            opacity: expandedComboRowId === row.id ? 1 : 0,
-                            transform: expandedComboRowId === row.id ? 'translateY(0px)' : 'translateY(-4px)',
-                            pointerEvents: expandedComboRowId === row.id ? 'auto' : 'none',
+                            maxHeight: expandedMovableRowId === row.id ? 200 : 0,
+                            opacity: expandedMovableRowId === row.id ? 1 : 0,
+                            transform: expandedMovableRowId === row.id ? 'translateY(0px)' : 'translateY(-4px)',
+                            pointerEvents: expandedMovableRowId === row.id ? 'auto' : 'none',
                           }}
                         >
                           <div style={{ display: 'flex', gap: 8, flexWrap: 'wrap', padding: '12px 6px 16px 6px' }}>
@@ -475,7 +479,7 @@ export default function ComboPanel({ messages, canWrite }: ComboPanelProps) {
                               disabled={loading}
                               style={{ padding: '6px 10px', borderRadius: 6, cursor: 'pointer' }}
                             >
-                              {messages.combos.actions.move}
+                              {strings.actions.move}
                             </button>
                             <button
                               type="button"
@@ -486,7 +490,7 @@ export default function ComboPanel({ messages, canWrite }: ComboPanelProps) {
                               disabled={loading}
                               style={{ padding: '6px 10px', borderRadius: 6, cursor: 'pointer' }}
                             >
-                              {messages.combos.actions.edit}
+                              {strings.actions.edit}
                             </button>
                             <button
                               type="button"
@@ -498,7 +502,7 @@ export default function ComboPanel({ messages, canWrite }: ComboPanelProps) {
                               disabled={loading}
                               style={{ padding: '6px 10px', borderRadius: 6, cursor: 'pointer' }}
                             >
-                              {messages.combos.actions.delete}
+                              {strings.actions.delete}
                             </button>
                           </div>
                         </div>

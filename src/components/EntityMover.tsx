@@ -29,7 +29,7 @@ type MoveDialogStrings = {
 
 type BulkItem = {
   entityId: number
-  entityType: 'base' | 'combo'
+  entityType: 'base' | 'combo' | 'console'
 }
 
 type EntityMoverProps = {
@@ -37,7 +37,7 @@ type EntityMoverProps = {
   canWrite: boolean
   open: boolean
   entityId?: number | null
-  entityType?: 'base' | 'combo'
+  entityType?: 'base' | 'combo' | 'console'
   items?: BulkItem[] | null
   locationId: number | null
   roomId: number | null
@@ -248,7 +248,6 @@ export default function EntityMover({ messages, canWrite, open, entityId, entity
 
         const latestMovements = new Map<string, { location: number; room: number; return_date: string | null }>()
         const baseIds = activeItems.filter((item) => item.entityType === 'base').map((item) => item.entityId)
-        const comboIds = activeItems.filter((item) => item.entityType === 'combo').map((item) => item.entityId)
 
         if (baseIds.length > 0) {
           let offset = 0
@@ -279,13 +278,16 @@ export default function EntityMover({ messages, canWrite, open, entityId, entity
           }
         }
 
-        if (comboIds.length > 0) {
+        for (const column of ['combo', 'console'] as const) {
+          const ids = activeItems.filter((item) => item.entityType === column).map((item) => item.entityId)
+          if (ids.length === 0) continue
+
           let offset = 0
           while (true) {
             const { data, error: movementError } = await supabase
               .from('movement')
-              .select('id, combo, location, room, return_date')
-              .in('combo', comboIds)
+              .select(`id, ${column}, location, room, return_date`)
+              .in(column, ids)
               .order('created_at', { ascending: false })
               .order('id', { ascending: false })
               .range(offset, offset + 999)
@@ -293,7 +295,7 @@ export default function EntityMover({ messages, canWrite, open, entityId, entity
             if (movementError) throw movementError
 
             for (const movement of data ?? []) {
-              const key = `combo:${movement.combo}`
+              const key = `${column}:${(movement as unknown as Record<string, number>)[column]}`
               if (!latestMovements.has(key)) {
                 latestMovements.set(key, {
                   location: movement.location,
@@ -303,7 +305,7 @@ export default function EntityMover({ messages, canWrite, open, entityId, entity
               }
             }
 
-            if (comboIds.every((id) => latestMovements.has(`combo:${id}`)) || (data?.length ?? 0) < 1000) break
+            if (ids.every((id) => latestMovements.has(`${column}:${id}`)) || (data?.length ?? 0) < 1000) break
             offset += data.length
           }
         }
@@ -334,6 +336,8 @@ export default function EntityMover({ messages, canWrite, open, entityId, entity
 
         if (item.entityType === 'base') {
           payload.base = item.entityId
+        } else if (item.entityType === 'console') {
+          payload.console = item.entityId
         } else {
           payload.combo = item.entityId
         }

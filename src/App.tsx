@@ -12,7 +12,7 @@ const Menu = lazy(() => import('./components/Menu'))
 const MicrophonesPanel = lazy(() => import('./components/MicrophonesPanel'))
 const BasePanel = lazy(() => import('./components/BasePanel'))
 const LocationsPanel = lazy(() => import('./components/LocationsPanel'))
-const ComboPanel = lazy(() => import('./components/ComboPanel'))
+const MovablePanel = lazy(() => import('./components/MovablePanel'))
 const ProfilePanel = lazy(() => import('./components/ProfilePanel'))
 const BulkMovePanel = lazy(() => import('./components/BulkMovePanel'))
 const HistoryPanel = lazy(() => import('./components/HistoryPanel'))
@@ -64,7 +64,7 @@ function App() {
 
     try {
       const raw = window.localStorage.getItem(ACTIVE_PANEL_STORAGE_KEY)
-      if (raw === 'microphones' || raw === 'bases' || raw === 'locations' || raw === 'combos' || raw === 'profile' || raw === 'bulkmoves' || raw === 'history' || raw === 'returns') {
+      if (raw === 'microphones' || raw === 'bases' || raw === 'locations' || raw === 'combos' || raw === 'consoles' || raw === 'profile' || raw === 'bulkmoves' || raw === 'history' || raw === 'returns') {
         return raw
       }
     } catch {
@@ -284,7 +284,11 @@ function App() {
     }
 
     if (activePanel === 'combos') {
-      return <ComboPanel messages={messages} canWrite={isWriter} />
+      return <MovablePanel key="combo" type="combo" messages={messages} canWrite={isWriter} />
+    }
+
+    if (activePanel === 'consoles') {
+      return <MovablePanel key="console" type="console" messages={messages} canWrite={isWriter} />
     }
 
     if (activePanel === 'bulkmoves') {
