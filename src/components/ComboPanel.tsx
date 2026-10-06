@@ -130,7 +130,7 @@ export default function ComboPanel({ messages, canWrite }: ComboPanelProps) {
 
     try {
       const { data, error: loadError } = await supabase
-        .rpc('get_combos_with_latest_location_room')
+        .rpc('get_items_with_latest_location_room', { type: 'combo' })
 
       if (loadError) throw loadError
 
