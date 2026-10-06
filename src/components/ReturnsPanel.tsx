@@ -209,8 +209,13 @@ export default function ReturnsPanel({ messages }: ReturnsPanelProps) {
                       key={`${row.type}-${row.type === 'Base' ? row.base_id : row.combo_id}-${row.return_date}`}
                       style={isDueOrOverdue(row.return_date) ? { color: 'red' } : undefined}
                     >
-                      <td style={cellStyle}>{getIdentifier(row) ?? ''}</td>
-                      <td style={cellStyle}>{getName(row)}</td>
+                      <td style={cellStyle}>
+                        <div>{getIdentifier(row) ?? ''}</div>
+                      </td>
+                      <td style={cellStyle}>
+                        <div style={{ fontSize: 12, color: 'var(--muted)' }}>{row.type ?? ''}</div>
+                        <div>{getName(row)}</div>
+                      </td>
                       <td style={cellStyle}>{row.location ?? ''}</td>
                       <td style={cellStyle}>{formatDateOnly(row.return_date)}</td>
                     </tr>
