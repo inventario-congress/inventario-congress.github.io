@@ -38,24 +38,14 @@ export default function Menu({ messages, activePanel, canWrite, onSelectPanel, o
         <h3 className="menu-title">{messages.menu.system.title}</h3>
         <div className="menu-list">
           <MenuButton
-            label={messages.menu.system.bases}
-            selected={activePanel === 'bases'}
-            onClick={() => onSelectPanel('bases')}
+            label={messages.returns.systemMenuLabel}
+            selected={activePanel === 'returns'}
+            onClick={() => onSelectPanel('returns')}
           />
           <MenuButton
-            label={messages.menu.system.combos}
-            selected={activePanel === 'combos'}
-            onClick={() => onSelectPanel('combos')}
-          />
-          <MenuButton
-            label={messages.menu.system.microphones}
-            selected={activePanel === 'microphones'}
-            onClick={() => onSelectPanel('microphones')}
-          />
-          <MenuButton
-            label={messages.menu.system.locations}
-            selected={activePanel === 'locations'}
-            onClick={() => onSelectPanel('locations')}
+            label={messages.history.systemMenuLabel}
+            selected={activePanel === 'history'}
+            onClick={() => onSelectPanel('history')}
           />
           {canWrite ? (
             <MenuButton
@@ -64,15 +54,31 @@ export default function Menu({ messages, activePanel, canWrite, onSelectPanel, o
               onClick={() => onSelectPanel('bulkmoves')}
             />
           ) : null}
+        </div>
+      </section>
+
+      <section className="menu-section">
+        <h3 className="menu-title">{messages.menu.inventory.title}</h3>
+        <div className="menu-list">
           <MenuButton
-            label={messages.history.systemMenuLabel}
-            selected={activePanel === 'history'}
-            onClick={() => onSelectPanel('history')}
+            label={messages.menu.inventory.bases}
+            selected={activePanel === 'bases'}
+            onClick={() => onSelectPanel('bases')}
           />
           <MenuButton
-            label={messages.returns.systemMenuLabel}
-            selected={activePanel === 'returns'}
-            onClick={() => onSelectPanel('returns')}
+            label={messages.menu.inventory.combos}
+            selected={activePanel === 'combos'}
+            onClick={() => onSelectPanel('combos')}
+          />
+          <MenuButton
+            label={messages.menu.inventory.microphones}
+            selected={activePanel === 'microphones'}
+            onClick={() => onSelectPanel('microphones')}
+          />
+          <MenuButton
+            label={messages.menu.inventory.locations}
+            selected={activePanel === 'locations'}
+            onClick={() => onSelectPanel('locations')}
           />
         </div>
       </section>

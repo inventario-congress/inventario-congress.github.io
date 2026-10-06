@@ -143,13 +143,15 @@ const es = {
     toggle: 'Menú',
     close: 'Cerrar menú',
     loading: 'Cargando...',
-    system: {
-      title: 'Sistema',
+    inventory: {
+      title: 'Inventario',
       microphones: 'Micrófonos',
       bases: 'Bases',
       locations: 'Venues',
       combos: 'Combos y Dinámicos',
-
+    },
+    system: {
+      title: 'Sistema',
     },
     user: {
       title: 'Mi cuenta',
