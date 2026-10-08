@@ -587,11 +587,6 @@ const en = {
       returnDate: 'Return Date',
       empty: 'No upcoming or overdue returns.',
     },
-    itemTypes: {
-      base: 'Base',
-      combo: 'Combo',
-      console: 'Console',
-    },
     feedback: {
       loadFailed: 'Failed to load returns',
     },

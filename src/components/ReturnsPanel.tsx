@@ -4,74 +4,24 @@ import type { Messages } from '../i18n'
 import { supabase } from '../supabaseClient'
 
 type ReturnRow = {
-  type: 'Base' | 'Combo' | 'Console'
-  base_id: number | null
-  base_identifier: number | null
-  base_mic_model_name: string | null
-  combo_id: number | null
-  combo_identifier: number | null
-  combo_model: string | null
-  console_id: number | null
-  console_identifier: number | null
-  console_model: string | null
+  item_type: string
+  item_id: number
+  item_identifier: number | null
+  item_name: string | null
   return_date: string | null
   location: string | null
 }
 
 type ReturnsPanelProps = {
   messages: Messages
+  // Display label per item_type returned by get_upcoming_returns()
+  itemTypeLabels: Record<string, string>
 }
 
 type SortColumn = 'identifier' | 'name' | 'location' | 'return_date'
 type SortDirection = 'asc' | 'desc'
 
 const SORT_STORAGE_KEY = 'inventario_congress:returns:sort'
-
-function getEntityId(row: ReturnRow): number | null {
-  switch (row.type) {
-    case 'Base':
-      return row.base_id
-    case 'Console':
-      return row.console_id
-    default:
-      return row.combo_id
-  }
-}
-
-function getIdentifier(row: ReturnRow): number | null {
-  switch (row.type) {
-    case 'Base':
-      return row.base_identifier
-    case 'Console':
-      return row.console_identifier
-    default:
-      return row.combo_identifier
-  }
-}
-
-function getName(row: ReturnRow): string {
-  switch (row.type) {
-    case 'Base':
-      return row.base_mic_model_name ?? ''
-    case 'Console':
-      return row.console_model ?? ''
-    default:
-      return row.combo_model ?? ''
-  }
-}
-
-function getType(row: ReturnRow, messages: Messages): string {
-  switch (row.type) {
-    case 'Base':
-      return messages.returns.itemTypes.base ?? ''
-    case 'Console':
-      return messages.returns.itemTypes.console ?? ''
-    case 'Combo':
-      return messages.returns.itemTypes.combo ?? ''
-    default:
-      return ''
-  }
-}
 
 function parseDateOnly(value: string | null): Date | null {
   if (!value) return null
@@ -123,7 +73,7 @@ const thStyle = {
   whiteSpace: 'nowrap',
 } as const
 
-export default function ReturnsPanel({ messages }: ReturnsPanelProps) {
+export default function ReturnsPanel({ messages, itemTypeLabels }: ReturnsPanelProps) {
   const [loading, setLoading] = useState(false)
   const [rows, setRows] = useState<ReturnRow[]>([])
   const [error, setError] = useState<string | null>(null)
@@ -195,9 +145,9 @@ export default function ReturnsPanel({ messages }: ReturnsPanelProps) {
     return [...rows].sort((a, b) => {
       let result: number
       if (sortColumn === 'identifier') {
-        result = (getIdentifier(a) ?? 0) - (getIdentifier(b) ?? 0)
+        result = (a.item_identifier ?? 0) - (b.item_identifier ?? 0)
       } else if (sortColumn === 'name') {
-        result = getName(a).localeCompare(getName(b))
+        result = (a.item_name ?? '').localeCompare(b.item_name ?? '')
       } else if (sortColumn === 'location') {
         result = (a.location ?? '').localeCompare(b.location ?? '')
       } else {
@@ -247,15 +197,15 @@ export default function ReturnsPanel({ messages }: ReturnsPanelProps) {
                   const cellStyle = { borderBottom: '1px solid var(--border)', padding: '8px 6px' }
                   return (
                     <tr
-                      key={`${row.type}-${getEntityId(row)}-${row.return_date}`}
+                      key={`${row.item_type}-${row.item_id}-${row.return_date}`}
                       style={isDueOrOverdue(row.return_date) ? { color: 'red' } : undefined}
                     >
                       <td style={cellStyle}>
-                        <div>{getIdentifier(row) ?? ''}</div>
+                        <div>{row.item_identifier ?? ''}</div>
                       </td>
                       <td style={cellStyle}>
-                        <div style={{ fontSize: 12, color: 'var(--muted)' }}>{getType(row, messages)}</div>
-                        <div>{getName(row)}</div>
+                        <div style={{ fontSize: 12, color: 'var(--muted)' }}>{itemTypeLabels[row.item_type] ?? row.item_type}</div>
+                        <div>{row.item_name ?? ''}</div>
                       </td>
                       <td style={cellStyle}>{row.location ?? ''}</td>
                       <td style={cellStyle}>{formatDateOnly(row.return_date)}</td>

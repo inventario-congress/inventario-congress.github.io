@@ -378,7 +378,7 @@ function App() {
     }
 
     if (activePanel === 'returns') {
-      return <ReturnsPanel messages={messages} />
+      return <ReturnsPanel messages={messages} itemTypeLabels={itemTypeLabels} />
     }
 
     if (activePanel === 'profile') {
