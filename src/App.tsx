@@ -1,4 +1,6 @@
-import { lazy, Suspense, useEffect, useMemo, useRef, useState, type ComponentProps } from 'react'
+import type { ExtraColumn, ExtraField, MovableRow, MovableStrings, MoveDialogStrings } from './components/movable/types'
+import { lazy, Suspense, useEffect, useMemo, useRef, useState, type ReactElement } from 'react'
+import type { MovablePanelProps } from './components/MovablePanel'
 import type { AppPanel } from './components/Menu'
 import type { Session } from '@supabase/supabase-js'
 import { MoonIcon, SunIcon } from './components/icons'
@@ -12,13 +14,18 @@ const Menu = lazy(() => import('./components/Menu'))
 const MicrophonesPanel = lazy(() => import('./components/MicrophonesPanel'))
 const BasePanel = lazy(() => import('./components/BasePanel'))
 const LocationsPanel = lazy(() => import('./components/LocationsPanel'))
-const MovablePanel = lazy(() => import('./components/MovablePanel'))
+// lazy() erases the component's generic parameter; restore it.
+const MovablePanel = lazy(() => import('./components/MovablePanel')) as unknown as <T extends MovableRow>(
+  props: MovablePanelProps<T>,
+) => ReactElement
 const ProfilePanel = lazy(() => import('./components/ProfilePanel'))
 const BulkMovePanel = lazy(() => import('./components/BulkMovePanel'))
 const HistoryPanel = lazy(() => import('./components/HistoryPanel'))
 const ReturnsPanel = lazy(() => import('./components/ReturnsPanel'))
 
 type Theme = 'light' | 'dark'
+
+type CaseRow = MovableRow & { speaker_count: number }
 
 function getPreferredTheme(): Theme {
   if (typeof window === 'undefined') return 'light'
@@ -64,7 +71,7 @@ function App() {
 
     try {
       const raw = window.localStorage.getItem(ACTIVE_PANEL_STORAGE_KEY)
-      if (raw === 'microphones' || raw === 'bases' || raw === 'locations' || raw === 'combos' || raw === 'consoles' || raw === 'profile' || raw === 'bulkmoves' || raw === 'history' || raw === 'returns') {
+      if (raw === 'microphones' || raw === 'bases' || raw === 'locations' || raw === 'combos' || raw === 'consoles' || raw === 'cases' || raw === 'profile' || raw === 'bulkmoves' || raw === 'history' || raw === 'returns') {
         return raw
       }
     } catch {
@@ -270,21 +277,41 @@ function App() {
   }
 
 
-  function renderMovablePanel(
+  const caseColumns: ExtraColumn<CaseRow>[] = useMemo(
+    () => [
+      {
+        key: 'speaker_count',
+        header: messages.cases.table.speakerCount,
+        render: (row) => row.speaker_count,
+        sortValue: (row) => row.speaker_count,
+      },
+    ],
+    [messages],
+  )
+
+  const caseFields: ExtraField[] = useMemo(
+    () => [{ key: 'speaker_count', label: messages.cases.dialogs.editor.fields.speakerCount, type: 'number' }],
+    [messages],
+  )
+
+  function renderMovablePanel<T extends MovableRow = MovableRow>(
     type: string,
     rpcName: string,
     rpcArgs: Record<string, unknown> | undefined,
-    strings: ComponentProps<typeof MovablePanel>['strings'],
-    moveDialogStrings: ComponentProps<typeof MovablePanel>['moveDialogStrings'],
+    strings: MovableStrings,
+    moveDialogStrings: MoveDialogStrings,
+    extra?: { columns?: ExtraColumn<T>[]; fields?: ExtraField[] },
   ) {
     return (
-      <MovablePanel
+      <MovablePanel<T>
         key={type}
         type={type}
         rpcName={rpcName}
         rpcArgs={rpcArgs}
         strings={strings}
         moveDialogStrings={moveDialogStrings}
+        extraColumns={extra?.columns}
+        extraFields={extra?.fields}
         messages={messages}
         canWrite={isWriter}
       />
@@ -310,6 +337,13 @@ function App() {
 
     if (activePanel === 'consoles') {
       return renderMovablePanel('console', 'get_items_with_latest_location_room', { type: 'console' }, messages.consoles, messages.consoles.dialogs.moveConsole)
+    }
+
+    if (activePanel === 'cases') {
+      return renderMovablePanel('case', 'get_cases_with_latest_location_room', undefined, messages.cases, messages.cases.dialogs.moveCase, {
+        columns: caseColumns,
+        fields: caseFields,
+      })
     }
 
     if (activePanel === 'bulkmoves') {

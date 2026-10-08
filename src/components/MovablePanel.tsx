@@ -11,7 +11,7 @@ const BUILT_IN_SORT_COLUMNS = ['identifier', 'model', 'latest_location_room', 'l
 type SortColumn = string
 type SortDirection = 'asc' | 'desc'
 
-type MovablePanelProps<T extends MovableRow> = {
+export type MovablePanelProps<T extends MovableRow> = {
   // Table / movement column name. Treated as opaque.
   type: string
   // Db function returning rows that satisfy MovableRow (plus any extra fields).
