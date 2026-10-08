@@ -1,5 +1,6 @@
 import type { ExtraColumn, ExtraField, MovableRow, MovableStrings, MoveDialogStrings } from './components/movable/types'
 import { lazy, Suspense, useEffect, useMemo, useRef, useState, type ReactElement } from 'react'
+import { createDetachMicrophonesAction } from './components/bulkMove/detachMicrophonesAction'
 import type { MovablePanelProps } from './components/MovablePanel'
 import type { AppPanel } from './components/Menu'
 import type { Session } from '@supabase/supabase-js'
@@ -25,6 +26,7 @@ const ReturnsPanel = lazy(() => import('./components/ReturnsPanel'))
 
 type Theme = 'light' | 'dark'
 
+const BULK_MOVE_ITEM_TYPE_ORDER = ['base', 'combo', 'console', 'case']
 const HISTORY_ATTACHMENT_TYPES = ['microphone']
 
 type CaseRow = MovableRow & { speaker_count: number }
@@ -296,7 +298,9 @@ function App() {
     [messages],
   )
 
-  const historyItemTypeLabels: Record<string, string> = useMemo(
+  const bulkSelectionActions = useMemo(() => [createDetachMicrophonesAction(messages)], [messages])
+
+  const itemTypeLabels: Record<string, string> = useMemo(
     () => ({
       base: messages.bulkMove.itemTypeBase,
       combo: messages.bulkMove.itemTypeCombo,
@@ -360,11 +364,17 @@ function App() {
     }
 
     if (activePanel === 'bulkmoves') {
-      return <BulkMovePanel messages={messages} canWrite={isWriter} />
+      return <BulkMovePanel
+          messages={messages}
+          canWrite={isWriter}
+          itemTypeOrder={BULK_MOVE_ITEM_TYPE_ORDER}
+          itemTypeLabels={itemTypeLabels}
+          selectionActions={bulkSelectionActions}
+        />
     }
 
     if (activePanel === 'history') {
-      return <HistoryPanel messages={messages} itemTypeLabels={historyItemTypeLabels} attachmentTypes={HISTORY_ATTACHMENT_TYPES} />
+      return <HistoryPanel messages={messages} itemTypeLabels={itemTypeLabels} attachmentTypes={HISTORY_ATTACHMENT_TYPES} />
     }
 
     if (activePanel === 'returns') {
