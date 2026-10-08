@@ -1,4 +1,4 @@
-import { lazy, Suspense, useEffect, useMemo, useRef, useState } from 'react'
+import { lazy, Suspense, useEffect, useMemo, useRef, useState, type ComponentProps } from 'react'
 import type { AppPanel } from './components/Menu'
 import type { Session } from '@supabase/supabase-js'
 import { MoonIcon, SunIcon } from './components/icons'
@@ -270,6 +270,27 @@ function App() {
   }
 
 
+  function renderMovablePanel(
+    type: string,
+    rpcName: string,
+    rpcArgs: Record<string, unknown> | undefined,
+    strings: ComponentProps<typeof MovablePanel>['strings'],
+    moveDialogStrings: ComponentProps<typeof MovablePanel>['moveDialogStrings'],
+  ) {
+    return (
+      <MovablePanel
+        key={type}
+        type={type}
+        rpcName={rpcName}
+        rpcArgs={rpcArgs}
+        strings={strings}
+        moveDialogStrings={moveDialogStrings}
+        messages={messages}
+        canWrite={isWriter}
+      />
+    )
+  }
+
   function renderPanel() {
     if (activePanel === 'microphones') {
       return <MicrophonesPanel messages={messages} canWrite={isWriter} />
@@ -284,11 +305,11 @@ function App() {
     }
 
     if (activePanel === 'combos') {
-      return <MovablePanel key="combo" type="combo" messages={messages} canWrite={isWriter} />
+      return renderMovablePanel('combo', 'get_items_with_latest_location_room', { type: 'combo' }, messages.combos, messages.combos.dialogs.moveCombo)
     }
 
     if (activePanel === 'consoles') {
-      return <MovablePanel key="console" type="console" messages={messages} canWrite={isWriter} />
+      return renderMovablePanel('console', 'get_items_with_latest_location_room', { type: 'console' }, messages.consoles, messages.consoles.dialogs.moveConsole)
     }
 
     if (activePanel === 'bulkmoves') {
