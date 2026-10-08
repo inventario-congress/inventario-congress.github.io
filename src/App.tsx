@@ -25,6 +25,8 @@ const ReturnsPanel = lazy(() => import('./components/ReturnsPanel'))
 
 type Theme = 'light' | 'dark'
 
+const HISTORY_ATTACHMENT_TYPES = ['microphone']
+
 type CaseRow = MovableRow & { speaker_count: number }
 
 function getPreferredTheme(): Theme {
@@ -294,6 +296,17 @@ function App() {
     [messages],
   )
 
+  const historyItemTypeLabels: Record<string, string> = useMemo(
+    () => ({
+      base: messages.bulkMove.itemTypeBase,
+      combo: messages.bulkMove.itemTypeCombo,
+      console: messages.bulkMove.itemTypeConsole,
+      case: messages.bulkMove.itemTypeCase,
+      microphone: messages.history.microphone,
+    }),
+    [messages],
+  )
+
   function renderMovablePanel<T extends MovableRow = MovableRow>(
     type: string,
     rpcName: string,
@@ -351,7 +364,7 @@ function App() {
     }
 
     if (activePanel === 'history') {
-      return <HistoryPanel messages={messages} />
+      return <HistoryPanel messages={messages} itemTypeLabels={historyItemTypeLabels} attachmentTypes={HISTORY_ATTACHMENT_TYPES} />
     }
 
     if (activePanel === 'returns') {

@@ -542,6 +542,7 @@ const es = {
     itemTypeBase: 'Base',
     itemTypeCombo: 'Combo',
     itemTypeConsole: 'Consola',
+    itemTypeCase: 'Baúl',
     selectedCount: '{count} elemento{plural} seleccionado{plural}',
     moveButton: 'Mover',
     detachButton: 'Separar',
