@@ -2,24 +2,26 @@ import { useCallback, useEffect, useMemo, useState, Fragment } from 'react'
 import type { Messages } from '../i18n'
 import { supabase } from '../supabaseClient'
 import DeleteConfirmation from './DeleteConfirmation'
-import MovableEditor, { type MovableType } from './MovableEditor'
+import MovableEditor from './MovableEditor'
 import EntityMover from './EntityMover'
+import type { ExtraColumn, ExtraField, MovableRow, MovableStrings, MoveDialogStrings } from './movable/types'
 
-type MovableRow = {
-  id: number
-  identifier: number
-  model: string
-  latest_location_room: string | null
-  latest_location_id: number | null
-  latest_room_id: number | null
-  latest_return_date: string | null
-}
+const BUILT_IN_SORT_COLUMNS = ['identifier', 'model', 'latest_location_room', 'latest_return_date']
 
-type SortColumn = 'identifier' | 'model' | 'latest_location_room' | 'latest_return_date'
+type SortColumn = string
 type SortDirection = 'asc' | 'desc'
 
-type MovablePanelProps = {
-  type: MovableType
+export type MovablePanelProps<T extends MovableRow> = {
+  // Table / movement column name. Treated as opaque.
+  type: string
+  // Db function returning rows that satisfy MovableRow (plus any extra fields).
+  rpcName: string
+  rpcArgs?: Record<string, unknown>
+  strings: MovableStrings
+  moveDialogStrings: MoveDialogStrings
+  // Pass stable (module-level or memoized) arrays.
+  extraColumns?: ExtraColumn<T>[]
+  extraFields?: ExtraField[]
   messages: Messages
   canWrite: boolean
 }
@@ -71,10 +73,20 @@ function formatDateOnly(value: string | null): string {
   return date.toLocaleDateString([], { year: 'numeric', month: 'numeric', day: 'numeric' })
 }
 
-export default function MovablePanel({ type, messages, canWrite }: MovablePanelProps) {
-  const strings = type === 'combo' ? messages.combos : messages.consoles
-  const moveDialogStrings = type === 'combo' ? messages.combos.dialogs.moveCombo : messages.consoles.dialogs.moveConsole
-  const [rows, setRows] = useState<MovableRow[]>([])
+const NO_EXTRA_COLUMNS: ExtraColumn<never>[] = []
+
+export default function MovablePanel<T extends MovableRow>({
+  type,
+  rpcName,
+  rpcArgs,
+  strings,
+  moveDialogStrings,
+  extraColumns = NO_EXTRA_COLUMNS as ExtraColumn<T>[],
+  extraFields,
+  messages,
+  canWrite,
+}: MovablePanelProps<T>) {
+  const [rows, setRows] = useState<T[]>([])
   const [loading, setLoading] = useState(false)
   const [movableEditorOpen, setMovableEditorOpen] = useState(false)
   const [editingMovableId, setEditingMovableId] = useState<number | null>(null)
@@ -99,10 +111,8 @@ export default function MovablePanel({ type, messages, canWrite }: MovablePanelP
       const parsed = JSON.parse(raw) as { sortColumn?: unknown; sortDirection?: unknown }
       const candidate = parsed.sortColumn
       if (
-        candidate === 'identifier' ||
-        candidate === 'model' ||
-        candidate === 'latest_location_room' ||
-        candidate === 'latest_return_date'
+        typeof candidate === 'string' &&
+        (BUILT_IN_SORT_COLUMNS.includes(candidate) || extraColumns.some((c) => c.key === candidate && c.sortValue))
       ) return candidate
     } catch {
       // ignore
@@ -123,6 +133,9 @@ export default function MovablePanel({ type, messages, canWrite }: MovablePanelP
     return 'asc'
   })
 
+  // Serialized so callers can pass inline arg objects without retriggering loads.
+  const rpcArgsKey = JSON.stringify(rpcArgs ?? {})
+
   const loadMovables = useCallback(async () => {
     if (!supabase) {
       return
@@ -133,17 +146,17 @@ export default function MovablePanel({ type, messages, canWrite }: MovablePanelP
 
     try {
       const { data, error: loadError } = await supabase
-        .rpc('get_items_with_latest_location_room', { type })
+        .rpc(rpcName, JSON.parse(rpcArgsKey) as Record<string, unknown>)
 
       if (loadError) throw loadError
 
-      setRows((data ?? []) as MovableRow[])
+      setRows((data ?? []) as T[])
     } catch (e) {
       setError(e instanceof Error ? e.message : strings.feedback.loadFailed)
     } finally {
       setLoading(false)
     }
-  }, [strings.feedback.loadFailed, type])
+  }, [rpcName, rpcArgsKey, strings.feedback.loadFailed])
 
   useEffect(() => {
     if (!supabase) {
@@ -188,13 +201,22 @@ export default function MovablePanel({ type, messages, canWrite }: MovablePanelP
           if (b.latest_return_date === null) return -1
           return a.latest_return_date.localeCompare(b.latest_return_date) * dirMul
         }
-        default:
-          return 0
+        default: {
+          const sortValue = extraColumns.find((c) => c.key === sortColumn)?.sortValue
+          if (!sortValue) return 0
+          const av = sortValue(a)
+          const bv = sortValue(b)
+          if (av === null && bv === null) return 0
+          if (av === null) return 1
+          if (bv === null) return -1
+          if (typeof av === 'number' && typeof bv === 'number') return (av - bv) * dirMul
+          return String(av).localeCompare(String(bv)) * dirMul
+        }
       }
     })
 
     return copy
-  }, [rows, sortColumn, sortDirection])
+  }, [extraColumns, rows, sortColumn, sortDirection])
 
   function toggleSort(column: SortColumn) {
     if (sortColumn === column) {
@@ -209,7 +231,7 @@ export default function MovablePanel({ type, messages, canWrite }: MovablePanelP
     }
   }
 
-  function startEdit(row: MovableRow) {
+  function startEdit(row: T) {
     if (!canWrite) return
     setEditingMovableId(row.id)
     setMovableEditorOpen(true)
@@ -243,7 +265,7 @@ export default function MovablePanel({ type, messages, canWrite }: MovablePanelP
     setMoveReturnDate(null)
   }, [])
 
-  function openMoveDialog(row: MovableRow) {
+  function openMoveDialog(row: T) {
     if (!canWrite) return
     setError(null)
     setMoveDialogOpen(true)
@@ -324,6 +346,8 @@ export default function MovablePanel({ type, messages, canWrite }: MovablePanelP
 
       <MovableEditor
         type={type}
+        strings={strings}
+        extraFields={extraFields}
         messages={messages}
         canWrite={canWrite}
         isOpen={movableEditorOpen}
@@ -431,6 +455,24 @@ export default function MovablePanel({ type, messages, canWrite }: MovablePanelP
                   {strings.table.latestReturnDate}
                   <SortIcon active={sortColumn === 'latest_return_date'} sortDirection={sortDirection} />
                 </th>
+                {extraColumns.map((col) => (
+                  <th
+                    key={col.key}
+                    onClick={col.sortValue ? () => toggleSort(col.key) : undefined}
+                    style={{
+                      cursor: col.sortValue ? 'pointer' : undefined,
+                      userSelect: 'none',
+                      textAlign: 'left',
+                      borderBottom: '1px solid var(--border)',
+                      background: 'var(--table-header-bg)',
+                      padding: '8px 6px',
+                      whiteSpace: 'nowrap',
+                    }}
+                  >
+                    {col.header}
+                    {col.sortValue ? <SortIcon active={sortColumn === col.key} sortDirection={sortDirection} /> : null}
+                  </th>
+                ))}
               </tr>
             </thead>
             <tbody>
@@ -451,12 +493,17 @@ export default function MovablePanel({ type, messages, canWrite }: MovablePanelP
                     <td style={{ borderBottom: '1px solid var(--border)', padding: '8px 6px' }}>{row.model}</td>
                     <td style={{ borderBottom: '1px solid var(--border)', padding: '8px 6px' }}>{row.latest_location_room ?? ''}</td>
                     <td style={{ borderBottom: '1px solid var(--border)', padding: '8px 6px' }}>{formatDateOnly(row.latest_return_date)}</td>
+                    {extraColumns.map((col) => (
+                      <td key={col.key} style={{ borderBottom: '1px solid var(--border)', padding: '8px 6px' }}>
+                        {col.render(row)}
+                      </td>
+                    ))}
                   </tr>
 
                   {canWrite ? (
                     <tr>
                       <td
-                        colSpan={4}
+                        colSpan={4 + extraColumns.length}
                         style={{ padding: 0, borderBottom: '1px solid var(--border)' }}
                       >
                         <div

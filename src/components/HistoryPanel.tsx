@@ -6,7 +6,8 @@ import { supabase } from '../supabaseClient'
 type HistoryItem = {
   id: number
   identifier: number
-  item_type: 'base' | 'combo' | 'microphone' | 'console'
+  // Matches the movement column name, or the key of an attachment-style type
+  item_type: string
   model_name: string
 }
 
@@ -30,11 +31,16 @@ type HistoryRecord = MovementRecord | AttachmentRecord
 
 type HistoryPanelProps = {
   messages: Messages
+  // Display label per item_type returned by get_entities()
+  itemTypeLabels: Record<string, string>
+  // item_types whose history is read from `attachment` instead of `movement`
+  attachmentTypes: string[]
 }
 
 const HISTORY_WINDOW_DAYS = 30
 
-export default function HistoryPanel({ messages }: HistoryPanelProps) {
+export default function HistoryPanel({ messages, itemTypeLabels, attachmentTypes }: HistoryPanelProps) {
+  const isAttachmentType = (itemType: string) => attachmentTypes.includes(itemType)
   const [items, setItems] = useState<HistoryItem[]>([])
   const [itemsLoading, setItemsLoading] = useState(false)
   const [error, setError] = useState<string | null>(null)
@@ -101,9 +107,9 @@ export default function HistoryPanel({ messages }: HistoryPanelProps) {
       (item) =>
         String(item.identifier).includes(lower) ||
         item.model_name.toLowerCase().includes(lower) ||
-        item.item_type.toLowerCase().includes(lower)
+        (itemTypeLabels[item.item_type] ?? item.item_type).toLowerCase().includes(lower)
     )
-  }, [items, searchTerm])
+  }, [items, searchTerm, itemTypeLabels])
 
   const selectedItems = useMemo(() => {
     return items.filter((item) => selectedKeys.has(getItemKey(item)))
@@ -159,7 +165,7 @@ export default function HistoryPanel({ messages }: HistoryPanelProps) {
     windowStart.setDate(windowStart.getDate() - HISTORY_WINDOW_DAYS)
     const windowStartIso = windowStart.toISOString()
 
-    if (item.item_type === 'microphone') {
+    if (isAttachmentType(item.item_type)) {
       let query = supabase
         .from('attachment')
         .select(`
@@ -200,7 +206,7 @@ export default function HistoryPanel({ messages }: HistoryPanelProps) {
         nextWindowEnd: olderRecords && olderRecords.length > 0 ? windowStartIso : null,
       }
     } else {
-      // base, combo or console
+      // item_type is the movement column name
       const column = item.item_type
       let query = supabase
         .from('movement')
@@ -344,18 +350,7 @@ export default function HistoryPanel({ messages }: HistoryPanelProps) {
   }
 
   function getItemTypeLabel(itemType: string): string {
-    switch (itemType) {
-      case 'base':
-        return messages.bulkMove.itemTypeBase
-      case 'combo':
-        return messages.bulkMove.itemTypeCombo
-      case 'console':
-        return messages.bulkMove.itemTypeConsole
-      case 'microphone':
-        return messages.history.microphone
-      default:
-        return itemType
-    }
+    return itemTypeLabels[itemType] ?? itemType
   }
 
   return (
@@ -518,7 +513,7 @@ export default function HistoryPanel({ messages }: HistoryPanelProps) {
                     messages.history.historyTitle
                       .replace('{identifier}', `N°${item.identifier}`)
                       .replace('{modelName}', item.model_name) +
-                    (item.item_type === 'microphone' && records && records.length > 0
+                    (isAttachmentType(item.item_type) && records && records.length > 0
                       ? records[0].is_active
                         ? ' (' + messages.history.attached + ')'
                         : ' (' + messages.history.detached + ')'
@@ -555,7 +550,7 @@ export default function HistoryPanel({ messages }: HistoryPanelProps) {
                         >
                           {messages.history.table.destination}
                         </th>
-                        {item.item_type !== 'microphone' ? (
+                        {!isAttachmentType(item.item_type) ? (
                           <th
                             style={{
                               textAlign: 'left',
@@ -596,7 +591,7 @@ export default function HistoryPanel({ messages }: HistoryPanelProps) {
                             <td style={{ borderBottom: '1px solid var(--border)', padding: '6px 8px' }}>
                               {destination}
                             </td>
-                            {item.item_type !== 'microphone' ? (
+                            {!isAttachmentType(item.item_type) ? (
                               <td style={{ borderBottom: '1px solid var(--border)', padding: '6px 8px', whiteSpace: 'nowrap' }}>
                                 {formatDateOnly((record as MovementRecord).return_date)}
                               </td>
@@ -606,7 +601,7 @@ export default function HistoryPanel({ messages }: HistoryPanelProps) {
                       })}
                       {historyNextWindowEnd[key] ? (
                         <tr>
-                          <td colSpan={item.item_type === 'microphone' ? 3 : 4} style={{ padding: 0 }}>
+                          <td colSpan={isAttachmentType(item.item_type) ? 3 : 4} style={{ padding: 0 }}>
                             <button
                               type="button"
                               onClick={() => void loadMoreHistory(item)}

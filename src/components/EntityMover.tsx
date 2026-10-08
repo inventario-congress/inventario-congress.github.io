@@ -36,7 +36,8 @@ type MoveDialogStrings = {
 
 type BulkItem = {
   entityId: number
-  entityType: 'base' | 'combo' | 'console'
+  // 'base' or the name of a movement column (e.g. 'combo', 'console', 'case')
+  entityType: string
 }
 
 type EntityMoverProps = {
@@ -44,7 +45,7 @@ type EntityMoverProps = {
   canWrite: boolean
   open: boolean
   entityId?: number | null
-  entityType?: 'base' | 'combo' | 'console'
+  entityType?: string
   items?: BulkItem[] | null
   locationId: number | null
   roomId: number | null
@@ -251,7 +252,8 @@ export default function EntityMover({ messages, canWrite, open, entityId, entity
       }
     }
 
-    for (const column of ['combo', 'console'] as const) {
+    const columns = [...new Set(requestedItems.map((item) => item.entityType).filter((t) => t !== 'base'))]
+    for (const column of columns) {
       const ids = requestedItems.filter((item) => item.entityType === column).map((item) => item.entityId)
       if (ids.length === 0) continue
 
@@ -259,7 +261,7 @@ export default function EntityMover({ messages, canWrite, open, entityId, entity
       while (true) {
         const { data, error: movementError } = await supabase
           .from('movement')
-          .select(`id, ${column}, location, room, return_date`)
+          .select(`id, ${column}, location, room, return_date` as '*')
           .in(column, ids)
           .order('created_at', { ascending: false })
           .order('id', { ascending: false })
@@ -267,7 +269,7 @@ export default function EntityMover({ messages, canWrite, open, entityId, entity
 
         if (movementError) throw movementError
 
-        for (const movement of data ?? []) {
+        for (const movement of (data ?? []) as unknown as { location: number; room: number; return_date: string | null }[]) {
           const key = `${column}:${(movement as unknown as Record<string, number>)[column]}`
           if (!movements.has(key)) {
             movements.set(key, {
@@ -388,13 +390,7 @@ export default function EntityMover({ messages, canWrite, open, entityId, entity
 
         if (returnDate) payload.return_date = returnDate
 
-        if (item.entityType === 'base') {
-          payload.base = item.entityId
-        } else if (item.entityType === 'console') {
-          payload.console = item.entityId
-        } else {
-          payload.combo = item.entityId
-        }
+        payload[item.entityType] = item.entityId
 
         return payload
       })

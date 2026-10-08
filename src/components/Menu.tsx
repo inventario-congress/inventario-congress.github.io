@@ -1,6 +1,6 @@
 import type { Messages } from '../i18n'
 
-export type AppPanel = 'microphones' | 'bases' | 'locations' | 'combos' | 'consoles' | 'profile' | 'bulkmoves' | 'history' | 'returns'
+export type AppPanel = 'microphones' | 'bases' | 'locations' | 'combos' | 'consoles' | 'cases' | 'profile' | 'bulkmoves' | 'history' | 'returns'
 
 
 type MenuProps = {
@@ -74,6 +74,11 @@ export default function Menu({ messages, activePanel, canWrite, onSelectPanel, o
             label={messages.menu.inventory.consoles}
             selected={activePanel === 'consoles'}
             onClick={() => onSelectPanel('consoles')}
+          />
+          <MenuButton
+            label={messages.menu.inventory.cases}
+            selected={activePanel === 'cases'}
+            onClick={() => onSelectPanel('cases')}
           />
           <MenuButton
             label={messages.menu.inventory.microphones}

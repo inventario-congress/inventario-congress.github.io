@@ -1,4 +1,7 @@
-import { lazy, Suspense, useEffect, useMemo, useRef, useState } from 'react'
+import type { ExtraColumn, ExtraField, MovableRow, MovableStrings, MoveDialogStrings } from './components/movable/types'
+import { lazy, Suspense, useEffect, useMemo, useRef, useState, type ReactElement } from 'react'
+import { createDetachMicrophonesAction } from './components/bulkMove/detachMicrophonesAction'
+import type { MovablePanelProps } from './components/MovablePanel'
 import type { AppPanel } from './components/Menu'
 import type { Session } from '@supabase/supabase-js'
 import { MoonIcon, SunIcon } from './components/icons'
@@ -12,13 +15,21 @@ const Menu = lazy(() => import('./components/Menu'))
 const MicrophonesPanel = lazy(() => import('./components/MicrophonesPanel'))
 const BasePanel = lazy(() => import('./components/BasePanel'))
 const LocationsPanel = lazy(() => import('./components/LocationsPanel'))
-const MovablePanel = lazy(() => import('./components/MovablePanel'))
+// lazy() erases the component's generic parameter; restore it.
+const MovablePanel = lazy(() => import('./components/MovablePanel')) as unknown as <T extends MovableRow>(
+  props: MovablePanelProps<T>,
+) => ReactElement
 const ProfilePanel = lazy(() => import('./components/ProfilePanel'))
 const BulkMovePanel = lazy(() => import('./components/BulkMovePanel'))
 const HistoryPanel = lazy(() => import('./components/HistoryPanel'))
 const ReturnsPanel = lazy(() => import('./components/ReturnsPanel'))
 
 type Theme = 'light' | 'dark'
+
+const BULK_MOVE_ITEM_TYPE_ORDER = ['base', 'combo', 'console', 'case']
+const HISTORY_ATTACHMENT_TYPES = ['microphone']
+
+type CaseRow = MovableRow & { speaker_count: number }
 
 function getPreferredTheme(): Theme {
   if (typeof window === 'undefined') return 'light'
@@ -64,7 +75,7 @@ function App() {
 
     try {
       const raw = window.localStorage.getItem(ACTIVE_PANEL_STORAGE_KEY)
-      if (raw === 'microphones' || raw === 'bases' || raw === 'locations' || raw === 'combos' || raw === 'consoles' || raw === 'profile' || raw === 'bulkmoves' || raw === 'history' || raw === 'returns') {
+      if (raw === 'microphones' || raw === 'bases' || raw === 'locations' || raw === 'combos' || raw === 'consoles' || raw === 'cases' || raw === 'profile' || raw === 'bulkmoves' || raw === 'history' || raw === 'returns') {
         return raw
       }
     } catch {
@@ -270,6 +281,60 @@ function App() {
   }
 
 
+  const caseColumns: ExtraColumn<CaseRow>[] = useMemo(
+    () => [
+      {
+        key: 'speaker_count',
+        header: messages.cases.table.speakerCount,
+        render: (row) => row.speaker_count,
+        sortValue: (row) => row.speaker_count,
+      },
+    ],
+    [messages],
+  )
+
+  const caseFields: ExtraField[] = useMemo(
+    () => [{ key: 'speaker_count', label: messages.cases.dialogs.editor.fields.speakerCount, type: 'number' }],
+    [messages],
+  )
+
+  const bulkSelectionActions = useMemo(() => [createDetachMicrophonesAction(messages)], [messages])
+
+  const itemTypeLabels: Record<string, string> = useMemo(
+    () => ({
+      base: messages.bulkMove.itemTypeBase,
+      combo: messages.bulkMove.itemTypeCombo,
+      console: messages.bulkMove.itemTypeConsole,
+      case: messages.bulkMove.itemTypeCase,
+      microphone: messages.history.microphone,
+    }),
+    [messages],
+  )
+
+  function renderMovablePanel<T extends MovableRow = MovableRow>(
+    type: string,
+    rpcName: string,
+    rpcArgs: Record<string, unknown> | undefined,
+    strings: MovableStrings,
+    moveDialogStrings: MoveDialogStrings,
+    extra?: { columns?: ExtraColumn<T>[]; fields?: ExtraField[] },
+  ) {
+    return (
+      <MovablePanel<T>
+        key={type}
+        type={type}
+        rpcName={rpcName}
+        rpcArgs={rpcArgs}
+        strings={strings}
+        moveDialogStrings={moveDialogStrings}
+        extraColumns={extra?.columns}
+        extraFields={extra?.fields}
+        messages={messages}
+        canWrite={isWriter}
+      />
+    )
+  }
+
   function renderPanel() {
     if (activePanel === 'microphones') {
       return <MicrophonesPanel messages={messages} canWrite={isWriter} />
@@ -284,23 +349,36 @@ function App() {
     }
 
     if (activePanel === 'combos') {
-      return <MovablePanel key="combo" type="combo" messages={messages} canWrite={isWriter} />
+      return renderMovablePanel('combo', 'get_items_with_latest_location_room', { type: 'combo' }, messages.combos, messages.combos.dialogs.moveCombo)
     }
 
     if (activePanel === 'consoles') {
-      return <MovablePanel key="console" type="console" messages={messages} canWrite={isWriter} />
+      return renderMovablePanel('console', 'get_items_with_latest_location_room', { type: 'console' }, messages.consoles, messages.consoles.dialogs.moveConsole)
+    }
+
+    if (activePanel === 'cases') {
+      return renderMovablePanel('case', 'get_cases_with_latest_location_room', undefined, messages.cases, messages.cases.dialogs.moveCase, {
+        columns: caseColumns,
+        fields: caseFields,
+      })
     }
 
     if (activePanel === 'bulkmoves') {
-      return <BulkMovePanel messages={messages} canWrite={isWriter} />
+      return <BulkMovePanel
+          messages={messages}
+          canWrite={isWriter}
+          itemTypeOrder={BULK_MOVE_ITEM_TYPE_ORDER}
+          itemTypeLabels={itemTypeLabels}
+          selectionActions={bulkSelectionActions}
+        />
     }
 
     if (activePanel === 'history') {
-      return <HistoryPanel messages={messages} />
+      return <HistoryPanel messages={messages} itemTypeLabels={itemTypeLabels} attachmentTypes={HISTORY_ATTACHMENT_TYPES} />
     }
 
     if (activePanel === 'returns') {
-      return <ReturnsPanel messages={messages} />
+      return <ReturnsPanel messages={messages} itemTypeLabels={itemTypeLabels} />
     }
 
     if (activePanel === 'profile') {
