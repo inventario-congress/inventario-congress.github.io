@@ -186,18 +186,19 @@ export default function ReturnsPanel({
     { key: 'return_date', label: messages.returns.table.returnDate },
   ]
 
-  const locationGroups = useMemo(() => {
-    const groups = new Map<string, ReturnRow[]>()
+  const returnGroups = useMemo(() => {
+    const groups = new Map<string, { locationName: string; returnDate: string | null; rows: ReturnRow[] }>()
     for (const row of sortedRows) {
       const locationName = row.location_name ?? ''
-      const group = groups.get(locationName)
+      const groupKey = JSON.stringify([locationName, row.return_date])
+      const group = groups.get(groupKey)
       if (group) {
-        group.push(row)
+        group.rows.push(row)
       } else {
-        groups.set(locationName, [row])
+        groups.set(groupKey, { locationName, returnDate: row.return_date, rows: [row] })
       }
     }
-    return Array.from(groups, ([locationName, locationRows]) => ({ locationName, rows: locationRows }))
+    return Array.from(groups.values())
   }, [sortedRows])
 
   const selectionCount = useMemo(() => Object.values(selection).filter(Boolean).length, [selection])
@@ -295,13 +296,14 @@ export default function ReturnsPanel({
         {rows.length === 0 ? (
           <div>{loading ? messages.menu.loading : messages.returns.table.empty}</div>
         ) : (
-          locationGroups.map((group) => {
+          returnGroups.map((group) => {
             const fullySelected = isLocationFullySelected(group.rows)
             const partiallySelected = isLocationPartiallySelected(group.rows)
+            const groupTitle = `${group.locationName} — ${formatDateOnly(group.returnDate)}`
 
             return (
               <div
-                key={group.locationName}
+                key={JSON.stringify([group.locationName, group.returnDate])}
                 style={{ marginBottom: 20, border: '1px solid var(--border)', borderRadius: 10, overflow: 'hidden' }}
               >
                 <div
@@ -321,9 +323,9 @@ export default function ReturnsPanel({
                       if (element) element.indeterminate = partiallySelected && !fullySelected
                     }}
                     onChange={(event) => toggleLocation(group.rows, event.target.checked)}
-                    aria-label={`${messages.bulkMove.selectAllLabel} - ${group.locationName}`}
+                    aria-label={`${messages.bulkMove.selectAllLabel} - ${groupTitle}`}
                   />
-                  <strong>{group.locationName}</strong>
+                  <strong>{groupTitle}</strong>
                 </div>
                 <div style={{ overflowX: 'auto' }}>
                   <table style={{ width: '100%', borderCollapse: 'collapse' }}>
