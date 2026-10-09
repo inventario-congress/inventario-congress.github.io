@@ -25,10 +25,13 @@ type ReturnsPanelProps = {
 }
 
 type SelectionMap = Record<string, boolean>
-type SortColumn = 'identifier' | 'name' | 'room_name' | 'return_date'
+type SortColumn = 'identifier' | 'name' | 'room_name'
 type SortDirection = 'asc' | 'desc'
+type SortState = {
+  column: SortColumn
+  direction: SortDirection
+}
 
-const SORT_STORAGE_KEY = 'inventario_congress:returns:sort'
 const NO_ACTIONS: BulkSelectionAction[] = []
 
 function parseDateOnly(value: string | null): Date | null {
@@ -93,31 +96,12 @@ export default function ReturnsPanel({
   const [error, setError] = useState<string | null>(null)
   const [moveDialogOpen, setMoveDialogOpen] = useState(false)
   const [actionDialogLoading, setActionDialogLoading] = useState(false)
+  const [sortStates, setSortStates] = useState<Record<string, SortState>>({})
   const [pendingAction, setPendingAction] = useState<{
     action: BulkSelectionAction
     ids: number[]
     entities: DeleteEntityDescriptor[]
   } | null>(null)
-
-  const [sortColumn, setSortColumn] = useState<SortColumn>(() => {
-    try {
-      const parsed = JSON.parse(window.localStorage.getItem(SORT_STORAGE_KEY) ?? '{}') as { sortColumn?: unknown }
-      const c = parsed.sortColumn
-      if (c === 'identifier' || c === 'name' || c === 'room_name' || c === 'return_date') return c
-    } catch {
-      // ignore
-    }
-    return 'return_date'
-  })
-  const [sortDirection, setSortDirection] = useState<SortDirection>(() => {
-    try {
-      const parsed = JSON.parse(window.localStorage.getItem(SORT_STORAGE_KEY) ?? '{}') as { sortDirection?: unknown }
-      if (parsed.sortDirection === 'asc' || parsed.sortDirection === 'desc') return parsed.sortDirection
-    } catch {
-      // ignore
-    }
-    return 'asc'
-  })
 
   const loadReturns = useCallback(async () => {
     if (!supabase) return
@@ -155,40 +139,36 @@ export default function ReturnsPanel({
     }
   }, [loadReturns])
 
-  function toggleSort(column: SortColumn) {
-    const nextDirection: SortDirection = sortColumn === column && sortDirection === 'asc' ? 'desc' : 'asc'
-    setSortColumn(column)
-    setSortDirection(nextDirection)
-    window.localStorage.setItem(SORT_STORAGE_KEY, JSON.stringify({ sortColumn: column, sortDirection: nextDirection }))
+  function toggleSort(groupKey: string, column: SortColumn) {
+    setSortStates((previous) => {
+      const current = previous[groupKey]
+      const direction: SortDirection =
+        current?.column === column && current.direction === 'asc' ? 'desc' : 'asc'
+      return { ...previous, [groupKey]: { column, direction } }
+    })
   }
 
-  const sortedRows = useMemo(() => {
-    const dirMul = sortDirection === 'asc' ? 1 : -1
-    return [...rows].sort((a, b) => {
-      let result: number
-      if (sortColumn === 'identifier') {
-        result = (a.item_identifier ?? 0) - (b.item_identifier ?? 0)
-      } else if (sortColumn === 'name') {
-        result = (a.item_name ?? '').localeCompare(b.item_name ?? '')
-      } else if (sortColumn === 'room_name') {
-        result = (a.room_name ?? '').localeCompare(b.room_name ?? '')
-      } else {
-        result = (parseDateOnly(a.return_date)?.getTime() ?? 0) - (parseDateOnly(b.return_date)?.getTime() ?? 0)
-      }
-      return result * dirMul
-    })
-  }, [rows, sortColumn, sortDirection])
+  function compareRows(a: ReturnRow, b: ReturnRow, sortState: SortState): number {
+    let result: number
+    if (sortState.column === 'identifier') {
+      result = (a.item_identifier ?? 0) - (b.item_identifier ?? 0)
+    } else if (sortState.column === 'name') {
+      result = (a.item_name ?? '').localeCompare(b.item_name ?? '')
+    } else {
+      result = (a.room_name ?? '').localeCompare(b.room_name ?? '')
+    }
+    return result * (sortState.direction === 'asc' ? 1 : -1)
+  }
 
   const columns: { key: SortColumn; label: string }[] = [
     { key: 'identifier', label: messages.returns.table.identifier },
     { key: 'name', label: messages.returns.table.name },
     { key: 'room_name', label: messages.returns.table.room },
-    { key: 'return_date', label: messages.returns.table.returnDate },
   ]
 
   const returnGroups = useMemo(() => {
     const groups = new Map<string, { locationName: string; returnDate: string | null; rows: ReturnRow[] }>()
-    for (const row of sortedRows) {
+    for (const row of rows) {
       const locationName = row.location_name ?? ''
       const groupKey = JSON.stringify([locationName, row.return_date])
       const group = groups.get(groupKey)
@@ -199,7 +179,7 @@ export default function ReturnsPanel({
       }
     }
     return Array.from(groups.values())
-  }, [sortedRows])
+  }, [rows])
 
   const selectionCount = useMemo(() => Object.values(selection).filter(Boolean).length, [selection])
 
@@ -300,10 +280,13 @@ export default function ReturnsPanel({
             const fullySelected = isLocationFullySelected(group.rows)
             const partiallySelected = isLocationPartiallySelected(group.rows)
             const groupTitle = `${group.locationName} — ${formatDateOnly(group.returnDate)}`
+            const groupKey = JSON.stringify([group.locationName, group.returnDate])
+            const sortState: SortState = sortStates[groupKey] ?? { column: 'room_name', direction: 'asc' }
+            const displayRows = [...group.rows].sort((a, b) => compareRows(a, b, sortState))
 
             return (
               <div
-                key={JSON.stringify([group.locationName, group.returnDate])}
+                key={groupKey}
                 style={{ marginBottom: 20, border: '1px solid var(--border)', borderRadius: 10, overflow: 'hidden' }}
               >
                 <div
@@ -333,15 +316,19 @@ export default function ReturnsPanel({
                       <tr>
                         <th style={{ ...thStyle, width: 40, cursor: 'default' }} />
                         {columns.map((col) => (
-                          <th key={col.key} onClick={() => toggleSort(col.key)} style={thStyle}>
+                          <th key={col.key} onClick={() => toggleSort(groupKey, col.key)} style={thStyle}>
                             {col.label}
-                            <SortIcon active={sortColumn === col.key} sortDirection={sortDirection} />
+                            <SortIcon
+                              active={sortState.column === col.key}
+                              sortDirection={sortState.direction}
+                            />
                           </th>
                         ))}
+                        <th style={{ ...thStyle, cursor: 'default' }}>{messages.returns.table.returnDate}</th>
                       </tr>
                     </thead>
                     <tbody>
-                      {group.rows.map((row) => {
+                      {displayRows.map((row) => {
                         const key = keyForRow(row)
                         const cellStyle = { borderBottom: '1px solid var(--border)', padding: '8px 6px' }
                         return (
