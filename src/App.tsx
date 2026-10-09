@@ -378,7 +378,14 @@ function App() {
     }
 
     if (activePanel === 'returns') {
-      return <ReturnsPanel messages={messages} itemTypeLabels={itemTypeLabels} />
+      return (
+        <ReturnsPanel
+          messages={messages}
+          canWrite={isWriter}
+          itemTypeLabels={itemTypeLabels}
+          selectionActions={bulkSelectionActions}
+        />
+      )
     }
 
     if (activePanel === 'profile') {

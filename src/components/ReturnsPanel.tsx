@@ -2,6 +2,9 @@ import { useCallback, useEffect, useMemo, useState } from 'react'
 
 import type { Messages } from '../i18n'
 import { supabase } from '../supabaseClient'
+import DeleteConfirmation, { type DeleteEntityDescriptor } from './DeleteConfirmation'
+import EntityMover from './EntityMover'
+import type { BulkSelectionAction } from './bulkMove/types'
 
 type ReturnRow = {
   item_type: string
@@ -9,19 +12,24 @@ type ReturnRow = {
   item_identifier: number | null
   item_name: string | null
   return_date: string | null
-  location: string | null
+  location_name: string | null
+  room_name: string | null
 }
 
 type ReturnsPanelProps = {
   messages: Messages
-  // Display label per item_type returned by get_upcoming_returns()
+  canWrite: boolean
+  // Display label per item_type returned by get_upcoming_returns_loc_room()
   itemTypeLabels: Record<string, string>
+  selectionActions?: BulkSelectionAction[]
 }
 
-type SortColumn = 'identifier' | 'name' | 'location' | 'return_date'
+type SelectionMap = Record<string, boolean>
+type SortColumn = 'identifier' | 'name' | 'room_name' | 'return_date'
 type SortDirection = 'asc' | 'desc'
 
 const SORT_STORAGE_KEY = 'inventario_congress:returns:sort'
+const NO_ACTIONS: BulkSelectionAction[] = []
 
 function parseDateOnly(value: string | null): Date | null {
   if (!value) return null
@@ -73,16 +81,29 @@ const thStyle = {
   whiteSpace: 'nowrap',
 } as const
 
-export default function ReturnsPanel({ messages, itemTypeLabels }: ReturnsPanelProps) {
+export default function ReturnsPanel({
+  messages,
+  canWrite,
+  itemTypeLabels,
+  selectionActions = NO_ACTIONS,
+}: ReturnsPanelProps) {
   const [loading, setLoading] = useState(false)
   const [rows, setRows] = useState<ReturnRow[]>([])
+  const [selection, setSelection] = useState<SelectionMap>({})
   const [error, setError] = useState<string | null>(null)
+  const [moveDialogOpen, setMoveDialogOpen] = useState(false)
+  const [actionDialogLoading, setActionDialogLoading] = useState(false)
+  const [pendingAction, setPendingAction] = useState<{
+    action: BulkSelectionAction
+    ids: number[]
+    entities: DeleteEntityDescriptor[]
+  } | null>(null)
 
   const [sortColumn, setSortColumn] = useState<SortColumn>(() => {
     try {
       const parsed = JSON.parse(window.localStorage.getItem(SORT_STORAGE_KEY) ?? '{}') as { sortColumn?: unknown }
       const c = parsed.sortColumn
-      if (c === 'identifier' || c === 'name' || c === 'location' || c === 'return_date') return c
+      if (c === 'identifier' || c === 'name' || c === 'room_name' || c === 'return_date') return c
     } catch {
       // ignore
     }
@@ -105,11 +126,12 @@ export default function ReturnsPanel({ messages, itemTypeLabels }: ReturnsPanelP
     setLoading(true)
 
     try {
-      const { data, error: rpcError } = await supabase.rpc('get_upcoming_returns')
+      const { data, error: rpcError } = await supabase.rpc('get_upcoming_returns_loc_room')
       if (rpcError) throw rpcError
-      if (!data) throw new Error('No data returned from get_upcoming_returns()')
+      if (!data) throw new Error('No data returned from get_upcoming_returns_loc_room()')
 
       setRows(data as ReturnRow[])
+      setSelection({})
     } catch (e) {
       setError(e instanceof Error ? e.message : messages.returns.feedback.loadFailed)
     } finally {
@@ -148,8 +170,8 @@ export default function ReturnsPanel({ messages, itemTypeLabels }: ReturnsPanelP
         result = (a.item_identifier ?? 0) - (b.item_identifier ?? 0)
       } else if (sortColumn === 'name') {
         result = (a.item_name ?? '').localeCompare(b.item_name ?? '')
-      } else if (sortColumn === 'location') {
-        result = (a.location ?? '').localeCompare(b.location ?? '')
+      } else if (sortColumn === 'room_name') {
+        result = (a.room_name ?? '').localeCompare(b.room_name ?? '')
       } else {
         result = (parseDateOnly(a.return_date)?.getTime() ?? 0) - (parseDateOnly(b.return_date)?.getTime() ?? 0)
       }
@@ -160,9 +182,103 @@ export default function ReturnsPanel({ messages, itemTypeLabels }: ReturnsPanelP
   const columns: { key: SortColumn; label: string }[] = [
     { key: 'identifier', label: messages.returns.table.identifier },
     { key: 'name', label: messages.returns.table.name },
-    { key: 'location', label: messages.returns.table.location },
+    { key: 'room_name', label: messages.returns.table.room },
     { key: 'return_date', label: messages.returns.table.returnDate },
   ]
+
+  const returnGroups = useMemo(() => {
+    const groups = new Map<string, { locationName: string; returnDate: string | null; rows: ReturnRow[] }>()
+    for (const row of sortedRows) {
+      const locationName = row.location_name ?? ''
+      const groupKey = JSON.stringify([locationName, row.return_date])
+      const group = groups.get(groupKey)
+      if (group) {
+        group.rows.push(row)
+      } else {
+        groups.set(groupKey, { locationName, returnDate: row.return_date, rows: [row] })
+      }
+    }
+    return Array.from(groups.values())
+  }, [sortedRows])
+
+  const selectionCount = useMemo(() => Object.values(selection).filter(Boolean).length, [selection])
+
+  const selectedItems = useMemo(() => {
+    return Object.entries(selection)
+      .filter(([, isSelected]) => isSelected)
+      .map(([key]) => {
+        const [entityType, entityId] = key.split('-')
+        return { entityType, entityId: Number.parseInt(entityId, 10) }
+      })
+  }, [selection])
+
+  const availableAction = useMemo(() => {
+    if (!canWrite || selectedItems.length === 0) return null
+    return (
+      selectionActions.find((action) => selectedItems.every((item) => item.entityType === action.itemType)) ?? null
+    )
+  }, [canWrite, selectedItems, selectionActions])
+
+  function keyForRow(row: ReturnRow): string {
+    return `${row.item_type}-${row.item_id}`
+  }
+
+  function toggleRow(key: string) {
+    setSelection((previous) => ({ ...previous, [key]: !previous[key] }))
+  }
+
+  function toggleLocation(locationRows: ReturnRow[], checked: boolean) {
+    setSelection((previous) => {
+      const next = { ...previous }
+      for (const row of locationRows) next[keyForRow(row)] = checked
+      return next
+    })
+  }
+
+  function isLocationFullySelected(locationRows: ReturnRow[]): boolean {
+    return locationRows.length > 0 && locationRows.every((row) => selection[keyForRow(row)])
+  }
+
+  function isLocationPartiallySelected(locationRows: ReturnRow[]): boolean {
+    return locationRows.some((row) => selection[keyForRow(row)]) && !isLocationFullySelected(locationRows)
+  }
+
+  async function handleActionClick(action: BulkSelectionAction) {
+    if (!canWrite) return
+    const ids = selectedItems.filter((item) => item.entityType === action.itemType).map((item) => item.entityId)
+    if (ids.length === 0) return
+
+    setError(null)
+    setActionDialogLoading(true)
+
+    try {
+      const entities = await action.prepare(ids)
+      setPendingAction({ action, ids, entities })
+    } catch (e) {
+      setError(e instanceof Error ? e.message : messages.bulkMove.feedback.loadFailed)
+    } finally {
+      setActionDialogLoading(false)
+    }
+  }
+
+  async function confirmPendingAction() {
+    if (!canWrite || !pendingAction) return
+    const { action, ids } = pendingAction
+
+    setError(null)
+    setActionDialogLoading(true)
+
+    try {
+      await action.execute(ids)
+      setPendingAction(null)
+      setSelection({})
+      await loadReturns()
+    } catch (e) {
+      setError(e instanceof Error ? e.message : action.failedMessage)
+    } finally {
+      setActionDialogLoading(false)
+    }
+  }
 
   return (
     <div style={{ maxWidth: 820, margin: '0 auto', padding: 0, textAlign: 'left' }}>
@@ -180,43 +296,162 @@ export default function ReturnsPanel({ messages, itemTypeLabels }: ReturnsPanelP
         {rows.length === 0 ? (
           <div>{loading ? messages.menu.loading : messages.returns.table.empty}</div>
         ) : (
-          <div style={{ overflowX: 'auto' }}>
-            <table style={{ width: '100%', borderCollapse: 'collapse' }}>
-              <thead>
-                <tr>
-                  {columns.map((col) => (
-                    <th key={col.key} onClick={() => toggleSort(col.key)} style={thStyle}>
-                      {col.label}
-                      <SortIcon active={sortColumn === col.key} sortDirection={sortDirection} />
-                    </th>
-                  ))}
-                </tr>
-              </thead>
-              <tbody>
-                {sortedRows.map((row) => {
-                  const cellStyle = { borderBottom: '1px solid var(--border)', padding: '8px 6px' }
-                  return (
-                    <tr
-                      key={`${row.item_type}-${row.item_id}-${row.return_date}`}
-                      style={isDueOrOverdue(row.return_date) ? { color: 'red' } : undefined}
-                    >
-                      <td style={cellStyle}>
-                        <div>{row.item_identifier ?? ''}</div>
-                      </td>
-                      <td style={cellStyle}>
-                        <div style={{ fontSize: 12, color: 'var(--muted)' }}>{itemTypeLabels[row.item_type] ?? row.item_type}</div>
-                        <div>{row.item_name ?? ''}</div>
-                      </td>
-                      <td style={cellStyle}>{row.location ?? ''}</td>
-                      <td style={cellStyle}>{formatDateOnly(row.return_date)}</td>
-                    </tr>
-                  )
-                })}
-              </tbody>
-            </table>
-          </div>
+          returnGroups.map((group) => {
+            const fullySelected = isLocationFullySelected(group.rows)
+            const partiallySelected = isLocationPartiallySelected(group.rows)
+            const groupTitle = `${group.locationName} — ${formatDateOnly(group.returnDate)}`
+
+            return (
+              <div
+                key={JSON.stringify([group.locationName, group.returnDate])}
+                style={{ marginBottom: 20, border: '1px solid var(--border)', borderRadius: 10, overflow: 'hidden' }}
+              >
+                <div
+                  style={{
+                    display: 'flex',
+                    alignItems: 'center',
+                    gap: 10,
+                    padding: '10px 12px',
+                    background: 'var(--table-header-bg)',
+                    borderBottom: '1px solid var(--border)',
+                  }}
+                >
+                  <input
+                    type="checkbox"
+                    checked={fullySelected}
+                    ref={(element) => {
+                      if (element) element.indeterminate = partiallySelected && !fullySelected
+                    }}
+                    onChange={(event) => toggleLocation(group.rows, event.target.checked)}
+                    aria-label={`${messages.bulkMove.selectAllLabel} - ${groupTitle}`}
+                  />
+                  <strong>{groupTitle}</strong>
+                </div>
+                <div style={{ overflowX: 'auto' }}>
+                  <table style={{ width: '100%', borderCollapse: 'collapse' }}>
+                    <thead>
+                      <tr>
+                        <th style={{ ...thStyle, width: 40, cursor: 'default' }} />
+                        {columns.map((col) => (
+                          <th key={col.key} onClick={() => toggleSort(col.key)} style={thStyle}>
+                            {col.label}
+                            <SortIcon active={sortColumn === col.key} sortDirection={sortDirection} />
+                          </th>
+                        ))}
+                      </tr>
+                    </thead>
+                    <tbody>
+                      {group.rows.map((row) => {
+                        const key = keyForRow(row)
+                        const cellStyle = { borderBottom: '1px solid var(--border)', padding: '8px 6px' }
+                        return (
+                          <tr
+                            key={key}
+                            onClick={() => toggleRow(key)}
+                            style={{ cursor: 'pointer', ...(isDueOrOverdue(row.return_date) ? { color: 'red' } : {}) }}
+                          >
+                            <td style={{ ...cellStyle, textAlign: 'center' }}>
+                              <input
+                                type="checkbox"
+                                checked={!!selection[key]}
+                                onChange={() => toggleRow(key)}
+                                onClick={(event) => event.stopPropagation()}
+                                aria-label={`${messages.returns.table.identifier}: ${row.item_identifier ?? ''}`}
+                              />
+                            </td>
+                            <td style={cellStyle}>{row.item_identifier ?? ''}</td>
+                            <td style={cellStyle}>
+                              <div style={{ fontSize: 12, color: 'var(--muted)' }}>{itemTypeLabels[row.item_type] ?? row.item_type}</div>
+                              <div>{row.item_name ?? ''}</div>
+                            </td>
+                            <td style={cellStyle}>{row.room_name ?? ''}</td>
+                            <td style={cellStyle}>{formatDateOnly(row.return_date)}</td>
+                          </tr>
+                        )
+                      })}
+                    </tbody>
+                  </table>
+                </div>
+              </div>
+            )
+          })
         )}
       </div>
+
+      {canWrite && selectionCount > 0 ? (
+        <div
+          style={{
+            position: 'sticky',
+            bottom: 0,
+            padding: '12px 0',
+            background: 'var(--bg)',
+            display: 'flex',
+            alignItems: 'center',
+            justifyContent: 'space-between',
+            gap: 12,
+            flexWrap: 'wrap',
+            borderTop: '1px solid var(--border)',
+            marginTop: 8,
+          }}
+        >
+          <span style={{ fontSize: 14, color: 'var(--muted)' }}>
+            {messages.bulkMove.selectedCount
+              .replace('{count}', String(selectionCount))
+              .replace(/\{plural\}/g, selectionCount === 1 ? '' : 's')}
+          </span>
+          <div style={{ display: 'flex', gap: 10, flexWrap: 'wrap', alignItems: 'center' }}>
+            {availableAction ? (
+              <button
+                type="button"
+                onClick={() => void handleActionClick(availableAction)}
+                disabled={actionDialogLoading}
+                style={{
+                  padding: '10px 18px',
+                  borderRadius: 6,
+                  cursor: actionDialogLoading ? 'not-allowed' : 'pointer',
+                  fontWeight: 600,
+                }}
+              >
+                {availableAction.label}
+              </button>
+            ) : null}
+            <button
+              type="button"
+              onClick={() => setMoveDialogOpen(true)}
+              style={{ padding: '10px 18px', borderRadius: 6, cursor: 'pointer', fontWeight: 600 }}
+            >
+              {messages.bulkMove.moveButton}
+            </button>
+          </div>
+        </div>
+      ) : null}
+
+      <EntityMover
+        messages={messages}
+        canWrite={canWrite}
+        open={moveDialogOpen}
+        items={selectedItems}
+        locationId={null}
+        roomId={null}
+        dialogStrings={messages.bulkMove.dialogs.moveSelection}
+        onClose={() => setMoveDialogOpen(false)}
+        onMoved={async () => {
+          setMoveDialogOpen(false)
+          await loadReturns()
+        }}
+      />
+
+      <DeleteConfirmation
+        open={pendingAction !== null}
+        title={pendingAction?.action.dialogTitle ?? ''}
+        messagePrefix={pendingAction?.action.dialogMessagePrefix ?? ''}
+        entities={pendingAction?.entities ?? []}
+        confirmLabel={pendingAction?.action.label ?? ''}
+        cancelLabel={messages.deleteConfirmation.actions.cancel}
+        loading={actionDialogLoading}
+        onCancel={() => setPendingAction(null)}
+        onConfirm={confirmPendingAction}
+      />
     </div>
   )
 }
