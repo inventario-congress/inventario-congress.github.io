@@ -582,8 +582,9 @@ const es = {
     title: 'Devoluciones',
     table: {
       identifier: 'N°',
-      name: 'Nombre',
+      name: 'Modelo',
       location: 'Ubicación',
+      room: 'Sala',
       returnDate: 'Fecha de Vuelta',
       empty: 'No hay devoluciones próximas o vencidas.',
     },

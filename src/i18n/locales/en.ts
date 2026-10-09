@@ -582,8 +582,9 @@ const en = {
     title: 'Returns',
     table: {
       identifier: 'Identifier',
-      name: 'Name',
+      name: 'Model',
       location: 'Location',
+      room: 'Room',
       returnDate: 'Return Date',
       empty: 'No upcoming or overdue returns.',
     },
