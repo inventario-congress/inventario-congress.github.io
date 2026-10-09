@@ -2,7 +2,9 @@ import { useCallback, useEffect, useMemo, useState } from 'react'
 
 import type { Messages } from '../i18n'
 import { supabase } from '../supabaseClient'
+import DeleteConfirmation, { type DeleteEntityDescriptor } from './DeleteConfirmation'
 import EntityMover from './EntityMover'
+import type { BulkSelectionAction } from './bulkMove/types'
 
 type ReturnRow = {
   item_type: string
@@ -19,6 +21,7 @@ type ReturnsPanelProps = {
   canWrite: boolean
   // Display label per item_type returned by get_upcoming_returns_loc_room()
   itemTypeLabels: Record<string, string>
+  selectionActions?: BulkSelectionAction[]
 }
 
 type SelectionMap = Record<string, boolean>
@@ -26,6 +29,7 @@ type SortColumn = 'identifier' | 'name' | 'room_name' | 'return_date'
 type SortDirection = 'asc' | 'desc'
 
 const SORT_STORAGE_KEY = 'inventario_congress:returns:sort'
+const NO_ACTIONS: BulkSelectionAction[] = []
 
 function parseDateOnly(value: string | null): Date | null {
   if (!value) return null
@@ -77,12 +81,23 @@ const thStyle = {
   whiteSpace: 'nowrap',
 } as const
 
-export default function ReturnsPanel({ messages, canWrite, itemTypeLabels }: ReturnsPanelProps) {
+export default function ReturnsPanel({
+  messages,
+  canWrite,
+  itemTypeLabels,
+  selectionActions = NO_ACTIONS,
+}: ReturnsPanelProps) {
   const [loading, setLoading] = useState(false)
   const [rows, setRows] = useState<ReturnRow[]>([])
   const [selection, setSelection] = useState<SelectionMap>({})
   const [error, setError] = useState<string | null>(null)
   const [moveDialogOpen, setMoveDialogOpen] = useState(false)
+  const [actionDialogLoading, setActionDialogLoading] = useState(false)
+  const [pendingAction, setPendingAction] = useState<{
+    action: BulkSelectionAction
+    ids: number[]
+    entities: DeleteEntityDescriptor[]
+  } | null>(null)
 
   const [sortColumn, setSortColumn] = useState<SortColumn>(() => {
     try {
@@ -196,6 +211,13 @@ export default function ReturnsPanel({ messages, canWrite, itemTypeLabels }: Ret
       })
   }, [selection])
 
+  const availableAction = useMemo(() => {
+    if (!canWrite || selectedItems.length === 0) return null
+    return (
+      selectionActions.find((action) => selectedItems.every((item) => item.entityType === action.itemType)) ?? null
+    )
+  }, [canWrite, selectedItems, selectionActions])
+
   function keyForRow(row: ReturnRow): string {
     return `${row.item_type}-${row.item_id}`
   }
@@ -218,6 +240,43 @@ export default function ReturnsPanel({ messages, canWrite, itemTypeLabels }: Ret
 
   function isLocationPartiallySelected(locationRows: ReturnRow[]): boolean {
     return locationRows.some((row) => selection[keyForRow(row)]) && !isLocationFullySelected(locationRows)
+  }
+
+  async function handleActionClick(action: BulkSelectionAction) {
+    if (!canWrite) return
+    const ids = selectedItems.filter((item) => item.entityType === action.itemType).map((item) => item.entityId)
+    if (ids.length === 0) return
+
+    setError(null)
+    setActionDialogLoading(true)
+
+    try {
+      const entities = await action.prepare(ids)
+      setPendingAction({ action, ids, entities })
+    } catch (e) {
+      setError(e instanceof Error ? e.message : messages.bulkMove.feedback.loadFailed)
+    } finally {
+      setActionDialogLoading(false)
+    }
+  }
+
+  async function confirmPendingAction() {
+    if (!canWrite || !pendingAction) return
+    const { action, ids } = pendingAction
+
+    setError(null)
+    setActionDialogLoading(true)
+
+    try {
+      await action.execute(ids)
+      setPendingAction(null)
+      setSelection({})
+      await loadReturns()
+    } catch (e) {
+      setError(e instanceof Error ? e.message : action.failedMessage)
+    } finally {
+      setActionDialogLoading(false)
+    }
   }
 
   return (
@@ -338,13 +397,30 @@ export default function ReturnsPanel({ messages, canWrite, itemTypeLabels }: Ret
               .replace('{count}', String(selectionCount))
               .replace(/\{plural\}/g, selectionCount === 1 ? '' : 's')}
           </span>
-          <button
-            type="button"
-            onClick={() => setMoveDialogOpen(true)}
-            style={{ padding: '10px 18px', borderRadius: 6, cursor: 'pointer', fontWeight: 600 }}
-          >
-            {messages.bulkMove.moveButton}
-          </button>
+          <div style={{ display: 'flex', gap: 10, flexWrap: 'wrap', alignItems: 'center' }}>
+            {availableAction ? (
+              <button
+                type="button"
+                onClick={() => void handleActionClick(availableAction)}
+                disabled={actionDialogLoading}
+                style={{
+                  padding: '10px 18px',
+                  borderRadius: 6,
+                  cursor: actionDialogLoading ? 'not-allowed' : 'pointer',
+                  fontWeight: 600,
+                }}
+              >
+                {availableAction.label}
+              </button>
+            ) : null}
+            <button
+              type="button"
+              onClick={() => setMoveDialogOpen(true)}
+              style={{ padding: '10px 18px', borderRadius: 6, cursor: 'pointer', fontWeight: 600 }}
+            >
+              {messages.bulkMove.moveButton}
+            </button>
+          </div>
         </div>
       ) : null}
 
@@ -361,6 +437,18 @@ export default function ReturnsPanel({ messages, canWrite, itemTypeLabels }: Ret
           setMoveDialogOpen(false)
           await loadReturns()
         }}
+      />
+
+      <DeleteConfirmation
+        open={pendingAction !== null}
+        title={pendingAction?.action.dialogTitle ?? ''}
+        messagePrefix={pendingAction?.action.dialogMessagePrefix ?? ''}
+        entities={pendingAction?.entities ?? []}
+        confirmLabel={pendingAction?.action.label ?? ''}
+        cancelLabel={messages.deleteConfirmation.actions.cancel}
+        loading={actionDialogLoading}
+        onCancel={() => setPendingAction(null)}
+        onConfirm={confirmPendingAction}
       />
     </div>
   )
