@@ -57,7 +57,7 @@ export default function RoomInventoryPanel({ messages, roomId, roomName }: RoomI
   const [rows, setRows] = useState<RoomInventoryRow[]>([])
   const [loading, setLoading] = useState(false)
   const [error, setError] = useState<string | null>(null)
-  const [expandedBaseId, setExpandedBaseId] = useState<number | null>(null)
+  const [collapsedBaseIds, setCollapsedBaseIds] = useState<Set<number>>(new Set())
 
   useEffect(() => {
     if (!supabase) return
@@ -158,12 +158,19 @@ export default function RoomInventoryPanel({ messages, roomId, roomName }: RoomI
             <tbody>
               {rows.map((row) => {
                 const isBase = row.item_type === 'base'
-                const isExpanded = isBase && expandedBaseId === row.item_id
+                const isExpanded = isBase && !collapsedBaseIds.has(row.item_id)
 
                 return (
                   <Fragment key={`${row.item_type}-${row.item_id}`}>
                     <tr
-                      onClick={isBase ? () => setExpandedBaseId(isExpanded ? null : row.item_id) : undefined}
+                      onClick={isBase ? () =>
+                            setCollapsedBaseIds(prev => {
+                              const next = new Set(prev)
+                              if (next.has(row.item_id)) next.delete(row.item_id)
+                              else next.add(row.item_id)
+                              return next
+                            })
+                          : undefined}
                       style={{
                         cursor: isBase ? 'pointer' : undefined,
                         fontWeight: isExpanded ? 'bold' : undefined,
@@ -187,6 +194,8 @@ export default function RoomInventoryPanel({ messages, roomId, roomName }: RoomI
                           <div
                             style={{
                               overflow: 'hidden',
+                              width: '85%',
+                              marginLeft: 'auto',
                               border: isExpanded ? '2px solid var(--accent-border)' : '0px solid transparent',
                               borderRadius: 12,
                               transition: 'max-height 120ms ease, opacity 120ms ease, transform 120ms ease, border 120ms ease',
