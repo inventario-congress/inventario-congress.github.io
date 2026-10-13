@@ -26,7 +26,7 @@ const ReturnsPanel = lazy(() => import('./components/ReturnsPanel'))
 
 type Theme = 'light' | 'dark'
 
-const BULK_MOVE_ITEM_TYPE_ORDER = ['base', 'combo', 'console', 'case']
+const BULK_MOVE_ITEM_TYPE_ORDER = ['base', 'combo', 'handheld', 'console', 'case']
 const HISTORY_ATTACHMENT_TYPES = ['microphone']
 
 type CaseRow = MovableRow & { speaker_count: number }
@@ -75,7 +75,7 @@ function App() {
 
     try {
       const raw = window.localStorage.getItem(ACTIVE_PANEL_STORAGE_KEY)
-      if (raw === 'microphones' || raw === 'bases' || raw === 'locations' || raw === 'combos' || raw === 'consoles' || raw === 'cases' || raw === 'profile' || raw === 'bulkmoves' || raw === 'history' || raw === 'returns') {
+      if (raw === 'microphones' || raw === 'bases' || raw === 'locations' || raw === 'combos' || raw === 'handhelds' || raw === 'consoles' || raw === 'cases' || raw === 'profile' || raw === 'bulkmoves' || raw === 'history' || raw === 'returns') {
         return raw
       }
     } catch {
@@ -304,6 +304,7 @@ function App() {
     () => ({
       base: messages.bulkMove.itemTypeBase,
       combo: messages.bulkMove.itemTypeCombo,
+      handheld: messages.bulkMove.itemTypeHandheld,
       console: messages.bulkMove.itemTypeConsole,
       case: messages.bulkMove.itemTypeCase,
       microphone: messages.history.microphone,
@@ -350,6 +351,10 @@ function App() {
 
     if (activePanel === 'combos') {
       return renderMovablePanel('combo', 'get_items_with_latest_location_room', { type: 'combo' }, messages.combos, messages.combos.dialogs.moveCombo)
+    }
+
+    if (activePanel === 'handhelds') {
+      return renderMovablePanel('handheld', 'get_items_with_latest_location_room', { type: 'handheld' }, messages.handhelds, messages.handhelds.dialogs.moveHandheld)
     }
 
     if (activePanel === 'consoles') {
