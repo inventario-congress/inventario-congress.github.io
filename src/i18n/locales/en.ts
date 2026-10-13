@@ -615,6 +615,7 @@ const en = {
     selectedCount: '{count} item{plural} selected',
     moveButton: 'Move',
     detachButton: 'Detach',
+    detachMicrophonesOption: 'Detach microphones from bases',
     moveButtonDisabled: 'Select items to move',
     noItems: 'Select a venue to see available items.',
     loadingItems: 'Loading items...',
@@ -644,6 +645,8 @@ const en = {
       moveFailed: 'Failed to move items.',
       detachFailed: 'Failed to detach microphones.',
       noMicrophonesToDetach: 'No microphones are currently attached to the selected bases.',
+      detachFailedNotMoved: 'Failed to detach the microphones. Nothing was moved.',
+      detachedButMoveFailed: 'The microphones were detached, but the move failed and the items were NOT moved. You can retry the move.',
     },
   },
   returns: {

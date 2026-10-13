@@ -615,6 +615,7 @@ const es = {
     selectedCount: '{count} elemento{plural} seleccionado{plural}',
     moveButton: 'Mover',
     detachButton: 'Separar',
+    detachMicrophonesOption: 'Separar micrófonos de bases',
     moveButtonDisabled: 'Selecciona elementos para mover',
     noItems: 'Selecciona un venue para ver los elementos disponibles.',
     loadingItems: 'Cargando elementos...',
@@ -644,6 +645,8 @@ const es = {
       moveFailed: 'No se pudieron mover los elementos.',
       detachFailed: 'No se pudieron separar los micrófonos.',
       noMicrophonesToDetach: 'No hay micrófonos actualmente conectados a las bases seleccionadas.',
+      detachFailedNotMoved: 'No se pudieron separar los micrófonos. No se movió nada.',
+      detachedButMoveFailed: 'Los micrófonos se separaron, pero el movimiento falló y los elementos NO se movieron. Puedes reintentar el movimiento.',
     },
   },
   returns: {

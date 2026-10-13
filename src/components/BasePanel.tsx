@@ -4,8 +4,9 @@ import type { Messages } from '../i18n'
 import { supabase } from '../supabaseClient'
 import BaseEditor from './BaseEditor'
 import BaseMicAttacher from './BaseMicAttacher'
-import DeleteConfirmation from './DeleteConfirmation'
+import DeleteConfirmation, { type DeleteEntityDescriptor } from './DeleteConfirmation'
 import EntityMover from './EntityMover'
+import { createDetachMicrophonesAction } from './bulkMove/detachMicrophonesAction'
 
 
 
@@ -102,6 +103,8 @@ function TriangleIcon({
 
 
 export default function BasePanel({ messages, canWrite }: BasePanelProps) {
+  const detachAction = useMemo(() => createDetachMicrophonesAction(messages), [messages])
+  const [detachAllTarget, setDetachAllTarget] = useState<{ baseId: number; entities: DeleteEntityDescriptor[] } | null>(null)
   const [baseEditorOpen, setBaseEditorOpen] = useState(false)
   const [editingBaseId, setEditingBaseId] = useState<number | null>(null)
   const [loading, setLoading] = useState(false)
@@ -314,6 +317,40 @@ export default function BasePanel({ messages, canWrite }: BasePanelProps) {
     } catch (e) {
       const msg = e instanceof Error ? e.message : messages.bases.feedback.deleteFailed
       setError(msg)
+    } finally {
+      setLoading(false)
+    }
+  }
+
+  async function openDetachAll(baseId: number) {
+    if (!canWrite) return
+
+    setError(null)
+    setLoading(true)
+
+    try {
+      const entities = await detachAction.prepare([baseId])
+      setDetachAllTarget({ baseId, entities })
+    } catch (e) {
+      setError(e instanceof Error ? e.message : detachAction.failedMessage)
+    } finally {
+      setLoading(false)
+    }
+  }
+
+  async function confirmDetachAll() {
+    if (!canWrite || !detachAllTarget) return
+    const { baseId } = detachAllTarget
+
+    setError(null)
+    setLoading(true)
+
+    try {
+      await detachAction.execute([baseId])
+      setDetachAllTarget(null)
+      await loadMicsForBase(baseId)
+    } catch (e) {
+      setError(e instanceof Error ? e.message : detachAction.failedMessage)
     } finally {
       setLoading(false)
     }
@@ -701,6 +738,14 @@ export default function BasePanel({ messages, canWrite }: BasePanelProps) {
                                   </button>
                                   <button
                                   type="button"
+                                  onClick={() => void openDetachAll(row.base_id)}
+                                  disabled={loading}
+                                  style={{ padding: '6px 10px', borderRadius: 6, cursor: 'pointer' }}
+                                  >
+                                  {messages.microphones.actions.detach}
+                                  </button>
+                                  <button
+                                  type="button"
                                   onClick={() => {
                                       setEditingBaseId(row.base_id)
                                       setBaseEditorOpen(true)
@@ -748,6 +793,14 @@ export default function BasePanel({ messages, canWrite }: BasePanelProps) {
                                         style={{ padding: '6px 10px', borderRadius: 6, cursor: 'pointer' }}
                                       >
                                         {messages.bases.actions.move}
+                                      </button>
+                                      <button
+                                        type="button"
+                                        onClick={() => void openDetachAll(row.base_id)}
+                                        disabled={loading || mics.length === 0}
+                                        style={{ padding: '6px 10px', borderRadius: 6, cursor: 'pointer' }}
+                                      >
+                                        {messages.microphones.actions.detach}
                                       </button>
                                       <button
                                         type="button"
@@ -967,6 +1020,19 @@ export default function BasePanel({ messages, canWrite }: BasePanelProps) {
         }}
       />
 
+      <DeleteConfirmation
+        open={detachAllTarget !== null}
+        title={detachAction.dialogTitle}
+        messagePrefix={detachAction.dialogMessagePrefix}
+        entities={detachAllTarget?.entities ?? []}
+        confirmLabel={messages.microphones.actions.detach}
+        cancelLabel={messages.deleteConfirmation.actions.cancel}
+        loading={loading}
+        confirmDisabled={false}
+        onCancel={() => setDetachAllTarget(null)}
+        onConfirm={confirmDetachAll}
+      />
+
       <BaseMicAttacher
         key={attachDialogOpen ? `attach-${attachBaseRow?.base_id}` : 'closed'}
         messages={messages}
@@ -995,6 +1061,7 @@ export default function BasePanel({ messages, canWrite }: BasePanelProps) {
         roomId={moveRoomId}
         latestReturnDate={moveReturnDate}
         dialogStrings={messages.bases.dialogs.moveBase}
+        detachAction={detachAction}
         onClose={() => cancelMoveDialog()}
         onMoved={async () => {
           setError(null)

@@ -2,6 +2,7 @@ import { useCallback, useEffect, useMemo, useState } from 'react'
 
 import type { Messages } from '../i18n'
 import { supabase } from '../supabaseClient'
+import type { BulkSelectionAction } from './bulkMove/types'
 
 type LocationChoice = {
   id: number
@@ -51,13 +52,18 @@ type EntityMoverProps = {
   roomId: number | null
   latestReturnDate?: string | null
   dialogStrings: MoveDialogStrings
+  // When provided, offers to run this action on matching items before moving them
+  detachAction?: BulkSelectionAction | null
   onClose: () => void
   onMoved: () => Promise<void> | void
 }
 
-export default function EntityMover({ messages, canWrite, open, entityId, entityType, items, locationId, roomId, latestReturnDate, dialogStrings, onClose, onMoved }: EntityMoverProps) {
+export default function EntityMover({ messages, canWrite, open, entityId, entityType, items, locationId, roomId, latestReturnDate, dialogStrings, detachAction = null, onClose, onMoved }: EntityMoverProps) {
   const [loading, setLoading] = useState(false)
   const [error, setError] = useState<string | null>(null)
+  const [detachHasWork, setDetachHasWork] = useState(false)
+  const [detachMicrophones, setDetachMicrophones] = useState(false)
+  const [detachDone, setDetachDone] = useState(false)
 
   const [locationsLoading, setLocationsLoading] = useState(false)
   const [locations, setLocations] = useState<LocationChoice[]>([])
@@ -80,6 +86,9 @@ export default function EntityMover({ messages, canWrite, open, entityId, entity
     setSelectedLocationId('')
     setSelectedRoomId('')
     setReturnDate('')
+    setDetachHasWork(false)
+    setDetachMicrophones(false)
+    setDetachDone(false)
     onClose()
   }, [loading, onClose])
 
@@ -166,6 +175,8 @@ export default function EntityMover({ messages, canWrite, open, entityId, entity
       setSelectedRoomId(typeof locationId === 'number' && typeof roomId === 'number' ? roomId : '')
       setReturnDate('')
       setRooms([])
+      setDetachMicrophones(false)
+      setDetachDone(false)
     })
 
     queueMicrotask(() => {
@@ -212,6 +223,36 @@ export default function EntityMover({ messages, canWrite, open, entityId, entity
     return []
   }, [items, entityId, entityType])
   const isBulkMove = Boolean(items && items.length > 0)
+
+  const detachIds = useMemo(
+    () => (detachAction ? activeItems.filter((item) => item.entityType === detachAction.itemType).map((item) => item.entityId) : []),
+    [activeItems, detachAction]
+  )
+
+  useEffect(() => {
+    if (!open || !canWrite || !detachAction || detachIds.length === 0) return
+
+    let active = true
+
+    queueMicrotask(() => {
+      if (!active) return
+      setDetachHasWork(false)
+      detachAction
+        .hasWork(detachIds)
+        .then((hasWork) => {
+          if (active) setDetachHasWork(hasWork)
+        })
+        .catch(() => {
+          if (active) setDetachHasWork(false)
+        })
+    })
+
+    return () => {
+      active = false
+    }
+  }, [canWrite, detachAction, detachIds, open])
+
+  const showDetachOption = detachAction !== null && detachIds.length > 0 && detachHasWork && !detachDone
 
   const [latestMovements, setLatestMovements] = useState<Map<string, LatestMovement>>(new Map())
   const [latestMovementsLoading, setLatestMovementsLoading] = useState(false)
@@ -395,8 +436,25 @@ export default function EntityMover({ messages, canWrite, open, entityId, entity
         return payload
       })
 
+      let detached = detachDone
+      if (detachAction && detachMicrophones && showDetachOption) {
+        try {
+          await detachAction.execute(detachIds)
+        } catch (e) {
+          const detail = e instanceof Error ? e.message : ''
+          throw new Error(`${messages.bulkMove.feedback.detachFailedNotMoved}${detail ? ` (${detail})` : ''}`, { cause: e })
+        }
+        detached = true
+        setDetachDone(true)
+      }
+
       const { error: createError } = await supabase.from('movement').insert(payloads)
-      if (createError) throw createError
+      if (createError) {
+        if (detached) {
+          throw new Error(`${messages.bulkMove.feedback.detachedButMoveFailed} (${createError.message})`)
+        }
+        throw createError
+      }
 
       await onMoved()
       close()
@@ -406,7 +464,7 @@ export default function EntityMover({ messages, canWrite, open, entityId, entity
     } finally {
       setLoading(false)
     }
-  }, [activeItems, canWrite, close, dialogStrings.returnDateMustBeFuture, dialogStrings.returnDateMustChange, loadLatestMovements, matchesLatestMovement, messages.microphones.feedback.authRequired, onMoved, returnDate, selectedLocationId, selectedRoomId, messages.bases.feedback.loadFailed])
+  }, [activeItems, canWrite, close, detachAction, detachDone, detachIds, detachMicrophones, dialogStrings.returnDateMustBeFuture, dialogStrings.returnDateMustChange, loadLatestMovements, matchesLatestMovement, messages.microphones.feedback.authRequired, messages.bulkMove.feedback.detachFailedNotMoved, messages.bulkMove.feedback.detachedButMoveFailed, onMoved, returnDate, selectedLocationId, selectedRoomId, showDetachOption, messages.bases.feedback.loadFailed])
 
   if (!open) return null
 
@@ -602,6 +660,18 @@ export default function EntityMover({ messages, canWrite, open, entityId, entity
                 </button>
               </div>
           </>
+
+          {showDetachOption ? (
+            <label style={{ display: 'flex', alignItems: 'center', gap: 8, textAlign: 'left' }}>
+              <input
+                type="checkbox"
+                checked={detachMicrophones}
+                onChange={(e) => setDetachMicrophones(e.target.checked)}
+                disabled={loading}
+              />
+              {messages.bulkMove.detachMicrophonesOption}
+            </label>
+          ) : null}
 
           {error ? (
             <div style={{ color: 'crimson' }}>
