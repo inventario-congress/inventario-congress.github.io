@@ -36,6 +36,19 @@ export function createDetachMicrophonesAction(messages: Messages): BulkSelection
         .sort((a, b) => a.identifier - b.identifier)
     },
 
+    async hasWork(baseIds) {
+      if (!supabase || baseIds.length === 0) return false
+
+      const { count, error } = await supabase
+        .from('attachment')
+        .select('id', { count: 'exact', head: true })
+        .in('base', baseIds)
+        .eq('is_active', true)
+
+      if (error) throw error
+      return (count ?? 0) > 0
+    },
+
     async execute(baseIds) {
       if (!supabase) return
 

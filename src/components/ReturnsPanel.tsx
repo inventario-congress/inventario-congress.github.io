@@ -2,7 +2,6 @@ import { useCallback, useEffect, useMemo, useState } from 'react'
 
 import type { Messages } from '../i18n'
 import { supabase } from '../supabaseClient'
-import DeleteConfirmation, { type DeleteEntityDescriptor } from './DeleteConfirmation'
 import EntityMover from './EntityMover'
 import type { BulkSelectionAction } from './bulkMove/types'
 
@@ -95,13 +94,7 @@ export default function ReturnsPanel({
   const [selection, setSelection] = useState<SelectionMap>({})
   const [error, setError] = useState<string | null>(null)
   const [moveDialogOpen, setMoveDialogOpen] = useState(false)
-  const [actionDialogLoading, setActionDialogLoading] = useState(false)
   const [sortStates, setSortStates] = useState<Record<string, SortState>>({})
-  const [pendingAction, setPendingAction] = useState<{
-    action: BulkSelectionAction
-    ids: number[]
-    entities: DeleteEntityDescriptor[]
-  } | null>(null)
 
   const loadReturns = useCallback(async () => {
     if (!supabase) return
@@ -192,10 +185,10 @@ export default function ReturnsPanel({
       })
   }, [selection])
 
-  const availableAction = useMemo(() => {
+  const detachAction = useMemo(() => {
     if (!canWrite || selectedItems.length === 0) return null
     return (
-      selectionActions.find((action) => selectedItems.every((item) => item.entityType === action.itemType)) ?? null
+      selectionActions.find((action) => selectedItems.some((item) => item.entityType === action.itemType)) ?? null
     )
   }, [canWrite, selectedItems, selectionActions])
 
@@ -221,43 +214,6 @@ export default function ReturnsPanel({
 
   function isLocationPartiallySelected(locationRows: ReturnRow[]): boolean {
     return locationRows.some((row) => selection[keyForRow(row)]) && !isLocationFullySelected(locationRows)
-  }
-
-  async function handleActionClick(action: BulkSelectionAction) {
-    if (!canWrite) return
-    const ids = selectedItems.filter((item) => item.entityType === action.itemType).map((item) => item.entityId)
-    if (ids.length === 0) return
-
-    setError(null)
-    setActionDialogLoading(true)
-
-    try {
-      const entities = await action.prepare(ids)
-      setPendingAction({ action, ids, entities })
-    } catch (e) {
-      setError(e instanceof Error ? e.message : messages.bulkMove.feedback.loadFailed)
-    } finally {
-      setActionDialogLoading(false)
-    }
-  }
-
-  async function confirmPendingAction() {
-    if (!canWrite || !pendingAction) return
-    const { action, ids } = pendingAction
-
-    setError(null)
-    setActionDialogLoading(true)
-
-    try {
-      await action.execute(ids)
-      setPendingAction(null)
-      setSelection({})
-      await loadReturns()
-    } catch (e) {
-      setError(e instanceof Error ? e.message : action.failedMessage)
-    } finally {
-      setActionDialogLoading(false)
-    }
   }
 
   return (
@@ -387,21 +343,6 @@ export default function ReturnsPanel({
               .replace(/\{plural\}/g, selectionCount === 1 ? '' : 's')}
           </span>
           <div style={{ display: 'flex', gap: 10, flexWrap: 'wrap', alignItems: 'center' }}>
-            {availableAction ? (
-              <button
-                type="button"
-                onClick={() => void handleActionClick(availableAction)}
-                disabled={actionDialogLoading}
-                style={{
-                  padding: '10px 18px',
-                  borderRadius: 6,
-                  cursor: actionDialogLoading ? 'not-allowed' : 'pointer',
-                  fontWeight: 600,
-                }}
-              >
-                {availableAction.label}
-              </button>
-            ) : null}
             <button
               type="button"
               onClick={() => setMoveDialogOpen(true)}
@@ -421,23 +362,12 @@ export default function ReturnsPanel({
         locationId={null}
         roomId={null}
         dialogStrings={messages.bulkMove.dialogs.moveSelection}
+        detachAction={detachAction}
         onClose={() => setMoveDialogOpen(false)}
         onMoved={async () => {
           setMoveDialogOpen(false)
           await loadReturns()
         }}
-      />
-
-      <DeleteConfirmation
-        open={pendingAction !== null}
-        title={pendingAction?.action.dialogTitle ?? ''}
-        messagePrefix={pendingAction?.action.dialogMessagePrefix ?? ''}
-        entities={pendingAction?.entities ?? []}
-        confirmLabel={pendingAction?.action.label ?? ''}
-        cancelLabel={messages.deleteConfirmation.actions.cancel}
-        loading={actionDialogLoading}
-        onCancel={() => setPendingAction(null)}
-        onConfirm={confirmPendingAction}
       />
     </div>
   )
