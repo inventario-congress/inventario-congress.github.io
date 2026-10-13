@@ -1,14 +1,16 @@
-import { useEffect, useState, useCallback } from 'react'
+import { Fragment, useEffect, useState, useCallback } from 'react'
 import type { Messages } from '../i18n'
 import { supabase } from '../supabaseClient'
 import DeleteConfirmation from './DeleteConfirmation'
+import RoomInventoryPanel from './RoomInventoryPanel'
 
+type LocationRoom = { id: number; name: string }
 
 type LocationRow = {
   id: number
   name: string
   address: string | null
-  rooms: { id: number; name: string }[]
+  rooms: LocationRoom[]
 }
 
 type LocationsPanelProps = {
@@ -23,6 +25,7 @@ export default function LocationsPanel({ messages, canWrite }: LocationsPanelPro
   const [loading, setLoading] = useState(false)
   const [locationEditorOpen, setLocationEditorOpen] = useState(false)
   const [editingLocationId, setEditingLocationId] = useState<number | null>(null)
+  const [selectedRoom, setSelectedRoom] = useState<LocationRoom | null>(null)
 
 
   const [deleteDialogOpen, setDeleteDialogOpen] = useState(false)
@@ -242,40 +245,76 @@ export default function LocationsPanel({ messages, canWrite }: LocationsPanelPro
             </thead>
             <tbody>
               {rows.map((row) => (
-                <tr key={row.id}>
-                  <td style={{ borderBottom: '1px solid var(--border)', padding: '8px 6px' }}>{row.name}</td>
-                  <td style={{ borderBottom: '1px solid var(--border)', padding: '8px 6px' }}>
-                    {row.rooms.length > 0 ? row.rooms.map((room) => (
-                      <div key={room.id}>{room.name}</div>
-                    )) : '-'}
-                  </td>
-                  {canWrite ? (
+                <Fragment key={row.id}>
+                  <tr>
+                    <td style={{ borderBottom: '1px solid var(--border)', padding: '8px 6px' }}>{row.name}</td>
                     <td style={{ borderBottom: '1px solid var(--border)', padding: '8px 6px' }}>
-                      <div style={{ display: 'flex', gap: 8, flexWrap: 'wrap' }}>
-                        <button
-                          type="button"
-                          onClick={() => startEdit(row)}
-                          disabled={loading}
-                          style={{ padding: '6px 10px', borderRadius: 6, cursor: 'pointer' }}
-                        >
-                          {messages.locations.actions.edit}
-                        </button>
-                        <button
-                          type="button"
-                          onClick={() => {
-                            setDeleteTarget({ id: row.id, name: row.name })
-                            setDeleteDialogOpen(true)
-                          }}
-                          disabled={loading}
-                          style={{ padding: '6px 10px', borderRadius: 6, cursor: 'pointer' }}
-                        >
-                          {messages.locations.actions.delete}
-                        </button>
-
-                      </div>
+                      {row.rooms.length > 0 ? row.rooms.map((room) => (
+                        <div key={room.id}>
+                          <button
+                            type="button"
+                            onClick={() => setSelectedRoom(room)}
+                            aria-pressed={selectedRoom?.id === room.id}
+                            style={{
+                              padding: '2px 4px',
+                              border: 0,
+                              borderRadius: 4,
+                              background: selectedRoom?.id === room.id ? 'color-mix(in srgb, var(--accent) 30%, transparent)' : 'transparent',
+                              color: 'inherit',
+                              cursor: 'pointer',
+                              textAlign: 'left',
+                            }}
+                          >
+                            {room.name}
+                          </button>
+                        </div>
+                      )) : ''}
                     </td>
+                    {canWrite ? (
+                      <td style={{ borderBottom: '1px solid var(--border)', padding: '8px 6px' }}>
+                        <div style={{ display: 'flex', gap: 8, flexWrap: 'wrap' }}>
+                          <button
+                            type="button"
+                            onClick={() => startEdit(row)}
+                            disabled={loading}
+                            style={{ padding: '6px 10px', borderRadius: 6, cursor: 'pointer' }}
+                          >
+                            {messages.locations.actions.edit}
+                          </button>
+                          <button
+                            type="button"
+                            onClick={() => {
+                              setDeleteTarget({ id: row.id, name: row.name })
+                              setDeleteDialogOpen(true)
+                            }}
+                            disabled={loading}
+                            style={{ padding: '6px 10px', borderRadius: 6, cursor: 'pointer' }}
+                          >
+                            {messages.locations.actions.delete}
+                          </button>
+                        </div>
+                      </td>
+                    ) : null}
+                  </tr>
+                  {selectedRoom && row.rooms.some((room) => room.id === selectedRoom.id) ? (
+                    <tr>
+                      <td
+                        colSpan={canWrite ? 3 : 2}
+                        style={{
+                          padding: '12px 8px',
+                          borderBottom: '1px solid var(--border)',
+                          background: 'color-mix(in srgb, var(--accent) 8%, transparent)',
+                        }}
+                      >
+                        <RoomInventoryPanel
+                          messages={messages}
+                          roomId={selectedRoom.id}
+                          roomName={selectedRoom.name}
+                        />
+                      </td>
+                    </tr>
                   ) : null}
-                </tr>
+                </Fragment>
               ))}
             </tbody>
           </table>

@@ -649,6 +649,18 @@ const en = {
       detachedButMoveFailed: 'The microphones were detached, but the move failed and the items were NOT moved. You can retry the move.',
     },
   },
+  roomInventory: {
+    title: 'Room Inventory',
+    loading: 'Loading room inventory...',
+    empty: 'No entities are currently moved to this room.',
+    table: {
+      type: 'Type',
+      id: 'ID',
+    },
+    feedback: {
+      loadFailed: 'Failed to load room inventory',
+    },
+  },
   returns: {
     systemMenuLabel: 'Returns',
     title: 'Returns',

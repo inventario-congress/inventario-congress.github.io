@@ -649,6 +649,18 @@ const es = {
       detachedButMoveFailed: 'Los micrófonos se separaron, pero el movimiento falló y los elementos NO se movieron. Puedes reintentar el movimiento.',
     },
   },
+  roomInventory: {
+    title: 'Inventario de sala',
+    loading: 'Cargando inventario de sala...',
+    empty: 'No hay elementos movidos actualmente a esta sala.',
+    table: {
+      type: 'Tipo',
+      id: 'ID',
+    },
+    feedback: {
+      loadFailed: 'No se pudo cargar el inventario de sala',
+    },
+  },
   returns: {
     systemMenuLabel: 'Devoluciones',
     title: 'Devoluciones',
