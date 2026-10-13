@@ -1,14 +1,16 @@
-import { useEffect, useState, useCallback } from 'react'
+import { Fragment, useEffect, useState, useCallback } from 'react'
 import type { Messages } from '../i18n'
 import { supabase } from '../supabaseClient'
 import DeleteConfirmation from './DeleteConfirmation'
+import RoomInventoryPanel from './RoomInventoryPanel'
 
+type LocationRoom = { id: number; name: string }
 
 type LocationRow = {
   id: number
   name: string
   address: string | null
-  roomNames: string
+  rooms: LocationRoom[]
 }
 
 type LocationsPanelProps = {
@@ -23,6 +25,7 @@ export default function LocationsPanel({ messages, canWrite }: LocationsPanelPro
   const [loading, setLoading] = useState(false)
   const [locationEditorOpen, setLocationEditorOpen] = useState(false)
   const [editingLocationId, setEditingLocationId] = useState<number | null>(null)
+  const [selectedRoom, setSelectedRoom] = useState<LocationRoom | null>(null)
 
 
   const [deleteDialogOpen, setDeleteDialogOpen] = useState(false)
@@ -39,25 +42,15 @@ export default function LocationsPanel({ messages, canWrite }: LocationsPanelPro
     setError(null)
 
     try {
-      // Use RPC get_locations_with_room_names() to fetch locations with their associated room names
-      const { data, error: loadError } = await supabase.rpc('get_locations_with_room_names')
+      const { data, error: loadError } = await supabase.rpc('get_locations_with_rooms')
 
       if (loadError) throw loadError
 
-      setRows(
-        (data ?? [])
-          // Avoid implicit any type assertions by explicitly typing the entries as objects with the expected properties.
-          .map((entry: { location_id: number; location_name: string; location_address: string | null; room_names: string | null }) => ({
-            id: entry.location_id,
-            name: entry.location_name,
-            address: entry.location_address ?? '',
-            roomNames: entry.room_names ?? '',
-          }))
-          .sort((
-            a: { id: number; name: string; address: string | null; roomNames: string },
-            b: { id: number; name: string; address: string | null; roomNames: string }) =>
-                a.name.localeCompare(b.name)),
-      )
+      if (!data) {
+        throw new Error('No data returned from get_locations_with_rooms()')
+      }
+
+      setRows(data as LocationRow[])
     } catch (e) {
       setError(e instanceof Error ? e.message : messages.locations.feedback.loadFailed)
     } finally {
@@ -252,46 +245,116 @@ export default function LocationsPanel({ messages, canWrite }: LocationsPanelPro
             </thead>
             <tbody>
               {rows.map((row) => (
-                <tr key={row.id}>
-                  <td style={{ borderBottom: '1px solid var(--border)', padding: '8px 6px' }}>{row.name}</td>
-                  <td style={{ borderBottom: '1px solid var(--border)', padding: '8px 6px' }}>
-                    {row.roomNames ? row.roomNames.split(',').map((name, index) => (
-                      <div key={index}>{name}</div>
-                    )) : '-'}
-                  </td>
-                  {canWrite ? (
+                <Fragment key={row.id}>
+                  <tr>
+                    <td style={{ borderBottom: '1px solid var(--border)', padding: '8px 6px' }}>{row.name}</td>
                     <td style={{ borderBottom: '1px solid var(--border)', padding: '8px 6px' }}>
-                      <div style={{ display: 'flex', gap: 8, flexWrap: 'wrap' }}>
-                        <button
-                          type="button"
-                          onClick={() => startEdit(row)}
-                          disabled={loading}
-                          style={{ padding: '6px 10px', borderRadius: 6, cursor: 'pointer' }}
-                        >
-                          {messages.locations.actions.edit}
-                        </button>
-                        <button
-                          type="button"
-                          onClick={() => {
-                            setDeleteTarget({ id: row.id, name: row.name })
-                            setDeleteDialogOpen(true)
-                          }}
-                          disabled={loading}
-                          style={{ padding: '6px 10px', borderRadius: 6, cursor: 'pointer' }}
-                        >
-                          {messages.locations.actions.delete}
-                        </button>
-
-                      </div>
+                      {row.rooms.length > 0 ? row.rooms.map((room) => (
+                        <div key={room.id}>
+                          <button
+                            type="button"
+                            onClick={() => setSelectedRoom(room)}
+                            aria-pressed={selectedRoom?.id === room.id}
+                            style={{
+                              padding: '2px 4px',
+                              border: 0,
+                              borderRadius: 4,
+                              background: selectedRoom?.id === room.id ? 'color-mix(in srgb, var(--accent) 30%, transparent)' : 'transparent',
+                              color: 'inherit',
+                              cursor: 'pointer',
+                              textAlign: 'left',
+                              font: 'inherit',
+                            }}
+                          >
+                            {room.name}
+                          </button>
+                        </div>
+                      )) : ''}
                     </td>
-                  ) : null}
-                </tr>
+                    {canWrite ? (
+                      <td style={{ borderBottom: '1px solid var(--border)', padding: '8px 6px' }}>
+                        <div style={{ display: 'flex', gap: 8, flexWrap: 'wrap' }}>
+                          <button
+                            type="button"
+                            onClick={() => startEdit(row)}
+                            disabled={loading}
+                            style={{ padding: '6px 10px', borderRadius: 6, cursor: 'pointer' }}
+                          >
+                            {messages.locations.actions.edit}
+                          </button>
+                          <button
+                            type="button"
+                            onClick={() => {
+                              setDeleteTarget({ id: row.id, name: row.name })
+                              setDeleteDialogOpen(true)
+                            }}
+                            disabled={loading}
+                            style={{ padding: '6px 10px', borderRadius: 6, cursor: 'pointer' }}
+                          >
+                            {messages.locations.actions.delete}
+                          </button>
+                        </div>
+                      </td>
+                    ) : null}
+                  </tr>
+                </Fragment>
               ))}
             </tbody>
           </table>
         </div>
       )}
       </div>
+      {selectedRoom ? (
+        <div
+          role="dialog"
+          aria-modal="true"
+          aria-label={`${messages.roomInventory.title}: ${selectedRoom.name}`}
+          onMouseDown={(event) => {
+            if (event.target === event.currentTarget) setSelectedRoom(null)
+          }}
+          style={{
+            position: 'fixed',
+            inset: 0,
+            zIndex: 50,
+            display: 'flex',
+            alignItems: 'center',
+            justifyContent: 'center',
+            padding: 16,
+            background: 'rgba(0,0,0,0.5)',
+          }}
+        >
+          <div
+            onMouseDown={(event) => event.stopPropagation()}
+            style={{
+              width: 'fit-content',
+              maxWidth: '95vw',
+              maxHeight: '90vh',
+              overflowY: 'auto',
+              border: '2px solid var(--accent-border)',
+              borderRadius: 12,
+              padding: 24,
+              background: 'var(--bg)',
+              color: 'var(--text)',
+              boxShadow: '0 12px 30px rgba(0,0,0,0.25)',
+            }}
+          >
+            <RoomInventoryPanel
+              messages={messages}
+              roomId={selectedRoom.id}
+              roomName={selectedRoom.name}
+            />
+            <div style={{ display: 'flex', justifyContent: 'flex-end', margin: '16px auto 0', maxWidth: '100%' }}>
+              <button
+                type="button"
+                onClick={() => setSelectedRoom(null)}
+                style={{ padding: '6px 10px', borderRadius: 6, cursor: 'pointer', font: 'inherit' }}
+              >
+                {messages.roomInventory.close}
+              </button>
+            </div>
+          </div>
+        </div>
+      ) : null}
     </div>
   )
 }
