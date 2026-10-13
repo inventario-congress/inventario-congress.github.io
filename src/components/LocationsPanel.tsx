@@ -263,6 +263,7 @@ export default function LocationsPanel({ messages, canWrite }: LocationsPanelPro
                               color: 'inherit',
                               cursor: 'pointer',
                               textAlign: 'left',
+                              font: 'inherit',
                             }}
                           >
                             {room.name}
@@ -296,24 +297,6 @@ export default function LocationsPanel({ messages, canWrite }: LocationsPanelPro
                       </td>
                     ) : null}
                   </tr>
-                  {selectedRoom && row.rooms.some((room) => room.id === selectedRoom.id) ? (
-                    <tr>
-                      <td
-                        colSpan={canWrite ? 3 : 2}
-                        style={{
-                          padding: '12px 8px',
-                          borderBottom: '1px solid var(--border)',
-                          background: 'color-mix(in srgb, var(--accent) 8%, transparent)',
-                        }}
-                      >
-                        <RoomInventoryPanel
-                          messages={messages}
-                          roomId={selectedRoom.id}
-                          roomName={selectedRoom.name}
-                        />
-                      </td>
-                    </tr>
-                  ) : null}
                 </Fragment>
               ))}
             </tbody>
@@ -321,6 +304,57 @@ export default function LocationsPanel({ messages, canWrite }: LocationsPanelPro
         </div>
       )}
       </div>
+      {selectedRoom ? (
+        <div
+          role="dialog"
+          aria-modal="true"
+          aria-label={`${messages.roomInventory.title}: ${selectedRoom.name}`}
+          onMouseDown={(event) => {
+            if (event.target === event.currentTarget) setSelectedRoom(null)
+          }}
+          style={{
+            position: 'fixed',
+            inset: 0,
+            zIndex: 50,
+            display: 'flex',
+            alignItems: 'center',
+            justifyContent: 'center',
+            padding: 16,
+            background: 'rgba(0,0,0,0.5)',
+          }}
+        >
+          <div
+            onMouseDown={(event) => event.stopPropagation()}
+            style={{
+              width: 'fit-content',
+              maxWidth: '95vw',
+              maxHeight: '90vh',
+              overflowY: 'auto',
+              border: '2px solid var(--accent-border)',
+              borderRadius: 12,
+              padding: 24,
+              background: 'var(--bg)',
+              color: 'var(--text)',
+              boxShadow: '0 12px 30px rgba(0,0,0,0.25)',
+            }}
+          >
+            <RoomInventoryPanel
+              messages={messages}
+              roomId={selectedRoom.id}
+              roomName={selectedRoom.name}
+            />
+            <div style={{ display: 'flex', justifyContent: 'flex-end', margin: '16px auto 0', maxWidth: '100%' }}>
+              <button
+                type="button"
+                onClick={() => setSelectedRoom(null)}
+                style={{ padding: '6px 10px', borderRadius: 6, cursor: 'pointer', font: 'inherit' }}
+              >
+                {messages.roomInventory.close}
+              </button>
+            </div>
+          </div>
+        </div>
+      ) : null}
     </div>
   )
 }

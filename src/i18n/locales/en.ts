@@ -651,6 +651,7 @@ const en = {
   },
   roomInventory: {
     title: 'Room Inventory',
+    close: 'Close',
     loading: 'Loading room inventory...',
     empty: 'No entities are currently moved to this room.',
     table: {

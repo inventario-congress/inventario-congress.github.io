@@ -81,19 +81,28 @@ export default function RoomInventoryPanel({ messages, roomId, roomName }: RoomI
   }
 
   return (
-    <div style={{ maxWidth: 820, margin: '0 auto', padding: 0, textAlign: 'left' }}>
-      <h2 style={{ margin: 0, marginBottom: 12 }}>
+    <div style={{ width: 'fit-content', maxWidth: '100%', margin: '0 auto', padding: 0, textAlign: 'left', fontSize: 'inherit' }}>
+      <h2
+        style={{
+          margin: '0 0 12px',
+          padding: '10px 12px',
+          borderRadius: 8,
+          background: 'var(--accent-border)',
+          fontSize: 20,
+          fontWeight: 'bold'
+        }}
+      >
         {messages.roomInventory.title}: {roomName}
       </h2>
 
       {error ? (
         <div style={{ color: 'crimson', marginBottom: 10 }}>
-          <strong>{messages.auth.feedback.error}</strong> {error}
+          <span>{messages.auth.feedback.error}</span> {error}
         </div>
       ) : null}
 
       {loading ? (
-        <div style={{ color: 'var(--muted)', padding: '10px 6px' }}>
+        <div style={{ color: 'var(--muted)', padding: '10px 6px', fontSize: 'inherit' }}>
           {messages.roomInventory.loading}
         </div>
       ) : rows.length === 0 ? (
@@ -104,7 +113,6 @@ export default function RoomInventoryPanel({ messages, roomId, roomName }: RoomI
             <thead>
               <tr>
                 {[
-                  messages.roomInventory.table.type,
                   messages.bases.table.identifier,
                   messages.bases.table.model,
                   messages.bases.table.latestReturnDate,
@@ -117,6 +125,8 @@ export default function RoomInventoryPanel({ messages, roomId, roomName }: RoomI
                       background: 'var(--table-header-bg)',
                       padding: '8px 6px',
                       whiteSpace: 'nowrap',
+                      fontSize: 'inherit',
+                      fontWeight: 'normal',
                     }}
                   >
                     {label}
@@ -128,12 +138,10 @@ export default function RoomInventoryPanel({ messages, roomId, roomName }: RoomI
               {rows.map((row) => (
                 <tr key={`${row.item_type}-${row.item_id}`}>
                   <td style={{ borderBottom: '1px solid var(--border)', padding: '8px 6px', verticalAlign: 'top' }}>
-                    {itemTypeLabels[row.item_type]}
-                  </td>
-                  <td style={{ borderBottom: '1px solid var(--border)', padding: '8px 6px', verticalAlign: 'top' }}>
                     {row.item_identifier}
                   </td>
                   <td style={{ borderBottom: '1px solid var(--border)', padding: '8px 6px' }}>
+                    <div style={{ fontSize: 12, color: 'var(--muted)' }}>{itemTypeLabels[row.item_type]}</div>
                     <div>{row.item_model}</div>
                     {row.item_type === 'base' ? (
                       <table
@@ -156,6 +164,8 @@ export default function RoomInventoryPanel({ messages, roomId, roomName }: RoomI
                                   background: 'var(--table-header-bg)',
                                   padding: '6px 4px',
                                   whiteSpace: 'nowrap',
+                                  fontSize: 'inherit',
+                                  fontWeight: 'normal',
                                 }}
                               >
                                 {label}

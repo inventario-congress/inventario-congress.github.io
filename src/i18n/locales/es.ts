@@ -651,6 +651,7 @@ const es = {
   },
   roomInventory: {
     title: 'Inventario de sala',
+    close: 'Cerrar',
     loading: 'Cargando inventario de sala...',
     empty: 'No hay elementos movidos actualmente a esta sala.',
     table: {
