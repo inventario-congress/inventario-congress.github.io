@@ -8,7 +8,7 @@ type LocationRow = {
   id: number
   name: string
   address: string | null
-  roomNames: string
+  rooms: { id: number; name: string }[]
 }
 
 type LocationsPanelProps = {
@@ -39,25 +39,15 @@ export default function LocationsPanel({ messages, canWrite }: LocationsPanelPro
     setError(null)
 
     try {
-      // Use RPC get_locations_with_room_names() to fetch locations with their associated room names
-      const { data, error: loadError } = await supabase.rpc('get_locations_with_room_names')
+      const { data, error: loadError } = await supabase.rpc('get_locations_with_rooms')
 
       if (loadError) throw loadError
 
-      setRows(
-        (data ?? [])
-          // Avoid implicit any type assertions by explicitly typing the entries as objects with the expected properties.
-          .map((entry: { location_id: number; location_name: string; location_address: string | null; room_names: string | null }) => ({
-            id: entry.location_id,
-            name: entry.location_name,
-            address: entry.location_address ?? '',
-            roomNames: entry.room_names ?? '',
-          }))
-          .sort((
-            a: { id: number; name: string; address: string | null; roomNames: string },
-            b: { id: number; name: string; address: string | null; roomNames: string }) =>
-                a.name.localeCompare(b.name)),
-      )
+      if (!data) {
+        throw new Error('No data returned from get_locations_with_rooms()')
+      }
+
+      setRows(data as LocationRow[])
     } catch (e) {
       setError(e instanceof Error ? e.message : messages.locations.feedback.loadFailed)
     } finally {
@@ -255,8 +245,8 @@ export default function LocationsPanel({ messages, canWrite }: LocationsPanelPro
                 <tr key={row.id}>
                   <td style={{ borderBottom: '1px solid var(--border)', padding: '8px 6px' }}>{row.name}</td>
                   <td style={{ borderBottom: '1px solid var(--border)', padding: '8px 6px' }}>
-                    {row.roomNames ? row.roomNames.split(',').map((name, index) => (
-                      <div key={index}>{name}</div>
+                    {row.rooms.length > 0 ? row.rooms.map((room) => (
+                      <div key={room.id}>{room.name}</div>
                     )) : '-'}
                   </td>
                   {canWrite ? (
