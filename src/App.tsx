@@ -13,6 +13,7 @@ import esMessages from './i18n/locales/es'
 const AuthPanel = lazy(() => import('./components/AuthPanel'))
 const Menu = lazy(() => import('./components/Menu'))
 const MicrophonesPanel = lazy(() => import('./components/MicrophonesPanel'))
+const CountablePanel = lazy(() => import('./components/CountablePanel'))
 const BasePanel = lazy(() => import('./components/BasePanel'))
 const LocationsPanel = lazy(() => import('./components/LocationsPanel'))
 // lazy() erases the component's generic parameter; restore it.
@@ -75,7 +76,7 @@ function App() {
 
     try {
       const raw = window.localStorage.getItem(ACTIVE_PANEL_STORAGE_KEY)
-      if (raw === 'microphones' || raw === 'bases' || raw === 'locations' || raw === 'combos' || raw === 'handhelds' || raw === 'consoles' || raw === 'cases' || raw === 'profile' || raw === 'bulkmoves' || raw === 'history' || raw === 'returns') {
+      if (raw === 'microphones' || raw === 'bases' || raw === 'countables' || raw === 'locations' || raw === 'combos' || raw === 'handhelds' || raw === 'consoles' || raw === 'cases' || raw === 'profile' || raw === 'bulkmoves' || raw === 'history' || raw === 'returns') {
         return raw
       }
     } catch {
@@ -339,6 +340,10 @@ function App() {
   function renderPanel() {
     if (activePanel === 'microphones') {
       return <MicrophonesPanel messages={messages} canWrite={isWriter} />
+    }
+
+    if (activePanel === 'countables') {
+      return <CountablePanel messages={messages} canWrite={isWriter} />
     }
 
     if (activePanel === 'bases') {

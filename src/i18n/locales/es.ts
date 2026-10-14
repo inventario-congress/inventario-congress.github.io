@@ -139,6 +139,22 @@ const es = {
     },
   },
   countables: {
+    panel: {
+      title: 'Insumos',
+      actions: {
+        create: 'Agregar insumo',
+      },
+      table: {
+        category: 'Categoría',
+        name: 'Nombre',
+        quantity: 'Cantidad',
+        empty: 'Aún no hay categorías.',
+        emptyCountables: 'No hay insumos en esta categoría.',
+      },
+      feedback: {
+        loadFailed: 'No se pudieron cargar los insumos',
+      },
+    },
     dialogs: {
       editor: {
         titleCreate: 'Crear insumo',
@@ -191,10 +207,7 @@ const es = {
     inventory: {
       title: 'Inventario',
       microphones: 'Micrófonos',
-      countables: {
-        title: 'Insumos',
-        add: 'Agregar insumo...',
-      },
+      countables: 'Insumos',
       bases: 'Bases',
       locations: 'Venues',
       combos: 'Combos',

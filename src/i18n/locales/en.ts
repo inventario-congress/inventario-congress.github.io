@@ -139,6 +139,22 @@ const en = {
     },
   },
   countables: {
+    panel: {
+      title: 'Countables',
+      actions: {
+        create: 'Add countable',
+      },
+      table: {
+        category: 'Category',
+        name: 'Name',
+        quantity: 'Quantity',
+        empty: 'No categories yet.',
+        emptyCountables: 'No countables in this category.',
+      },
+      feedback: {
+        loadFailed: 'Failed to load countables',
+      },
+    },
     dialogs: {
       editor: {
         titleCreate: 'Create countable',
@@ -191,10 +207,7 @@ const en = {
     inventory: {
       title: 'Inventory',
       microphones: 'Microphones',
-      countables: {
-        title: 'Countables',
-        add: 'Add countable...',
-      },
+      countables: 'Countables',
       bases: 'Bases',
       locations: 'Locations',
       combos: 'Combos',
