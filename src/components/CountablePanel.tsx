@@ -51,13 +51,7 @@ export default function CountablePanel({ messages, canWrite, categoryId, categor
 
       if (countablesError) throw countablesError
 
-      setCountables(
-        (data as CountableRow[]).map((c) => ({
-          id: c.id as number,
-          name: c.name as string,
-          quantity: c.quantity as number,
-        })),
-      )
+      setCountables(data as CountableRow[])
     } catch (e) {
       setError(e instanceof Error ? e.message : panelStrings.feedback.loadFailed)
     } finally {
