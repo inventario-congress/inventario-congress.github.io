@@ -145,11 +145,9 @@ const en = {
         create: 'Add countable',
       },
       table: {
-        category: 'Category',
         name: 'Name',
         quantity: 'Quantity',
-        empty: 'No categories yet.',
-        emptyCountables: 'No countables in this category.',
+        empty: 'No countables in this category.',
       },
       feedback: {
         loadFailed: 'Failed to load countables',
@@ -207,7 +205,6 @@ const en = {
     inventory: {
       title: 'Inventory',
       microphones: 'Microphones',
-      countables: 'Countables',
       bases: 'Bases',
       locations: 'Locations',
       combos: 'Combos',

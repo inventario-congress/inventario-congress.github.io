@@ -7,7 +7,10 @@ type MenuProps = {
   messages: Messages
   activePanel: AppPanel
   canWrite: boolean
+  countableCategories: Array<{ id: number; name: string }>
+  activeCategoryId: number | null
   onSelectPanel: (panel: AppPanel) => void
+  onSelectCategory: (categoryId: number) => void
   onSignOut: () => void
 }
 
@@ -31,7 +34,7 @@ function MenuButton({
   )
 }
 
-export default function Menu({ messages, activePanel, canWrite, onSelectPanel, onSignOut }: MenuProps) {
+export default function Menu({ messages, activePanel, canWrite, countableCategories, activeCategoryId, onSelectPanel, onSelectCategory, onSignOut }: MenuProps) {
   return (
     <nav aria-label={messages.menu.ariaLabel} className="menu-panel">
       <section className="menu-section">
@@ -90,11 +93,14 @@ export default function Menu({ messages, activePanel, canWrite, onSelectPanel, o
             selected={activePanel === 'microphones'}
             onClick={() => onSelectPanel('microphones')}
           />
-          <MenuButton
-            label={messages.menu.inventory.countables}
-            selected={activePanel === 'countables'}
-            onClick={() => onSelectPanel('countables')}
-          />
+          {countableCategories.map((category) => (
+            <MenuButton
+              key={category.id}
+              label={category.name}
+              selected={activePanel === 'countables' && activeCategoryId === category.id}
+              onClick={() => onSelectCategory(category.id)}
+            />
+          ))}
           <MenuButton
             label={messages.menu.inventory.locations}
             selected={activePanel === 'locations'}

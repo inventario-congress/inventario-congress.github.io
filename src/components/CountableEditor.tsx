@@ -16,6 +16,7 @@ type CountableEditorProps = {
   onClose: () => void
   onSaved?: () => void
   onCategoriesChanged?: () => void
+  initialCategoryId?: number | null
 }
 
 // Ugly hard-coding of the specific room id in which countables are spawned when created
@@ -29,7 +30,7 @@ const fieldStyle = {
   border: '1px solid var(--border)',
 } as const
 
-export default function CountableEditor({ messages, canWrite, isOpen, onClose, onSaved, onCategoriesChanged, countableId }: CountableEditorProps) {
+export default function CountableEditor({ messages, canWrite, isOpen, onClose, onSaved, onCategoriesChanged, countableId, initialCategoryId }: CountableEditorProps) {
   const isEditMode = typeof countableId === 'number' && countableId > 0
 
   const editorStrings = messages.countables.dialogs.editor
@@ -189,9 +190,10 @@ export default function CountableEditor({ messages, canWrite, isOpen, onClose, o
     void (async () => {
       // Rooms are only needed to choose where to add/deduct stock when editing an existing countable.
       await Promise.all([loadCategories(), isEditMode ? loadRooms() : Promise.resolve()])
+      if (!isEditMode && initialCategoryId) setCategoryId(initialCategoryId)
       await loadForEdit()
     })()
-  }, [canWrite, isEditMode, isOpen, loadCategories, loadForEdit, loadRooms])
+  }, [canWrite, initialCategoryId, isEditMode, isOpen, loadCategories, loadForEdit, loadRooms])
 
   useEffect(() => {
     if (!isOpen) return

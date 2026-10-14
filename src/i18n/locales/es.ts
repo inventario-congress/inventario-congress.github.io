@@ -145,11 +145,9 @@ const es = {
         create: 'Agregar insumo',
       },
       table: {
-        category: 'Categoría',
         name: 'Nombre',
         quantity: 'Cantidad',
-        empty: 'Aún no hay categorías.',
-        emptyCountables: 'No hay insumos en esta categoría.',
+        empty: 'No hay insumos en esta categoría.',
       },
       feedback: {
         loadFailed: 'No se pudieron cargar los insumos',
@@ -207,7 +205,6 @@ const es = {
     inventory: {
       title: 'Inventario',
       microphones: 'Micrófonos',
-      countables: 'Insumos',
       bases: 'Bases',
       locations: 'Venues',
       combos: 'Combos',
