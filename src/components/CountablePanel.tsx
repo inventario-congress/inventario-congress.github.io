@@ -14,6 +14,7 @@ type CountablePanelProps = {
   messages: Messages
   canWrite: boolean
   categoryId: number
+  categoryName: string
   onCategoriesChanged?: () => void
 }
 
@@ -27,13 +28,12 @@ const headerCellStyle = {
 
 const cellStyle = { borderBottom: '1px solid var(--border)', padding: '8px 6px' } as const
 
-export default function CountablePanel({ messages, canWrite, categoryId, onCategoriesChanged }: CountablePanelProps) {
+export default function CountablePanel({ messages, canWrite, categoryId, categoryName, onCategoriesChanged }: CountablePanelProps) {
   const panelStrings = messages.countables.panel
 
   const [editorOpen, setEditorOpen] = useState(false)
   const [loading, setLoading] = useState(false)
   const [error, setError] = useState<string | null>(null)
-  const [categoryName, setCategoryName] = useState('')
   const [countables, setCountables] = useState<CountableRow[]>([])
 
   const load = useCallback(async () => {
@@ -43,21 +43,16 @@ export default function CountablePanel({ messages, canWrite, categoryId, onCateg
     setError(null)
 
     try {
-      const [categoryResult, countablesResult] = await Promise.all([
-        supabase.from('countable_category').select('name').eq('id', categoryId).maybeSingle(),
-        supabase
-          .from('countable')
-          .select('id, name, quantity')
-          .eq('category', categoryId)
-          .order('name', { ascending: true }),
-      ])
+      const { data, error: countablesError } = await supabase
+        .from('countable')
+        .select('id, name, quantity')
+        .eq('category', categoryId)
+        .order('name', { ascending: true })
 
-      if (categoryResult.error) throw categoryResult.error
-      if (countablesResult.error) throw countablesResult.error
+      if (countablesError) throw countablesError
 
-      setCategoryName((categoryResult.data?.name as string | undefined) ?? '')
       setCountables(
-        (countablesResult.data ?? []).map((c) => ({
+        (data as CountableRow[]).map((c) => ({
           id: c.id as number,
           name: c.name as string,
           quantity: c.quantity as number,
