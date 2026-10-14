@@ -138,6 +138,65 @@ const en = {
       authRequired: 'Authentication is required',
     },
   },
+  countables: {
+    panel: {
+      title: 'Countables',
+      actions: {
+        create: 'Add countable',
+      },
+      table: {
+        name: 'Name',
+        quantity: 'Quantity',
+        empty: 'No countables in this category.',
+      },
+      feedback: {
+        loadFailed: 'Failed to load countables',
+      },
+    },
+    dialogs: {
+      editor: {
+        titleCreate: 'Create countable',
+        titleEdit: 'Update countable',
+        description: 'Configure countable name, category and quantity.',
+        fields: {
+          name: 'Name',
+          category: 'Category',
+          quantity: 'Quantity',
+          room: 'Room',
+          roomForChange: 'Room to add to or deduct from',
+        },
+        actions: {
+          cancel: 'Cancel',
+          save: 'Save countable',
+        },
+        feedback: {
+          loadFailed: 'Failed to load countable',
+          loadingCategories: 'Loading categories...',
+          noCategories: 'No categories available',
+          addNewCategory: 'Add new category',
+          loadingRooms: 'Loading rooms...',
+          noRooms: 'No rooms available',
+          submitting: 'Submitting...',
+          createFailed: 'Failed to create countable',
+          updateFailed: 'Failed to update countable',
+          addNewCategoryCreateFailed: 'Failed to create category',
+        },
+        addNewCategoryDialog: {
+          title: 'Add new category',
+          fields: {
+            categoryName: 'Category name',
+          },
+          actions: {
+            cancel: 'Cancel',
+            save: 'Add category',
+          },
+          feedback: {
+            submitting: 'Adding...',
+          },
+        },
+      },
+    },
+  },
   menu: {
     ariaLabel: 'Application menu',
     toggle: 'Menu',

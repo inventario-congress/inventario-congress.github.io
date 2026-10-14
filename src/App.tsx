@@ -13,6 +13,7 @@ import esMessages from './i18n/locales/es'
 const AuthPanel = lazy(() => import('./components/AuthPanel'))
 const Menu = lazy(() => import('./components/Menu'))
 const MicrophonesPanel = lazy(() => import('./components/MicrophonesPanel'))
+const CountablePanel = lazy(() => import('./components/CountablePanel'))
 const BasePanel = lazy(() => import('./components/BasePanel'))
 const LocationsPanel = lazy(() => import('./components/LocationsPanel'))
 // lazy() erases the component's generic parameter; restore it.
@@ -69,13 +70,26 @@ function App() {
   const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false)
 
   const ACTIVE_PANEL_STORAGE_KEY = 'inventario_congress:activePanel'
+  const ACTIVE_CATEGORY_STORAGE_KEY = 'inventario_congress:activeCountableCategory'
+
+  function getInitialCategoryId(): number | null {
+    if (typeof window === 'undefined') return null
+
+    try {
+      const parsed = Number.parseInt(window.localStorage.getItem(ACTIVE_CATEGORY_STORAGE_KEY) ?? '', 10)
+      return Number.isNaN(parsed) ? null : parsed
+    } catch {
+      return null
+    }
+  }
 
   function getInitialActivePanel(): AppPanel {
     if (typeof window === 'undefined') return 'microphones'
 
     try {
       const raw = window.localStorage.getItem(ACTIVE_PANEL_STORAGE_KEY)
-      if (raw === 'microphones' || raw === 'bases' || raw === 'locations' || raw === 'combos' || raw === 'handhelds' || raw === 'consoles' || raw === 'cases' || raw === 'profile' || raw === 'bulkmoves' || raw === 'history' || raw === 'returns') {
+      if (raw === 'countables' && getInitialCategoryId() === null) return 'microphones'
+      if (raw === 'microphones' || raw === 'bases' || raw === 'countables' || raw === 'locations' || raw === 'combos' || raw === 'handhelds' || raw === 'consoles' || raw === 'cases' || raw === 'profile' || raw === 'bulkmoves' || raw === 'history' || raw === 'returns') {
         return raw
       }
     } catch {
@@ -86,6 +100,8 @@ function App() {
   }
 
   const [activePanel, setActivePanel] = useState<AppPanel>(getInitialActivePanel)
+  const [countableCategories, setCountableCategories] = useState<Array<{ id: number; name: string }>>([])
+  const [activeCategoryId, setActiveCategoryId] = useState<number | null>(getInitialCategoryId)
 
 
   const [sessionEmail, setSessionEmail] = useState<string | null>(null)
@@ -270,10 +286,38 @@ function App() {
   useEffect(() => {
     try {
       window.localStorage.setItem(ACTIVE_PANEL_STORAGE_KEY, activePanel)
+      if (activeCategoryId === null) window.localStorage.removeItem(ACTIVE_CATEGORY_STORAGE_KEY)
+      else window.localStorage.setItem(ACTIVE_CATEGORY_STORAGE_KEY, String(activeCategoryId))
     } catch {
       // ignore
     }
-  }, [activePanel])
+  }, [activeCategoryId, activePanel])
+
+  async function loadCountableCategories() {
+    if (!supabase) return
+
+    const { data, error } = await supabase
+      .from('countable_category')
+      .select('id, name')
+      .order('name', { ascending: true })
+
+    if (error) return
+    setCountableCategories((data ?? []).map((c) => ({ id: c.id as number, name: c.name as string })))
+  }
+
+  useEffect(() => {
+    if (!isAuthenticated) return
+
+    void (async () => {
+      await loadCountableCategories()
+    })()
+  }, [isAuthenticated])
+
+  function handleSelectCategory(categoryId: number) {
+    setActiveCategoryId(categoryId)
+    setActivePanel('countables')
+    setIsMobileMenuOpen(false)
+  }
 
   function handleSelectPanel(panel: AppPanel) {
     setActivePanel(panel)
@@ -339,6 +383,20 @@ function App() {
   function renderPanel() {
     if (activePanel === 'microphones') {
       return <MicrophonesPanel messages={messages} canWrite={isWriter} />
+    }
+
+    if (activePanel === 'countables') {
+      if (activeCategoryId === null) return null
+
+      return (
+        <CountablePanel
+          key={activeCategoryId}
+          messages={messages}
+          canWrite={isWriter}
+          categoryId={activeCategoryId}
+          onCategoriesChanged={() => void loadCountableCategories()}
+        />
+      )
     }
 
     if (activePanel === 'bases') {
@@ -454,7 +512,10 @@ function App() {
                 messages={messages}
                 canWrite={isWriter}
                 activePanel={activePanel}
+                countableCategories={countableCategories}
+                activeCategoryId={activeCategoryId}
                 onSelectPanel={handleSelectPanel}
+                onSelectCategory={handleSelectCategory}
                 onSignOut={handleSignOut}
               />
             </Suspense>
