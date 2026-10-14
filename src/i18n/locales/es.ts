@@ -138,6 +138,51 @@ const es = {
       authRequired: 'Se requiere autenticación',
     },
   },
+  countables: {
+    dialogs: {
+      editor: {
+        titleCreate: 'Crear insumo',
+        titleEdit: 'Actualizar insumo',
+        description: 'Configura el nombre, la categoría y la cantidad del insumo.',
+        fields: {
+          name: 'Nombre',
+          category: 'Categoría',
+          quantity: 'Cantidad',
+          room: 'Sala',
+          roomForChange: 'Sala a la que sumar o de la que restar',
+        },
+        actions: {
+          cancel: 'Cancelar',
+          save: 'Guardar insumo',
+        },
+        feedback: {
+          loadFailed: 'No se pudo cargar el insumo',
+          loadingCategories: 'Cargando categorías...',
+          noCategories: 'No hay categorías disponibles',
+          addNewCategory: 'Agregar nueva categoría...',
+          loadingRooms: 'Cargando salas...',
+          noRooms: 'No hay salas disponibles',
+          submitting: 'Enviando...',
+          createFailed: 'No se pudo crear el insumo',
+          updateFailed: 'No se pudo actualizar el insumo',
+          addNewCategoryCreateFailed: 'No se pudo crear la categoría',
+        },
+        addNewCategoryDialog: {
+          title: 'Agregar nueva categoría',
+          fields: {
+            categoryName: 'Nombre de la categoría',
+          },
+          actions: {
+            cancel: 'Cancelar',
+            save: 'Agregar categoría',
+          },
+          feedback: {
+            submitting: 'Agregando...',
+          },
+        },
+      },
+    },
+  },
   menu: {
     ariaLabel: 'Menú de la aplicación',
     toggle: 'Menú',
@@ -146,6 +191,10 @@ const es = {
     inventory: {
       title: 'Inventario',
       microphones: 'Micrófonos',
+      countables: {
+        title: 'Insumos',
+        add: 'Agregar insumo...',
+      },
       bases: 'Bases',
       locations: 'Venues',
       combos: 'Combos',

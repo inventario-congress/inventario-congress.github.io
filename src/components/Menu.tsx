@@ -1,4 +1,9 @@
+import { useCallback, useEffect, useState } from 'react'
+import { createPortal } from 'react-dom'
+
 import type { Messages } from '../i18n'
+import { supabase } from '../supabaseClient'
+import CountableEditor from './CountableEditor'
 
 export type AppPanel = 'microphones' | 'bases' | 'locations' | 'combos' | 'handhelds' | 'consoles' | 'cases' | 'profile' | 'bulkmoves' | 'history' | 'returns'
 
@@ -32,6 +37,30 @@ function MenuButton({
 }
 
 export default function Menu({ messages, activePanel, canWrite, onSelectPanel, onSignOut }: MenuProps) {
+  const [countablesExpanded, setCountablesExpanded] = useState(false)
+  const [categories, setCategories] = useState<Array<{ id: number; name: string }>>([])
+  const [editorOpen, setEditorOpen] = useState(false)
+
+  const loadCategories = useCallback(async () => {
+    if (!supabase) return
+
+    const { data, error } = await supabase
+      .from('countable_category')
+      .select('id, name')
+      .order('name', { ascending: true })
+
+    if (error) return
+    setCategories((data ?? []).map((c) => ({ id: c.id as number, name: c.name as string })))
+  }, [])
+
+  useEffect(() => {
+    void (async () => {
+      await loadCategories()
+    })()
+  }, [loadCategories])
+
+  const countablesStrings = messages.menu.inventory.countables
+
   return (
     <nav aria-label={messages.menu.ariaLabel} className="menu-panel">
       <section className="menu-section">
@@ -90,6 +119,30 @@ export default function Menu({ messages, activePanel, canWrite, onSelectPanel, o
             selected={activePanel === 'microphones'}
             onClick={() => onSelectPanel('microphones')}
           />
+          <button
+            type="button"
+            className="menu-button"
+            aria-expanded={countablesExpanded}
+            aria-controls="menu-countables-list"
+            onClick={() => setCountablesExpanded((v) => !v)}
+          >
+            {countablesExpanded ? '▾' : '▸'} {countablesStrings.title}
+          </button>
+          {countablesExpanded ? (
+            <div id="menu-countables-list" className="menu-list" style={{ paddingLeft: 12 }}>
+              {canWrite ? (
+                <button type="button" className="menu-button" onClick={() => setEditorOpen(true)}>
+                  {countablesStrings.add}
+                </button>
+              ) : null}
+              {categories.map((c) => (
+                // Category selection is not wired to a panel yet.
+                <button key={c.id} type="button" className="menu-button">
+                  {c.name}
+                </button>
+              ))}
+            </div>
+          ) : null}
           <MenuButton
             label={messages.menu.inventory.locations}
             selected={activePanel === 'locations'}
@@ -115,6 +168,22 @@ export default function Menu({ messages, activePanel, canWrite, onSelectPanel, o
           </button>
         </div>
       </section>
+      {/* Portaled because the mobile sidebar's transform would otherwise contain fixed positioning. */}
+      {editorOpen
+        ? createPortal(
+            <CountableEditor
+              messages={messages}
+              canWrite={canWrite}
+              isOpen={editorOpen}
+              onClose={() => {
+                setEditorOpen(false)
+                void loadCategories()
+              }}
+              onCategoriesChanged={() => void loadCategories()}
+            />,
+            document.body,
+          )
+        : null}
     </nav>
   )
 }
