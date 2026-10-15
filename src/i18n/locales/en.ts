@@ -148,6 +148,8 @@ const en = {
         name: 'Name',
         quantity: 'Quantity',
         empty: 'No countables in this category.',
+        subTablePlaceholder: 'No allocations for this countable.',
+        locationRoom: 'Venue / Room',
       },
       feedback: {
         loadFailed: 'Failed to load countables',

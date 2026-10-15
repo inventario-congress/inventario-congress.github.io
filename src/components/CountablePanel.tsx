@@ -10,6 +10,11 @@ type CountableRow = {
   quantity: number
 }
 
+type AllocationRow = {
+  location_room: string
+  quantity: number
+}
+
 type CountablePanelProps = {
   messages: Messages
   canWrite: boolean
@@ -36,6 +41,7 @@ export default function CountablePanel({ messages, canWrite, categoryId, categor
   const [error, setError] = useState<string | null>(null)
   const [countables, setCountables] = useState<CountableRow[]>([])
   const [expandedRows, setExpandedRows] = useState<Set<number>>(new Set())
+  const [allocations, setAllocations] = useState<Record<number, AllocationRow[]>>({})
 
   const load = useCallback(async () => {
     if (!supabase) return
@@ -60,6 +66,27 @@ export default function CountablePanel({ messages, canWrite, categoryId, categor
     }
   }, [categoryId, panelStrings.feedback.loadFailed])
 
+  const loadAllocations = useCallback(async (countableId: number) => {
+    if (!supabase) return
+
+    try {
+      const { data, error: allocationsError } = await supabase
+        .rpc('get_countable_allocations', { countable_id: countableId })
+
+      if (allocationsError) throw allocationsError
+
+      setAllocations(prev => {
+        const newAllocations = {
+          ...prev,
+          [countableId]: data as AllocationRow[]
+        }
+        return newAllocations
+      })
+    } catch (e) {
+      console.error('Failed to load allocations:', e)
+    }
+  }, [])
+
   const toggleRowExpansion = useCallback((id: number) => {
     setExpandedRows(prev => {
       const newSet = new Set(prev)
@@ -67,10 +94,12 @@ export default function CountablePanel({ messages, canWrite, categoryId, categor
         newSet.delete(id)
       } else {
         newSet.add(id)
+        // Load allocations when expanding
+        loadAllocations(id)
       }
       return newSet
     })
-  }, [])
+  }, [loadAllocations])
 
   useEffect(() => {
     void (async () => {
@@ -170,16 +199,27 @@ export default function CountablePanel({ messages, canWrite, categoryId, categor
                             <table style={{ width: '100%', borderCollapse: 'collapse' }}>
                               <thead>
                                 <tr>
-                                  <th style={headerCellStyle}>Room</th>
-                                  <th style={{ ...headerCellStyle, textAlign: 'right' }}>Quantity</th>
+                                  <th style={headerCellStyle}>{panelStrings.table.locationRoom}</th>
+                                  <th style={{ ...headerCellStyle, textAlign: 'right' }}>{panelStrings.table.quantity}</th>
                                 </tr>
                               </thead>
                               <tbody>
-                                <tr>
-                                  <td style={cellStyle} colSpan={2} align="center">
-                                    {panelStrings.table.subTablePlaceholder}
-                                  </td>
-                                </tr>
+                                {allocations[item.id] && allocations[item.id].length > 0 ? (
+                                  allocations[item.id].map((allocation, index) => (
+                                    <tr key={index}>
+                                      <td style={cellStyle}>
+                                        {allocation.location_room}
+                                      </td>
+                                      <td style={{ ...cellStyle, textAlign: 'right' }}>{allocation.quantity}</td>
+                                    </tr>
+                                  ))
+                                ) : (
+                                  <tr>
+                                    <td style={cellStyle} colSpan={2}>
+                                      {panelStrings.table.subTablePlaceholder}
+                                    </td>
+                                  </tr>
+                                )}
                               </tbody>
                             </table>
                           </div>

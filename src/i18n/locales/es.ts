@@ -148,6 +148,8 @@ const es = {
         name: 'Nombre',
         quantity: 'Cantidad',
         empty: 'No hay insumos en esta categoría.',
+        subTablePlaceholder: 'No hay asignaciones para este insumo.',
+        locationRoom: 'Venue y Sala',
       },
       feedback: {
         loadFailed: 'No se pudieron cargar los insumos',
