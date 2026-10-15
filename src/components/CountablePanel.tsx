@@ -129,6 +129,7 @@ export default function CountablePanel({ messages, canWrite, categoryId, categor
 
       {movingCountableId !== null ? (
         <CountableMover
+          key={movingCountableId}
           messages={messages}
           canWrite={canWrite}
           countableId={movingCountableId}

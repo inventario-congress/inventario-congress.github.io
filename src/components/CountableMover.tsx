@@ -31,7 +31,7 @@ type CountableMoverProps = {
 export default function CountableMover({ messages, canWrite, countableId, countableName, onClose, onMoved }: CountableMoverProps) {
   const strings = messages.countables.dialogs.mover
   const [loading, setLoading] = useState(false)
-  const [initialLoading, setInitialLoading] = useState(true)
+  const [initialLoading, setInitialLoading] = useState(() => Boolean(supabase && canWrite))
   const [roomsLoading, setRoomsLoading] = useState(false)
   const [error, setError] = useState<string | null>(null)
   const [sourceRooms, setSourceRooms] = useState<SourceRoomChoice[]>([])
@@ -44,14 +44,9 @@ export default function CountableMover({ messages, canWrite, countableId, counta
   const [returnDate, setReturnDate] = useState('')
 
   useEffect(() => {
-    if (!supabase || !canWrite) {
-      setInitialLoading(false)
-      return
-    }
+    if (!supabase || !canWrite) return
 
     let active = true
-    setInitialLoading(true)
-    setError(null)
 
     void (async () => {
       try {
@@ -153,31 +148,26 @@ export default function CountableMover({ messages, canWrite, countableId, counta
   }, [canWrite, countableId, strings.feedback.loadFailed])
 
   useEffect(() => {
-    if (!supabase || !canWrite || selectedLocationId === '') {
-      setTargetRooms([])
-      setRoomsLoading(false)
-      return
-    }
+    if (!supabase || !canWrite || selectedLocationId === '') return
 
     let active = true
-    setRoomsLoading(true)
-    setError(null)
 
-    void supabase
-      .rpc('get_rooms_for_location', { p_location_id: selectedLocationId })
-      .then(({ data, error: roomsError }) => {
+    void (async () => {
+      try {
+        const { data, error: roomsError } = await supabase.rpc('get_rooms_for_location', {
+          p_location_id: selectedLocationId,
+        })
         if (!active) return
         if (roomsError) throw roomsError
         setTargetRooms(((data ?? []) as RoomChoice[]).sort((a, b) => a.room_name.localeCompare(b.room_name)))
-      })
-      .catch((e: unknown) => {
+      } catch (e) {
         if (!active) return
         setError(e instanceof Error ? e.message : strings.feedback.loadFailed)
         setTargetRooms([])
-      })
-      .finally(() => {
+      } finally {
         if (active) setRoomsLoading(false)
-      })
+      }
+    })()
 
     return () => {
       active = false
@@ -322,6 +312,8 @@ export default function CountableMover({ messages, canWrite, countableId, counta
               setSelectedLocationId(value === '' ? '' : Number.parseInt(value, 10))
               setSelectedToRoomId('')
               setTargetRooms([])
+              setRoomsLoading(value !== '')
+              setError(null)
             }}
             disabled={loading || initialLoading || locations.length === 0}
             style={{ width: '100%', boxSizing: 'border-box', padding: 10, borderRadius: 6, border: '1px solid var(--border)' }}
