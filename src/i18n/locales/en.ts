@@ -143,17 +143,47 @@ const en = {
       title: 'Countables',
       actions: {
         create: 'Add countable',
+        move: 'Move',
       },
       table: {
         name: 'Name',
         quantity: 'Quantity',
         empty: 'No countables in this category.',
+        subTablePlaceholder: 'No allocations for this countable.',
+        locationRoom: 'Venue / Room',
       },
       feedback: {
         loadFailed: 'Failed to load countables',
       },
     },
     dialogs: {
+      mover: {
+        title: 'Move countable',
+        fields: {
+          fromRoom: 'From room',
+          location: 'To location',
+          toRoom: 'To room',
+          quantity: 'Quantity',
+          returnDate: 'Return date',
+        },
+        placeholders: {
+          fromRoom: 'Select a room...',
+          location: 'Select a location...',
+          toRoom: 'Select a room...',
+        },
+        actions: {
+          clearReturnDate: 'Clear return date',
+        },
+        feedback: {
+          authRequired: 'Authentication is required',
+          loadFailed: 'Failed to load countable move options',
+          moveFailed: 'Failed to move countable',
+          noSourceRooms: 'No rooms have a quantity available.',
+          noLocations: 'No locations available.',
+          noTargetRooms: 'No rooms associated with this location.',
+          returnDateMustBeFuture: 'Return date must be in the future.',
+        },
+      },
       editor: {
         titleCreate: 'Create countable',
         titleEdit: 'Update countable',

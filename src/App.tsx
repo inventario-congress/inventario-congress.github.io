@@ -380,13 +380,16 @@ function App() {
     )
   }
 
+  const activeCategoryName =
+    countableCategories.find((category) => category.id === activeCategoryId)?.name ?? ''
+
   function renderPanel() {
     if (activePanel === 'microphones') {
       return <MicrophonesPanel messages={messages} canWrite={isWriter} />
     }
 
     if (activePanel === 'countables') {
-      if (activeCategoryId === null) return null
+      if (activeCategoryId === null || activeCategoryName === '') return null
 
       return (
         <CountablePanel
@@ -394,6 +397,7 @@ function App() {
           messages={messages}
           canWrite={isWriter}
           categoryId={activeCategoryId}
+          categoryName={activeCategoryName}
           onCategoriesChanged={() => void loadCountableCategories()}
         />
       )
