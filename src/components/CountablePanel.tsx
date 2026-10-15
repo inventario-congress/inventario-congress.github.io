@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useState } from 'react'
+import { useCallback, useEffect, useState, Fragment } from 'react'
 
 import type { Messages } from '../i18n'
 import { supabase } from '../supabaseClient'
@@ -35,6 +35,7 @@ export default function CountablePanel({ messages, canWrite, categoryId, categor
   const [loading, setLoading] = useState(false)
   const [error, setError] = useState<string | null>(null)
   const [countables, setCountables] = useState<CountableRow[]>([])
+  const [expandedRows, setExpandedRows] = useState<Set<number>>(new Set())
 
   const load = useCallback(async () => {
     if (!supabase) return
@@ -58,6 +59,18 @@ export default function CountablePanel({ messages, canWrite, categoryId, categor
       setLoading(false)
     }
   }, [categoryId, panelStrings.feedback.loadFailed])
+
+  const toggleRowExpansion = useCallback((id: number) => {
+    setExpandedRows(prev => {
+      const newSet = new Set(prev)
+      if (newSet.has(id)) {
+        newSet.delete(id)
+      } else {
+        newSet.add(id)
+      }
+      return newSet
+    })
+  }, [])
 
   useEffect(() => {
     void (async () => {
@@ -133,10 +146,55 @@ export default function CountablePanel({ messages, canWrite, categoryId, categor
               </thead>
               <tbody>
                 {countables.map((item) => (
-                  <tr key={item.id}>
-                    <td style={cellStyle}>{item.name}</td>
-                    <td style={{ ...cellStyle, textAlign: 'right' }}>{item.quantity}</td>
-                  </tr>
+                  <Fragment key={item.id}>
+                    <tr>
+                      <td style={cellStyle}>
+                        <button
+                          type="button"
+                          onClick={() => toggleRowExpansion(item.id)}
+                          aria-expanded={expandedRows.has(item.id)}
+                          aria-label={expandedRows.has(item.id) ? panelStrings.actions.collapse : panelStrings.actions.expand}
+                          style={{
+                            background: 'none',
+                            border: 'none',
+                            cursor: 'pointer',
+                            padding: 0,
+                            display: 'flex',
+                            alignItems: 'center',
+                          }}
+                        >
+                          <span style={{ marginRight: 8 }}>
+                            {expandedRows.has(item.id) ? '▼' : '▶'}
+                          </span>
+                          {item.name}
+                        </button>
+                      </td>
+                      <td style={{ ...cellStyle, textAlign: 'right' }}>{item.quantity}</td>
+                    </tr>
+                    {expandedRows.has(item.id) && (
+                      <tr>
+                        <td colSpan={2} style={{ padding: 0, border: 'none' }}>
+                          <div style={{ padding: 12, borderTop: '1px solid var(--border)' }}>
+                            <table style={{ width: '100%', borderCollapse: 'collapse' }}>
+                              <thead>
+                                <tr>
+                                  <th style={headerCellStyle}>Room</th>
+                                  <th style={{ ...headerCellStyle, textAlign: 'right' }}>Quantity</th>
+                                </tr>
+                              </thead>
+                              <tbody>
+                                <tr>
+                                  <td style={cellStyle} colSpan={2} align="center">
+                                    {panelStrings.table.subTablePlaceholder}
+                                  </td>
+                                </tr>
+                              </tbody>
+                            </table>
+                          </div>
+                        </td>
+                      </tr>
+                    )}
+                  </Fragment>
                 ))}
               </tbody>
             </table>
