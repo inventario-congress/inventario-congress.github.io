@@ -147,27 +147,19 @@ export default function CountablePanel({ messages, canWrite, categoryId, categor
               <tbody>
                 {countables.map((item) => (
                   <Fragment key={item.id}>
-                    <tr>
+                    <tr
+                      style={{
+                        cursor: 'pointer',
+                        background: expandedRows.has(item.id) ? 'color-mix(in srgb, var(--accent) 30%, transparent)' : undefined,
+                        fontWeight: expandedRows.has(item.id) ? 'bold' : undefined,
+                      }}
+                      onClick={() => toggleRowExpansion(item.id)}
+                    >
                       <td style={cellStyle}>
-                        <button
-                          type="button"
-                          onClick={() => toggleRowExpansion(item.id)}
-                          aria-expanded={expandedRows.has(item.id)}
-                          aria-label={expandedRows.has(item.id) ? panelStrings.actions.collapse : panelStrings.actions.expand}
-                          style={{
-                            background: 'none',
-                            border: 'none',
-                            cursor: 'pointer',
-                            padding: 0,
-                            display: 'flex',
-                            alignItems: 'center',
-                          }}
-                        >
-                          <span style={{ marginRight: 8 }}>
-                            {expandedRows.has(item.id) ? '▼' : '▶'}
-                          </span>
-                          {item.name}
-                        </button>
+                        <span style={{ marginRight: 8 }}>
+                          {expandedRows.has(item.id) ? '▼' : '▶'}
+                        </span>
+                        {item.name}
                       </td>
                       <td style={{ ...cellStyle, textAlign: 'right' }}>{item.quantity}</td>
                     </tr>
