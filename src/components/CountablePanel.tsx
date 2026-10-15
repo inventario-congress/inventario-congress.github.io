@@ -196,6 +196,15 @@ export default function CountablePanel({ messages, canWrite, categoryId, categor
                       <tr>
                         <td colSpan={2} style={{ padding: 0, border: 'none' }}>
                           <div style={{ padding: 12, borderTop: '1px solid var(--border)' }}>
+                            <div style={{ display: 'flex', gap: 8, flexWrap: 'wrap', marginBottom: 12 }}>
+                              <button
+                                type="button"
+                                style={{ padding: '6px 10px', borderRadius: 6, cursor: 'pointer' }}
+                              >
+                                {messages.countables.panel.actions.move}
+                              </button>
+                            </div>
+
                             <table style={{ width: '100%', borderCollapse: 'collapse' }}>
                               <thead>
                                 <tr>

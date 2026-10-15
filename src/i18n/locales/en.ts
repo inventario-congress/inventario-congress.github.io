@@ -143,6 +143,7 @@ const en = {
       title: 'Countables',
       actions: {
         create: 'Add countable',
+        move: 'Move',
       },
       table: {
         name: 'Name',

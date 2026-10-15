@@ -143,6 +143,7 @@ const es = {
       title: 'Insumos',
       actions: {
         create: 'Agregar insumo',
+        move: 'Mover',
       },
       table: {
         name: 'Nombre',
