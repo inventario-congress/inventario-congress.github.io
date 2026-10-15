@@ -181,7 +181,7 @@ export default function RoomInventoryPanel({ messages, roomId, roomName }: RoomI
                         {row.item_identifier}
                       </td>
                       <td style={{ borderBottom: '1px solid var(--border)', padding: '8px 6px' }}>
-                        <div style={{ fontSize: 12, color: 'var(--muted)' }}>{itemTypeLabels[row.item_type]}</div>
+                        <div style={{ fontSize: 12, color: 'var(--muted)' }}>{itemTypeLabels[row.item_type] ?? row.item_type}</div>
                         <div>{row.item_model}</div>
                       </td>
                       <td style={{ borderBottom: '1px solid var(--border)', padding: '8px 6px', verticalAlign: 'top' }}>
