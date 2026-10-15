@@ -3,6 +3,7 @@ import { useCallback, useEffect, useState, Fragment } from 'react'
 import type { Messages } from '../i18n'
 import { supabase } from '../supabaseClient'
 import CountableEditor from './CountableEditor'
+import CountableMover from './CountableMover'
 
 type CountableRow = {
   id: number
@@ -37,6 +38,7 @@ export default function CountablePanel({ messages, canWrite, categoryId, categor
   const panelStrings = messages.countables.panel
 
   const [editorOpen, setEditorOpen] = useState(false)
+  const [movingCountableId, setMovingCountableId] = useState<number | null>(null)
   const [loading, setLoading] = useState(false)
   const [error, setError] = useState<string | null>(null)
   const [countables, setCountables] = useState<CountableRow[]>([])
@@ -125,6 +127,20 @@ export default function CountablePanel({ messages, canWrite, categoryId, categor
         onCategoriesChanged={onCategoriesChanged}
       />
 
+      {movingCountableId !== null ? (
+        <CountableMover
+          messages={messages}
+          canWrite={canWrite}
+          countableId={movingCountableId}
+          countableName={countables.find(c => c.id === movingCountableId)?.name ?? ''}
+          onClose={() => setMovingCountableId(null)}
+          onMoved={async () => {
+            await loadAllocations(movingCountableId)
+            await load()
+          }}
+        />
+      ) : null}
+
       <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 0, marginTop: 0 }}>
         <h2 style={{ margin: 0 }}>{categoryName || panelStrings.title}</h2>
 
@@ -200,6 +216,10 @@ export default function CountablePanel({ messages, canWrite, categoryId, categor
                                 <div style={{ display: 'flex', gap: 8, flexWrap: 'wrap', marginBottom: 12 }}>
                                 <button
                                     type="button"
+                                    onClick={(e) => {
+                                      e.stopPropagation()
+                                      setMovingCountableId(item.id)
+                                    }}
                                     style={{ padding: '6px 10px', borderRadius: 6, cursor: 'pointer' }}
                                 >
                                     {messages.countables.panel.actions.move}

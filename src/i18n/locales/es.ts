@@ -157,6 +157,33 @@ const es = {
       },
     },
     dialogs: {
+      mover: {
+        title: 'Mover',
+        fields: {
+          fromRoom: 'Desde sala',
+          location: 'A venue',
+          toRoom: 'A sala',
+          quantity: 'Cantidad',
+          returnDate: 'Fecha de vuelta',
+        },
+        placeholders: {
+          fromRoom: 'Selecciona una sala...',
+          location: 'Selecciona un venue...',
+          toRoom: 'Selecciona una sala...',
+        },
+        actions: {
+          clearReturnDate: 'Borrar fecha de vuelta',
+        },
+        feedback: {
+          authRequired: 'Se requiere autenticación',
+          loadFailed: 'No se pudieron cargar las opciones de movimiento',
+          moveFailed: 'No se pudo mover el insumo',
+          noSourceRooms: 'No hay cantidades disponibles en ninguna sala.',
+          noLocations: 'No hay venues disponibles.',
+          noTargetRooms: 'No hay salas asociadas con este venue.',
+          returnDateMustBeFuture: 'La fecha de vuelta debe ser futura.',
+        },
+      },
       editor: {
         titleCreate: 'Crear insumo',
         titleEdit: 'Actualizar insumo',
