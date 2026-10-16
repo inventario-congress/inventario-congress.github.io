@@ -350,7 +350,9 @@ export default function HistoryPanel({ messages, itemTypeLabels, attachmentTypes
   }
 
   function getItemTypeLabel(itemType: string): string {
-    return itemTypeLabels[itemType] ?? itemType
+    // return itemType with its first letter capitalized but validate that it is a non-empty string
+    if (!itemType || typeof itemType !== 'string') return ''
+    return itemTypeLabels[itemType] ?? itemType.charAt(0).toUpperCase() + itemType.slice(1)
   }
 
   return (
