@@ -205,8 +205,8 @@ export default function HistoryPanel({ messages, itemTypeLabels, attachmentTypes
         })),
         nextWindowEnd: olderRecords && olderRecords.length > 0 ? windowStartIso : null,
       }
-    } else {
-      // item_type is the movement column name
+    } else if (itemTypeLabels[item.item_type]) {
+      // If item.item_type is itemTypeLabels, item_type is the movement column name
       const column = item.item_type
       let query = supabase
         .from('movement')
@@ -249,7 +249,47 @@ export default function HistoryPanel({ messages, itemTypeLabels, attachmentTypes
         })),
         nextWindowEnd: olderRecords && olderRecords.length > 0 ? windowStartIso : null,
       }
-    }
+    } else {
+        // Get countable movements for this item from public.countable_movements
+        // The location for countable movements is represented by the location to which to_room field points
+        const { data, error: queryError } = await supabase
+          .from('countable_movement')
+          .select(`
+            created_at,
+            user,
+            to_room!inner(name),
+            quantity
+          `)
+          .eq('id', item.id)
+          .gte('created_at', windowStartIso)
+          .order('created_at', { ascending: false })
+
+        if (queryError) throw queryError;
+
+        const { data: olderRecords, error: olderRecordsError } = await supabase
+          .from('countable_movement')
+          .select('created_at')
+          .eq('id', item.id)
+          .lt('created_at', windowStartIso)
+          .limit(1)
+
+        if (olderRecordsError) throw olderRecordsError
+
+        const userIds = [...new Set((data ?? []).map((r) => r.user).filter(Boolean))]
+        const userNames = await fetchUserDisplayNames(userIds)
+
+        return {
+          records: (data ?? []).map((r) => ({
+            created_at: r.created_at,
+            user_name: userNames[r.user] ?? null,
+            location_name: (r.to_room as unknown as { name: string }).name,
+            room_name: "(" + r.quantity + ")",
+            return_date: null,
+            is_active: false, // Not applicable for countable movements
+          })),
+          nextWindowEnd: olderRecords && olderRecords.length > 0 ? windowStartIso : null,
+        }
+      }
   }
 
   async function fetchUserDisplayNames(userIds: string[]): Promise<Record<string, string>> {
