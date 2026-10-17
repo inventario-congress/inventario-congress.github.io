@@ -251,40 +251,40 @@ export default function HistoryPanel({ messages, itemTypeLabels, attachmentTypes
       }
     } else {
         // Get countable movements for this item from public.countable_movements
-        // The location for countable movements is represented by the location to which to_room field points
-        const { data, error: queryError } = await supabase
-          .from('countable_movement')
-          .select(`
-            created_at,
-            user,
-            to_room!inner(name),
-            quantity
-          `)
-          .eq('id', item.id)
-          .gte('created_at', windowStartIso)
-          .order('created_at', { ascending: false })
+        const { data: rows, error: queryError } = await supabase
+            .from('countable_movement')
+            .select(`
+                created_at,
+                user,
+                room!inner(name, location!inner(name)),
+                return_date,
+                quantity
+            `)
+            .eq('countable', item.id)
+            .gte('created_at', windowStartIso)
+            .order('created_at', { ascending: false })
 
         if (queryError) throw queryError;
 
         const { data: olderRecords, error: olderRecordsError } = await supabase
           .from('countable_movement')
           .select('created_at')
-          .eq('id', item.id)
+          .eq('countable', item.id)
           .lt('created_at', windowStartIso)
           .limit(1)
 
         if (olderRecordsError) throw olderRecordsError
 
-        const userIds = [...new Set((data ?? []).map((r) => r.user).filter(Boolean))]
+        const userIds = [...new Set((rows ?? []).map((r) => r.user).filter(Boolean))]
         const userNames = await fetchUserDisplayNames(userIds)
 
         return {
-          records: (data ?? []).map((r) => ({
+          records: (rows ?? []).map((r) => ({
             created_at: r.created_at,
             user_name: userNames[r.user] ?? null,
-            location_name: (r.to_room as unknown as { name: string }).name,
-            room_name: "(" + r.quantity + ")",
-            return_date: null,
+            location_name: (r.room.location as { name: string}).name,
+            room_name: (r.room as { name: string }).name + " (" + r.quantity + ")",
+            return_date: (r.return_date as string | null) ?? null,
             is_active: false, // Not applicable for countable movements
           })),
           nextWindowEnd: olderRecords && olderRecords.length > 0 ? windowStartIso : null,
@@ -393,6 +393,11 @@ export default function HistoryPanel({ messages, itemTypeLabels, attachmentTypes
     // return itemType with its first letter capitalized but validate that it is a non-empty string
     if (!itemType || typeof itemType !== 'string') return ''
     return itemTypeLabels[itemType] ?? itemType.charAt(0).toUpperCase() + itemType.slice(1)
+  }
+
+  function isCountable(itemType: string): boolean {
+    // If itemTypeLabels[itemType] doesn't exist, it's a countable item by default
+    return !itemTypeLabels[itemType]
   }
 
   return (
@@ -504,8 +509,14 @@ export default function HistoryPanel({ messages, itemTypeLabels, attachmentTypes
                     />
                     <span style={{ display: 'flex', justifyContent: 'space-between', width: '100%' }}>
                       <span>
-                        <strong>{`N°${item.identifier}`}</strong>
-                        {' '}
+                        {
+                          !isCountable(item.item_type) && (
+                            <>
+                              <strong>{`N°${item.identifier}`}</strong>
+                              {' '}
+                            </>
+                          )
+                        }
                         <span style={{ color: 'var(--muted)' }}>{item.model_name}</span>
                       </span>
                       <span style={{ color: 'var(--muted)', fontSize: 12, alignSelf: 'center' }}>
@@ -553,14 +564,14 @@ export default function HistoryPanel({ messages, itemTypeLabels, attachmentTypes
                   {
                     getItemTypeLabel(item.item_type) + ' ' +
                     messages.history.historyTitle
-                      .replace('{identifier}', `N°${item.identifier}`)
+                      .replace('{identifier}', isCountable(item.item_type) ? ' - ' : `N°${item.identifier}`)
                       .replace('{modelName}', item.model_name) +
                     (isAttachmentType(item.item_type) && records && records.length > 0
                       ? records[0].is_active
                         ? ' (' + messages.history.attached + ')'
                         : ' (' + messages.history.detached + ')'
                       : '')
-                }
+                  }
                 </div>
 
                 {isLoading && !records ? (
