@@ -282,8 +282,8 @@ export default function HistoryPanel({ messages, itemTypeLabels, attachmentTypes
           records: (rows ?? []).map((r) => ({
             created_at: r.created_at,
             user_name: userNames[r.user] ?? null,
-            location_name: (r.room.location as { name: string}).name,
-            room_name: (r.room as { name: string }).name + " (" + r.quantity + ")",
+            location_name: (r.room as unknown as { location: { name: string } }).location.name,
+            room_name: (r.room as unknown as { name: string }).name + " (" + r.quantity + ")",
             return_date: (r.return_date as string | null) ?? null,
             is_active: false, // Not applicable for countable movements
           })),
