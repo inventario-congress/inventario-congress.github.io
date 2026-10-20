@@ -1,4 +1,4 @@
-import { Fragment, useEffect, useState } from 'react'
+import { Fragment, useEffect, useMemo, useState } from 'react'
 
 import type { Messages } from '../i18n'
 import { supabase } from '../supabaseClient'
@@ -59,6 +59,17 @@ export default function RoomInventoryPanel({ messages, roomId, roomName }: RoomI
   const [error, setError] = useState<string | null>(null)
   const [collapsedBaseIds, setCollapsedBaseIds] = useState<Set<number>>(new Set())
 
+  const itemTypeLabels = useMemo(() => {
+    const labels: Record<RoomInventoryRow['item_type'], string> = {
+        base: messages.bulkMove.itemTypeBase,
+        combo: messages.bulkMove.itemTypeCombo,
+        handheld: messages.bulkMove.itemTypeHandheld,
+        console: messages.bulkMove.itemTypeConsole,
+        case: messages.bulkMove.itemTypeCase,
+    }
+    return labels
+  }, [messages.bulkMove.itemTypeBase, messages.bulkMove.itemTypeCombo, messages.bulkMove.itemTypeHandheld, messages.bulkMove.itemTypeConsole, messages.bulkMove.itemTypeCase])
+
   useEffect(() => {
     if (!supabase) return
 
@@ -77,7 +88,7 @@ export default function RoomInventoryPanel({ messages, roomId, roomName }: RoomI
 
         if (active) {
           // FIX ME! Temporarily disable countable categories.
-          const filtered_data = (data ?? []).filter(item => itemTypeLabels[item.item_type] !== undefined)
+          const filtered_data = (data ?? []).filter((item: RoomInventoryRow) => itemTypeLabels[item.item_type] !== undefined)
           setRows(filtered_data as RoomInventoryRow[])
           // setRows((data ?? []) as RoomInventoryRow[])
           // END FIX ME!
@@ -95,15 +106,7 @@ export default function RoomInventoryPanel({ messages, roomId, roomName }: RoomI
     return () => {
       active = false
     }
-  }, [messages.roomInventory.feedback.loadFailed, roomId])
-
-  const itemTypeLabels: Record<RoomInventoryRow['item_type'], string> = {
-    base: messages.bulkMove.itemTypeBase,
-    combo: messages.bulkMove.itemTypeCombo,
-    handheld: messages.bulkMove.itemTypeHandheld,
-    console: messages.bulkMove.itemTypeConsole,
-    case: messages.bulkMove.itemTypeCase,
-  }
+  }, [messages.roomInventory.feedback.loadFailed, roomId, itemTypeLabels])
 
   return (
     <div style={{ width: 'fit-content', maxWidth: '100%', margin: '0 auto', padding: 0, textAlign: 'left', fontSize: 'inherit' }}>

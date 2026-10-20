@@ -65,7 +65,7 @@ export default function HistoryPanel({ messages, itemTypeLabels, attachmentTypes
 
       // FIX ME! Temporarily disable countable categories.
       // Remove countable item types from the data
-      const filtered_data = data.filter(item => itemTypeLabels[item.item_type] !== undefined)
+      const filtered_data = (data ?? []).filter((item: HistoryItem) => itemTypeLabels[item.item_type] !== undefined)
       setItems((filtered_data ?? []) as HistoryItem[])
       // setItems((data ?? []) as HistoryItem[])
       // END FIX ME!
@@ -74,7 +74,7 @@ export default function HistoryPanel({ messages, itemTypeLabels, attachmentTypes
     } finally {
       setItemsLoading(false)
     }
-  }, [messages.history.noItems])
+  }, [messages.history.noItems, itemTypeLabels])
 
   useEffect(() => {
     if (!supabase) return
