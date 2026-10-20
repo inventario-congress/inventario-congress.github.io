@@ -218,8 +218,7 @@ export default function HistoryPanel({ messages, itemTypeLabels, attachmentTypes
         .select(`
           created_at,
           user,
-          location!inner(name),
-          room!inner(name),
+          room!inner(name, location!inner(name)),
           return_date
         `)
         .eq(column, item.id)
@@ -247,7 +246,7 @@ export default function HistoryPanel({ messages, itemTypeLabels, attachmentTypes
         records: (data ?? []).map((r) => ({
           created_at: r.created_at,
           user_name: userNames[r.user] ?? null,
-          location_name: (r.location as unknown as { name: string }).name,
+          location_name: (r.room as unknown as { location: { name: string } }).location.name,
           room_name: (r.room as unknown as { name: string }).name,
           return_date: (r.return_date as string | null) ?? null,
           is_active: false, // Not applicable for movement records
@@ -689,4 +688,3 @@ export default function HistoryPanel({ messages, itemTypeLabels, attachmentTypes
     </div>
   )
 }
-
