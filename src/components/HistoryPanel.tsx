@@ -63,7 +63,12 @@ export default function HistoryPanel({ messages, itemTypeLabels, attachmentTypes
 
       if (rpcError) throw rpcError
 
-      setItems((data ?? []) as HistoryItem[])
+      // FIX ME! Temporarily disable countable categories.
+      // Remove countable item types from the data
+      const filtered_data = data.filter(item => itemTypeLabels[item.item_type] !== undefined)
+      setItems((filtered_data ?? []) as HistoryItem[])
+      // setItems((data ?? []) as HistoryItem[])
+      // END FIX ME!
     } catch (e) {
       setError(e instanceof Error ? e.message : messages.history.noItems)
     } finally {
