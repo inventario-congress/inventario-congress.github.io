@@ -76,7 +76,11 @@ export default function RoomInventoryPanel({ messages, roomId, roomName }: RoomI
         if (loadError) throw loadError
 
         if (active) {
-          setRows((data ?? []) as RoomInventoryRow[])
+          // FIX ME! Temporarily disable countable categories.
+          const filtered_data = (data ?? []).filter(item => itemTypeLabels[item.item_type] !== undefined)
+          setRows(filtered_data as RoomInventoryRow[])
+          // setRows((data ?? []) as RoomInventoryRow[])
+          // END FIX ME!
         }
       } catch (e) {
         if (active) {
