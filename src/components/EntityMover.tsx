@@ -276,7 +276,7 @@ export default function EntityMover({ messages, canWrite, open, entityId, entity
       while (true) {
         const { data, error: movementError } = await supabase
           .from('movement')
-          .select('id, base, location, room, return_date')
+          .select('id, base, room!inner(id, location!inner(id)), return_date')
           .in('base', baseIds)
           .order('created_at', { ascending: false })
           .order('id', { ascending: false })
@@ -287,9 +287,10 @@ export default function EntityMover({ messages, canWrite, open, entityId, entity
         for (const movement of data ?? []) {
           const key = `base:${movement.base}`
           if (!movements.has(key)) {
+            const room = movement.room as unknown as { id: number; location: { id: number } }
             movements.set(key, {
-              location: movement.location,
-              room: movement.room,
+              location: room.location.id,
+              room: room.id,
               return_date: movement.return_date,
             })
           }
@@ -309,7 +310,7 @@ export default function EntityMover({ messages, canWrite, open, entityId, entity
       while (true) {
         const { data, error: movementError } = await supabase
           .from('movement')
-          .select(`id, ${column}, location, room, return_date` as '*')
+          .select(`id, ${column}, room!inner(id, location!inner(id)), return_date` as '*')
           .in(column, ids)
           .order('created_at', { ascending: false })
           .order('id', { ascending: false })
@@ -317,12 +318,16 @@ export default function EntityMover({ messages, canWrite, open, entityId, entity
 
         if (movementError) throw movementError
 
-        for (const movement of (data ?? []) as unknown as { location: number; room: number; return_date: string | null }[]) {
+        for (const movement of (data ?? []) as unknown as {
+          [key: string]: number | string | null | { id: number; location: { id: number } }
+          room: { id: number; location: { id: number } }
+          return_date: string | null
+        }[]) {
           const key = `${column}:${(movement as unknown as Record<string, number>)[column]}`
           if (!movements.has(key)) {
             movements.set(key, {
-              location: movement.location,
-              room: movement.room,
+              location: movement.room.location.id,
+              room: movement.room.id,
               return_date: movement.return_date,
             })
           }
@@ -431,7 +436,6 @@ export default function EntityMover({ messages, canWrite, open, entityId, entity
 
       const payloads: Record<string, number | string | null>[] = activeItems.map((item) => {
         const payload: Record<string, number | string> = {
-          location: selectedLocationId,
           room: selectedRoomId,
           user: userId,
         }
