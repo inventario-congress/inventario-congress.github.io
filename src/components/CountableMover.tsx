@@ -72,12 +72,12 @@ export default function CountableMover({ messages, canWrite, countableId, counta
         }))
         const roomIds = allocations.map((allocation) => allocation.id)
         const roomsById = new Map<number, string>()
-        const locationNamesByRoom = new Map<number, string[]>()
+        const locationNamesByRoom = new Map<number, string>()
 
         if (roomIds.length > 0) {
           const { data: roomData, error: roomError } = await supabase
             .from('room')
-            .select('id, name')
+            .select('id, name, location')
             .in('id', roomIds)
 
           if (roomError) throw roomError
@@ -86,14 +86,7 @@ export default function CountableMover({ messages, canWrite, countableId, counta
             roomsById.set(room.id as number, room.name as string)
           }
 
-          const { data: locationRoomData, error: locationRoomError } = await supabase
-            .from('location_rooms')
-            .select('room, location')
-            .in('room', roomIds)
-
-          if (locationRoomError) throw locationRoomError
-
-          const locationIds = [...new Set((locationRoomData ?? []).map((entry) => entry.location as number))]
+          const locationIds = [...new Set((roomData ?? []).map((room) => room.location as number))]
           if (locationIds.length > 0) {
             const { data: associatedLocations, error: associatedLocationsError } = await supabase
               .from('location')
@@ -106,12 +99,10 @@ export default function CountableMover({ messages, canWrite, countableId, counta
             for (const location of associatedLocations ?? []) {
               namesById.set(location.id as number, location.name as string)
             }
-            for (const entry of locationRoomData ?? []) {
-              const locationName = namesById.get(entry.location as number)
+            for (const room of roomData ?? []) {
+              const locationName = namesById.get(room.location as number)
               if (!locationName) continue
-              const names = locationNamesByRoom.get(entry.room as number) ?? []
-              names.push(locationName)
-              locationNamesByRoom.set(entry.room as number, names)
+              locationNamesByRoom.set(room.id as number, locationName)
             }
           }
         }
@@ -122,7 +113,7 @@ export default function CountableMover({ messages, canWrite, countableId, counta
             .flatMap((allocation) => {
               const roomName = roomsById.get(allocation.id)
               if (!roomName) return []
-              const locationName = locationNamesByRoom.get(allocation.id)?.sort((a, b) => a.localeCompare(b))[0]
+              const locationName = locationNamesByRoom.get(allocation.id)
               return [{
                 id: allocation.id,
                 name: locationName ? `${locationName} - ${roomName}` : roomName,
@@ -154,12 +145,17 @@ export default function CountableMover({ messages, canWrite, countableId, counta
 
     void (async () => {
       try {
-        const { data, error: roomsError } = await supabase.rpc('get_rooms_for_location', {
-          p_location_id: selectedLocationId,
-        })
+        const { data, error: roomsError } = await supabase
+          .from('room')
+          .select('id, name')
+          .eq('location', selectedLocationId)
+          .order('name')
         if (!active) return
         if (roomsError) throw roomsError
-        setTargetRooms(((data ?? []) as RoomChoice[]).sort((a, b) => a.room_name.localeCompare(b.room_name)))
+        setTargetRooms((data ?? []).map((room) => ({
+          room_id: room.id as number,
+          room_name: room.name as string,
+        })))
       } catch (e) {
         if (!active) return
         setError(e instanceof Error ? e.message : strings.feedback.loadFailed)
@@ -211,8 +207,7 @@ export default function CountableMover({ messages, canWrite, countableId, counta
         .from('countable_movement')
         .insert({
           countable: countableId,
-          from_room: selectedSourceRoom.id,
-          to_room: selectedToRoomId,
+          room: selectedToRoomId,
           quantity: parsedQuantity,
           return_date: returnDate || null,
         })

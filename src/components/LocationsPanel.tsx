@@ -42,15 +42,27 @@ export default function LocationsPanel({ messages, canWrite }: LocationsPanelPro
     setError(null)
 
     try {
-      const { data, error: loadError } = await supabase.rpc('get_locations_with_rooms')
+      const [{ data: locationData, error: locationError }, { data: roomData, error: roomError }] = await Promise.all([
+        supabase.from('location').select('id, name, address').order('name'),
+        supabase.from('room').select('id, name, location').order('name'),
+      ])
 
-      if (loadError) throw loadError
+      if (locationError) throw locationError
+      if (roomError) throw roomError
 
-      if (!data) {
-        throw new Error('No data returned from get_locations_with_rooms()')
+      const roomsByLocation = new Map<number, LocationRoom[]>()
+      for (const room of roomData ?? []) {
+        const rooms = roomsByLocation.get(room.location as number) ?? []
+        rooms.push({ id: room.id as number, name: room.name as string })
+        roomsByLocation.set(room.location as number, rooms)
       }
 
-      setRows(data as LocationRow[])
+      setRows((locationData ?? []).map((location) => ({
+        id: location.id as number,
+        name: location.name as string,
+        address: location.address as string | null,
+        rooms: roomsByLocation.get(location.id as number) ?? [],
+      })))
     } catch (e) {
       setError(e instanceof Error ? e.message : messages.locations.feedback.loadFailed)
     } finally {

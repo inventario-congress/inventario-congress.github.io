@@ -139,18 +139,25 @@ export default function EntityMover({ messages, canWrite, open, entityId, entity
       setRoomsLoading(true)
       setError(null)
 
-      const { data: rpcData, error: rpcError } = await supabase.rpc('get_rooms_for_location', { p_location_id: locationId })
+      const { data: roomData, error: roomError } = await supabase
+        .from('room')
+        .select('id, name')
+        .eq('location', locationId)
+        .order('name')
       if (!isActive()) return
 
-      if (rpcError) {
-        setError(rpcError.message)
+      if (roomError) {
+        setError(roomError.message)
         setRooms([])
         setSelectedRoomId('')
         setRoomsLoading(false)
         return
       }
 
-      const mapped: RoomChoice[] = (rpcData as RoomChoice[]).sort((a, b) => a.room_name.localeCompare(b.room_name))
+      const mapped: RoomChoice[] = (roomData ?? []).map((room) => ({
+        room_id: room.id as number,
+        room_name: room.name as string,
+      }))
       if (!isActive()) return
 
       setRooms(mapped)

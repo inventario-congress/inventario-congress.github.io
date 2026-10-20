@@ -116,7 +116,6 @@ export default function LocationEditor({
 
   const [roomsLoading, setRoomsLoading] = useState(false)
   const [roomsChoices, setRoomsChoices] = useState<RoomChoice[]>([])
-  const [selectedRoomIds, setSelectedRoomIds] = useState<Set<number>>(new Set())
 
   // Track room creations triggered from the nested modal so we can clean up if the editor is canceled.
   const [newRoomIds, setNewRoomIds] = useState<number[]>([])
@@ -208,7 +207,6 @@ const loadForEdit = useCallback(async () => {
     if (!supabase) return
     if (!isEditMode || !locationId) {
       setRoomsChoices([])
-      setSelectedRoomIds(new Set())
       return
     }
 
@@ -216,18 +214,20 @@ const loadForEdit = useCallback(async () => {
     setError(null)
 
     try {
-      // Use RPC get_rooms_for_location(location_id) to fetch rooms associated with the location.
-      const { data: rpcData, error: rpcError } = await supabase.rpc('get_rooms_for_location', { p_location_id: locationId })
-      if (rpcError) throw rpcError
-      if (!rpcData) throw new Error('No data returned from get_rooms_for_location()')
+      const { data: roomData, error: roomError } = await supabase
+        .from('room')
+        .select('id, name')
+        .eq('location', locationId)
+        .order('name')
 
-      const mapped = rpcData as unknown as RoomChoice[]
+      if (roomError) throw roomError
 
-      // Sort for stable UX
-      mapped.sort((a, b) => a.room_name.localeCompare(b.room_name))
+      const mapped = (roomData ?? []).map((room) => ({
+        room_id: room.id as number,
+        room_name: room.name as string,
+      }))
 
       setRoomsChoices(mapped)
-      setSelectedRoomIds(new Set(mapped.map((r) => r.room_id)))
     } catch (e) {
       setError(e instanceof Error ? e.message : String(editorStrings.feedback.loadRoomsFailed))
     } finally {
@@ -274,28 +274,20 @@ const loadForEdit = useCallback(async () => {
     const trimmed = addRoomName.trim()
     if (!trimmed) return
 
-    // Disallow duplicate room names for the same location.
-    // Use the existing RPC used for loading rooms for the location.
-    try {
-      const { data: rpcData, error: rpcError } = await supabase.rpc('get_rooms_for_location', {
-        p_location_id: locationId,
-      })
+    const { data: existingRooms, error: existingRoomsError } = await supabase
+      .from('room')
+      .select('name')
+      .eq('location', locationId)
 
-      if (rpcError) throw rpcError
+    if (existingRoomsError) {
+      setAddRoomError(existingRoomsError.message)
+      return
+    }
 
-      const mapped = rpcData as unknown as RoomChoice[]
-      const inputLower = trimmed.toLocaleLowerCase()
-
-      const existsForLocation = mapped.some(
-        (r) => r.room_name?.toLocaleLowerCase() === inputLower,
-      )
-
-      if (existsForLocation) {
-        setAddRoomError(editorStrings.feedback.duplicateRoomForLocation)
-        return
-      }
-    } catch {
-      // Best-effort: if the duplicate check fails, allow the create attempt to proceed.
+    const inputLower = trimmed.toLocaleLowerCase()
+    if ((existingRooms ?? []).some((room) => room.name.toLocaleLowerCase() === inputLower)) {
+      setAddRoomError(editorStrings.feedback.duplicateRoomForLocation)
+      return
     }
 
 
@@ -303,11 +295,10 @@ const loadForEdit = useCallback(async () => {
     setAddRoomError(null)
 
     try {
-      // Create/ensure room by unique name
-      // Note: room must be associated with the selected location only.
+      // Create the room with its owning location.
       const { data: createdRooms, error: roomCreateError } = await supabase
         .from('room')
-        .insert({ name: trimmed })
+        .insert({ name: trimmed, location: locationId })
         .select('id, name')
 
       if (roomCreateError) throw roomCreateError
@@ -315,27 +306,10 @@ const loadForEdit = useCallback(async () => {
       const createdRoomId = (createdRooms?.[0]?.id as number | undefined) ?? null
       if (!createdRoomId) throw new Error(editorStrings.feedback.createRoomFailed)
 
-      // Associate to current location
-      // Use `insert(...).select()` so Supabase returns the inserted row and errors are surfaced reliably.
-      const { data: assocData, error: assocError } = await supabase
-        .from('location_rooms')
-        .insert({ location: locationId, room: createdRoomId })
-        .select('id, location, room')
-
-      if (assocError) throw assocError
-      if (!assocData || assocData.length === 0) throw new Error(editorStrings.feedback.createRoomFailed)
-
       setNewRoomIds((prev) => (prev.includes(createdRoomId) ? prev : [...prev, createdRoomId]))
 
       // Update UI selection and list: new room should be checked.
       const newChoice: RoomChoice = { room_id: createdRoomId, room_name: trimmed }
-
-      // Ensure UI selection includes the new association before the user hits Save.
-      setSelectedRoomIds((prev) => {
-        const next = new Set(prev)
-        next.add(createdRoomId)
-        return next
-      })
 
       setRoomsChoices((prev) => {
         const exists = prev.some((r) => r.room_id === createdRoomId)
@@ -389,17 +363,13 @@ const loadForEdit = useCallback(async () => {
       }
 
 
-      // Save location
-      let targetLocationId: number | null = null
-
       if (isEditMode && locationId) {
         const { error: updateLocError } = await supabase
           .from('location')
           .update({ name: trimmedName, address: trimmedAddress || null })
           .eq('id', locationId)
-
         if (updateLocError) throw updateLocError
-        targetLocationId = locationId
+        if (updateLocError) throw updateLocError
       } else {
         const { data: createdLocations, error: createLocError } = await supabase
           .from('location')
@@ -410,27 +380,6 @@ const loadForEdit = useCallback(async () => {
 
         const createdLocationId = (createdLocations?.[0]?.id as number | undefined) ?? null
         if (!createdLocationId) throw new Error(editorStrings.feedback.createFailed)
-        targetLocationId = createdLocationId
-      }
-
-      if (!targetLocationId) throw new Error(editorStrings.feedback.createFailed)
-
-      // Replace associations for that location
-      const { error: deleteAssocError } = await supabase
-        .from('location_rooms')
-        .delete()
-        .eq('location', targetLocationId)
-
-      if (deleteAssocError) throw deleteAssocError
-
-      const assocRows = Array.from(selectedRoomIds).map((roomId) => ({
-        location: targetLocationId,
-        room: roomId,
-      }))
-
-      if (assocRows.length > 0) {
-        const { error: assocError } = await supabase.from('location_rooms').insert(assocRows)
-        if (assocError) throw assocError
       }
 
       setLoading(false)
@@ -446,7 +395,7 @@ const loadForEdit = useCallback(async () => {
     } finally {
       setLoading(false)
     }
-  }, [address, canWrite, editorStrings.feedback.createFailed, isEditMode, locationId, name, onClose, onSaved, resetForm, selectedRoomIds, messages.auth.feedback.error])
+  }, [address, canWrite, editorStrings.feedback.createFailed, isEditMode, locationId, name, onClose, onSaved, resetForm, messages.auth.feedback.error])
 
   if (!isOpen) return null
 
@@ -553,106 +502,95 @@ const loadForEdit = useCallback(async () => {
             }}
           />
 
-          <div style={{ marginTop: 8 }}>
-            <div style={{ fontWeight: 600 }}>{editorStrings.rooms.title}</div>
-            <div style={{ fontSize: 13, opacity: 0.9, marginTop: 2 }}>{editorStrings.rooms.description}</div>
+          {isEditMode && locationId ? (
+            <div style={{ marginTop: 8 }}>
+              <div style={{ fontWeight: 600 }}>{editorStrings.rooms.title}</div>
+              <div style={{ fontSize: 13, opacity: 0.9, marginTop: 2 }}>{editorStrings.rooms.description}</div>
 
-            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'baseline', gap: 12, marginTop: 10 }}>
+              <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'baseline', gap: 12, marginTop: 10 }}>
+                <button
+                  type="button"
+                  onClick={() => {
+                    if (!canWrite || loading) return
+                    setAddRoomOpen(true)
+                    setAddRoomName('')
+                    setAddRoomError(null)
+                  }}
+                  disabled={loading || roomsLoading}
+                  style={{ padding: '8px 12px', borderRadius: 6, cursor: 'pointer' }}
+                >
+                  {editorStrings.rooms.addRoom}
+                </button>
+              </div>
 
-              <button
-                type="button"
-                onClick={() => {
-                  if (!canWrite || loading) return
-                  setAddRoomOpen(true)
-                  setAddRoomName('')
-                  setAddRoomError(null)
+              <div
+                style={{
+                  border: '1px solid var(--border)',
+                  borderRadius: 8,
+                  padding: 10,
+                  marginTop: 8,
+                  maxHeight: 260,
+                  overflow: 'auto',
                 }}
-                disabled={loading || roomsLoading || !isEditMode || !locationId}
-                style={{ padding: '8px 12px', borderRadius: 6, cursor: 'pointer' }}
-                title={!isEditMode || !locationId ? editorStrings.rooms.addRequiresSavedLocation : undefined}
               >
-                {editorStrings.rooms.addRoom}
-              </button>
-            </div>
-
-            <div
-              style={{
-                border: '1px solid var(--border)',
-                borderRadius: 8,
-                padding: 10,
-                marginTop: 8,
-                maxHeight: 260,
-                overflow: 'auto',
-              }}
-            >
-              {roomsLoading ? (
-                <div style={{ opacity: 0.85 }}>{editorStrings.rooms.loadingRooms}</div>
-              ) : roomsChoices.length === 0 ? (
-                <div style={{ opacity: 0.85 }}>{editorStrings.rooms.noneAssociated}</div>
-              ) : (
-                <div style={{ overflowX: 'auto' }}>
-                  <table style={{ width: '100%', borderCollapse: 'collapse' }}>
-                    <tbody>
-                      {roomsChoices.map((r) => (
-                        <tr key={r.room_id}>
-                          <td style={{ borderBottom: '1px solid var(--border)', padding: '8px 6px' }}>{r.room_name}</td>
-                          <td
-                            style={{
-                              borderBottom: '1px solid var(--border)',
-                              padding: '8px 6px',
-                              textAlign: 'right',
-                              whiteSpace: 'nowrap',
-                            }}
-                          >
-                            <button
-                              type="button"
-                              onClick={() => {
-                                if (loading || roomsLoading) return
-                                // Remove this room association from the current location.
-                                // (Rooms themselves are owned only by the location association UI; deleting the association
-                                // is the correct behavior. If DB schema uses ON DELETE CASCADE for related rows,
-                                // you can still optionally delete the room entity separately in another flow.)
-                                void (async () => {
-                                  if (!supabase) return
-                                  if (!locationId) return
-
-                                  const { error: deleteError } = await supabase
-                                    .from('location_rooms')
-                                    .delete()
-                                    .eq('location', locationId)
-                                    .eq('room', r.room_id)
-
-                                  if (deleteError) {
-                                    setError(deleteError.message)
-                                    return
-                                  }
-
-                                  // Remove this room from the UI list
-                                  setRoomsChoices((prev) => prev.filter((room) => room.room_id !== r.room_id))
-                                  setSelectedRoomIds((prev) => {
-                                    const next = new Set(prev)
-                                    next.delete(r.room_id)
-                                    return next
-                                  })
-                                })()
+                {roomsLoading ? (
+                  <div style={{ opacity: 0.85 }}>{editorStrings.rooms.loadingRooms}</div>
+                ) : roomsChoices.length === 0 ? (
+                  <div style={{ opacity: 0.85 }}>{editorStrings.rooms.noneAssociated}</div>
+                ) : (
+                  <div style={{ overflowX: 'auto' }}>
+                    <table style={{ width: '100%', borderCollapse: 'collapse' }}>
+                      <tbody>
+                        {roomsChoices.map((r) => (
+                          <tr key={r.room_id}>
+                            <td style={{ borderBottom: '1px solid var(--border)', padding: '8px 6px' }}>{r.room_name}</td>
+                            <td
+                              style={{
+                                borderBottom: '1px solid var(--border)',
+                                padding: '8px 6px',
+                                textAlign: 'right',
+                                whiteSpace: 'nowrap',
                               }}
-                              disabled={loading || roomsLoading}
-                              style={{ padding: '6px 10px', borderRadius: 6, cursor: 'pointer' }}
-                              aria-label={editorStrings.rooms.tableDeleteLabel}
-                              title={editorStrings.rooms.tableDeleteLabel}
                             >
-                              {editorStrings.rooms.tableDeleteLabel}
-                            </button>
+                              <button
+                                type="button"
+                                onClick={() => {
+                                  if (loading || roomsLoading) return
+                                  void (async () => {
+                                    if (!supabase) return
 
-                          </td>
-                        </tr>
-                      ))}
-                    </tbody>
-                  </table>
-                </div>
-              )}
+                                    const { error: deleteError } = await supabase
+                                      .from('room')
+                                      .delete()
+                                      .eq('id', r.room_id)
+
+                                    if (deleteError) {
+                                      setError(deleteError.message)
+                                      return
+                                    }
+
+                                    // Remove this room from the UI list
+                                    setRoomsChoices((prev) => prev.filter((room) => room.room_id !== r.room_id))
+                                  })()
+                                }}
+                                disabled={loading || roomsLoading}
+                                style={{ padding: '6px 10px', borderRadius: 6, cursor: 'pointer' }}
+                                aria-label={editorStrings.rooms.tableDeleteLabel}
+                                title={editorStrings.rooms.tableDeleteLabel}
+                              >
+                                {editorStrings.rooms.tableDeleteLabel}
+                              </button>
+
+                            </td>
+                          </tr>
+                        ))}
+                      </tbody>
+                    </table>
+                  </div>
+                )}
+              </div>
             </div>
-          </div>
+          ) : null}
 
           {error ? (
             <div style={{ color: 'crimson' }}>
@@ -795,4 +733,3 @@ const loadForEdit = useCallback(async () => {
     </div>
   )
 }
-
