@@ -750,6 +750,8 @@ const es = {
     feedback: {
       loadFailed: 'No se pudo cargar el inventario de sala',
     },
+    unit: 'unidad',
+    units: 'unidades',
   },
   returns: {
     systemMenuLabel: 'Devoluciones',
@@ -781,8 +783,10 @@ const es = {
     table: {
       date: 'Fecha',
       user: 'Usuario',
+      from: 'Desde',
       destination: 'Destino',
       returnDate: 'Fecha de Vuelta',
+      quantity: 'Cantidad',
       empty: 'No se encontraron registros de historial para este elemento.',
     },
     loadingHistory: 'Cargando historial...',

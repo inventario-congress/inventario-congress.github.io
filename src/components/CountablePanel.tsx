@@ -12,7 +12,8 @@ type CountableRow = {
 }
 
 type AllocationRow = {
-  location_room: string
+  location: string
+  room: string
   quantity: number
 }
 
@@ -53,10 +54,7 @@ export default function CountablePanel({ messages, canWrite, categoryId, categor
 
     try {
       const { data, error: countablesError } = await supabase
-        .from('countable')
-        .select('id, name, quantity')
-        .eq('category', categoryId)
-        .order('name', { ascending: true })
+        .rpc('get_category_countables', { p_category: categoryId })
 
       if (countablesError) throw countablesError
 
@@ -90,18 +88,21 @@ export default function CountablePanel({ messages, canWrite, categoryId, categor
   }, [])
 
   const toggleRowExpansion = useCallback((id: number) => {
+    const isExpanded = expandedRows.has(id)
+    if (!isExpanded) {
+      void loadAllocations(id)
+    }
+
     setExpandedRows(prev => {
       const newSet = new Set(prev)
       if (newSet.has(id)) {
         newSet.delete(id)
       } else {
         newSet.add(id)
-        // Load allocations when expanding
-        loadAllocations(id)
       }
       return newSet
     })
-  }, [loadAllocations])
+  }, [expandedRows, loadAllocations])
 
   useEffect(() => {
     void (async () => {
@@ -240,7 +241,7 @@ export default function CountablePanel({ messages, canWrite, categoryId, categor
                                   allocations[item.id].map((allocation, index) => (
                                     <tr key={index}>
                                       <td style={cellStyle}>
-                                        {allocation.location_room}
+                                        {allocation.location}, {allocation.room}
                                       </td>
                                       <td style={{ ...cellStyle, textAlign: 'right' }}>{allocation.quantity}</td>
                                     </tr>

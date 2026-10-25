@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useMemo, useState } from 'react'
+import { useCallback, useEffect, useState } from 'react'
 
 import type { Messages } from '../i18n'
 import { supabase } from '../supabaseClient'
@@ -6,17 +6,35 @@ import { supabase } from '../supabaseClient'
 type LocationChoice = {
   id: number
   name: string
+  room: {
+    id: number
+    name: string
+    countable_quantity: {
+      countable: number
+      quantity: number
+    }[]
+  }[]
 }
 
-type RoomChoice = {
-  room_id: number
-  room_name: string
-}
-
-type SourceRoomChoice = {
+type SelectedSourceRoom = {
   id: number
   name: string
   quantity: number
+}
+
+function findSourceRoom(locations: LocationChoice[], countableId: number, roomId: number | ''): SelectedSourceRoom | undefined {
+  for (const location of locations) {
+    const room = location.room.find((candidate) => candidate.id === roomId)
+    const allocation = room?.countable_quantity.find((quantity) => quantity.countable === countableId)
+    if (room && allocation) {
+      return {
+        id: room.id,
+        name: room.name,
+        quantity: allocation.quantity,
+      }
+    }
+  }
+  return undefined
 }
 
 type CountableMoverProps = {
@@ -32,11 +50,8 @@ export default function CountableMover({ messages, canWrite, countableId, counta
   const strings = messages.countables.dialogs.mover
   const [loading, setLoading] = useState(false)
   const [initialLoading, setInitialLoading] = useState(() => Boolean(supabase && canWrite))
-  const [roomsLoading, setRoomsLoading] = useState(false)
   const [error, setError] = useState<string | null>(null)
-  const [sourceRooms, setSourceRooms] = useState<SourceRoomChoice[]>([])
   const [locations, setLocations] = useState<LocationChoice[]>([])
-  const [targetRooms, setTargetRooms] = useState<RoomChoice[]>([])
   const [selectedFromRoomId, setSelectedFromRoomId] = useState<number | ''>('')
   const [selectedLocationId, setSelectedLocationId] = useState<number | ''>('')
   const [selectedToRoomId, setSelectedToRoomId] = useState<number | ''>('')
@@ -50,82 +65,17 @@ export default function CountableMover({ messages, canWrite, countableId, counta
 
     void (async () => {
       try {
-        const [{ data: allocationData, error: allocationError }, { data: locationData, error: locationError }] = await Promise.all([
-          supabase
-            .from('countable_location')
-            .select('room, quantity')
-            .eq('countable', countableId)
-            .gt('quantity', 0),
-          supabase
-            .from('location')
-            .select('id, name')
-            .order('name', { ascending: true }),
-        ])
+        const { data, error: locationError } = await supabase
+          .from('location')
+          .select('id, name, room(id, name, countable_quantity(countable, quantity))')
+          .eq('room.countable_quantity.countable', countableId)
+          .gt('room.countable_quantity.quantity', 0)
+          .order('name', { ascending: true })
+          .order('name', { ascending: true, referencedTable: 'room' })
 
-        if (allocationError) throw allocationError
         if (locationError) throw locationError
         if (!active) return
-
-        const allocations = (allocationData ?? []).map((allocation) => ({
-          id: allocation.room as number,
-          quantity: allocation.quantity as number,
-        }))
-        const roomIds = allocations.map((allocation) => allocation.id)
-        const roomsById = new Map<number, string>()
-        const locationNamesByRoom = new Map<number, string>()
-
-        if (roomIds.length > 0) {
-          const { data: roomData, error: roomError } = await supabase
-            .from('room')
-            .select('id, name, location')
-            .in('id', roomIds)
-
-          if (roomError) throw roomError
-
-          for (const room of roomData ?? []) {
-            roomsById.set(room.id as number, room.name as string)
-          }
-
-          const locationIds = [...new Set((roomData ?? []).map((room) => room.location as number))]
-          if (locationIds.length > 0) {
-            const { data: associatedLocations, error: associatedLocationsError } = await supabase
-              .from('location')
-              .select('id, name')
-              .in('id', locationIds)
-
-            if (associatedLocationsError) throw associatedLocationsError
-
-            const namesById = new Map<number, string>()
-            for (const location of associatedLocations ?? []) {
-              namesById.set(location.id as number, location.name as string)
-            }
-            for (const room of roomData ?? []) {
-              const locationName = namesById.get(room.location as number)
-              if (!locationName) continue
-              locationNamesByRoom.set(room.id as number, locationName)
-            }
-          }
-        }
-
-        if (!active) return
-        setSourceRooms(
-          allocations
-            .flatMap((allocation) => {
-              const roomName = roomsById.get(allocation.id)
-              if (!roomName) return []
-              const locationName = locationNamesByRoom.get(allocation.id)
-              return [{
-                id: allocation.id,
-                name: locationName ? `${locationName} - ${roomName}` : roomName,
-                quantity: allocation.quantity,
-              }]
-            })
-            .sort((a, b) => a.name.localeCompare(b.name))
-        )
-        setLocations((locationData ?? []).map((location) => ({
-          id: location.id as number,
-          name: location.name as string,
-        })))
+        setLocations(data ?? [])
       } catch (e) {
         if (active) setError(e instanceof Error ? e.message : strings.feedback.loadFailed)
       } finally {
@@ -138,41 +88,13 @@ export default function CountableMover({ messages, canWrite, countableId, counta
     }
   }, [canWrite, countableId, strings.feedback.loadFailed])
 
-  useEffect(() => {
-    if (!supabase || !canWrite || selectedLocationId === '') return
-
-    let active = true
-
-    void (async () => {
-      try {
-        const { data, error: roomsError } = await supabase
-          .from('room')
-          .select('id, name')
-          .eq('location', selectedLocationId)
-          .order('name')
-        if (!active) return
-        if (roomsError) throw roomsError
-        setTargetRooms((data ?? []).map((room) => ({
-          room_id: room.id as number,
-          room_name: room.name as string,
-        })))
-      } catch (e) {
-        if (!active) return
-        setError(e instanceof Error ? e.message : strings.feedback.loadFailed)
-        setTargetRooms([])
-      } finally {
-        if (active) setRoomsLoading(false)
-      }
-    })()
-
-    return () => {
-      active = false
-    }
-  }, [canWrite, selectedLocationId, strings.feedback.loadFailed])
-
-  const selectedSourceRoom = useMemo(
-    () => sourceRooms.find((room) => room.id === selectedFromRoomId),
-    [selectedFromRoomId, sourceRooms]
+  const selectedSourceRoom = findSourceRoom(locations, countableId, selectedFromRoomId)
+  const selectedLocation = locations.find((location) => location.id === selectedLocationId)
+  const targetRooms = selectedLocation?.room ?? []
+  const hasSourceRooms = locations.some((location) =>
+    location.room.some((room) =>
+      room.countable_quantity.some((allocation) => allocation.countable === countableId && allocation.quantity > 0)
+    )
   )
   const parsedQuantity = Number(quantity)
   const quantityIsValid = Number.isInteger(parsedQuantity) && parsedQuantity > 0 && parsedQuantity <= (selectedSourceRoom?.quantity ?? 0)
@@ -181,7 +103,6 @@ export default function CountableMover({ messages, canWrite, countableId, counta
     !supabase ||
     loading ||
     initialLoading ||
-    roomsLoading ||
     !selectedSourceRoom ||
     selectedLocationId === '' ||
     selectedToRoomId === '' ||
@@ -207,7 +128,8 @@ export default function CountableMover({ messages, canWrite, countableId, counta
         .from('countable_movement')
         .insert({
           countable: countableId,
-          room: selectedToRoomId,
+          from_room: selectedFromRoomId,
+          to_room: selectedToRoomId,
           quantity: parsedQuantity,
           return_date: returnDate || null,
         })
@@ -221,7 +143,7 @@ export default function CountableMover({ messages, canWrite, countableId, counta
     } finally {
       setLoading(false)
     }
-  }, [canWrite, countableId, onClose, onMoved, parsedQuantity, quantityIsValid, returnDate, selectedLocationId, selectedSourceRoom, selectedToRoomId, strings.feedback.authRequired, strings.feedback.moveFailed, strings.feedback.returnDateMustBeFuture])
+  }, [canWrite, countableId, onClose, onMoved, parsedQuantity, quantityIsValid, returnDate, selectedFromRoomId, selectedLocationId, selectedSourceRoom, selectedToRoomId, strings.feedback.authRequired, strings.feedback.moveFailed, strings.feedback.returnDateMustBeFuture])
 
   if (!canWrite) return null
 
@@ -284,18 +206,26 @@ export default function CountableMover({ messages, canWrite, countableId, counta
             onChange={(e) => {
               const value = e.target.value
               const roomId = value === '' ? '' : Number.parseInt(value, 10)
-              const room = sourceRooms.find((choice) => choice.id === roomId)
+              const room = findSourceRoom(locations, countableId, roomId)
               setSelectedFromRoomId(roomId)
               setQuantity(room ? String(room.quantity) : '')
               if (roomId === selectedToRoomId) setSelectedToRoomId('')
             }}
-            disabled={loading || initialLoading || sourceRooms.length === 0}
+            disabled={loading || initialLoading || !hasSourceRooms}
             style={{ width: '100%', boxSizing: 'border-box', padding: 10, borderRadius: 6, border: '1px solid var(--border)' }}
           >
             <option value="">{initialLoading ? messages.menu.loading : strings.placeholders.fromRoom}</option>
-            {sourceRooms.length === 0 ? <option value="" disabled>{strings.feedback.noSourceRooms}</option> : sourceRooms.map((room) => (
-              <option key={room.id} value={room.id}>{room.name} ({room.quantity})</option>
-            ))}
+            {!hasSourceRooms ? (
+              <option value="" disabled>{strings.feedback.noSourceRooms}</option>
+            ) : locations.map((location) => location.room.map((room) => {
+              const allocation = room.countable_quantity.find((item) => item.countable === countableId)
+              if (!allocation) return null
+              return (
+                <option key={room.id} value={room.id}>
+                  {location.name} - {room.name} ({allocation.quantity})
+                </option>
+              )
+            }))}
           </select>
 
           <label htmlFor="countable-mover-location">{strings.fields.location}</label>
@@ -306,8 +236,6 @@ export default function CountableMover({ messages, canWrite, countableId, counta
               const value = e.target.value
               setSelectedLocationId(value === '' ? '' : Number.parseInt(value, 10))
               setSelectedToRoomId('')
-              setTargetRooms([])
-              setRoomsLoading(value !== '')
               setError(null)
             }}
             disabled={loading || initialLoading || locations.length === 0}
@@ -327,12 +255,12 @@ export default function CountableMover({ messages, canWrite, countableId, counta
               const value = e.target.value
               setSelectedToRoomId(value === '' ? '' : Number.parseInt(value, 10))
             }}
-            disabled={loading || roomsLoading || selectedLocationId === '' || targetRooms.length === 0}
+            disabled={loading || selectedLocationId === '' || targetRooms.length === 0}
             style={{ width: '100%', boxSizing: 'border-box', padding: 10, borderRadius: 6, border: '1px solid var(--border)' }}
           >
             <option value="">{strings.placeholders.toRoom}</option>
             {targetRooms.length === 0 ? <option value="" disabled>{strings.feedback.noTargetRooms}</option> : targetRooms.map((room) => (
-              <option key={room.room_id} value={room.room_id} disabled={room.room_id === selectedFromRoomId}>{room.room_name}</option>
+              <option key={room.id} value={room.id} disabled={room.id === selectedFromRoomId}>{room.name}</option>
             ))}
           </select>
 
