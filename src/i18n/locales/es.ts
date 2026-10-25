@@ -750,6 +750,8 @@ const es = {
     feedback: {
       loadFailed: 'No se pudo cargar el inventario de sala',
     },
+    unit: 'unidad',
+    units: 'unidades',
   },
   returns: {
     systemMenuLabel: 'Devoluciones',

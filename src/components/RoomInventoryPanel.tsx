@@ -87,11 +87,7 @@ export default function RoomInventoryPanel({ messages, roomId, roomName }: RoomI
         if (loadError) throw loadError
 
         if (active) {
-          // FIX ME! Temporarily disable countable categories.
-          const filtered_data = (data ?? []).filter((item: RoomInventoryRow) => itemTypeLabels[item.item_type] !== undefined)
-          setRows(filtered_data as RoomInventoryRow[])
-          // setRows((data ?? []) as RoomInventoryRow[])
-          // END FIX ME!
+          setRows((data ?? []) as RoomInventoryRow[])
         }
       } catch (e) {
         if (active) {
@@ -165,6 +161,7 @@ export default function RoomInventoryPanel({ messages, roomId, roomName }: RoomI
             <tbody>
               {rows.map((row) => {
                 const isBase = row.item_type === 'base'
+                const isCountable = !(row.item_type in itemTypeLabels)
                 const isExpanded = isBase && !collapsedBaseIds.has(row.item_id)
 
                 return (
@@ -183,13 +180,30 @@ export default function RoomInventoryPanel({ messages, roomId, roomName }: RoomI
                         fontWeight: isExpanded ? 'bold' : undefined,
                       }}
                     >
-                      <td style={{ borderBottom: '1px solid var(--border)', padding: '8px 6px', verticalAlign: 'top' }}>
-                        {isBase ? <TriangleIcon isOpen={isExpanded} /> : null}
-                        {row.item_identifier}
-                      </td>
+                      {!isCountable ? (
+                        <td style={{ borderBottom: '1px solid var(--border)', padding: '8px 6px', verticalAlign: 'top' }}>
+                            {isBase ? <TriangleIcon isOpen={isExpanded} /> : null}
+                            {row.item_identifier}
+                        </td>
+                        ) :
+                        <td />
+                      }
                       <td style={{ borderBottom: '1px solid var(--border)', padding: '8px 6px' }}>
                         <div style={{ fontSize: 12, color: 'var(--muted)' }}>{itemTypeLabels[row.item_type] ?? row.item_type}</div>
-                        <div>{row.item_model}</div>
+                        {!isCountable ? (
+                          <div>{row.item_model}</div>
+                          ) : (
+                            <div>
+                            {
+                              `${row.item_model} (${row.item_identifier}
+                                ${row.item_identifier > 1 ?
+                                    messages.roomInventory.units :
+                                    messages.roomInventory.unit
+                                })`
+                            }
+                            </div>
+                          )
+                        }
                       </td>
                       <td style={{ borderBottom: '1px solid var(--border)', padding: '8px 6px', verticalAlign: 'top' }}>
                         {formatDateOnly(row.return_date)}
