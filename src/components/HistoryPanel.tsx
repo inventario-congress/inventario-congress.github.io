@@ -20,6 +20,12 @@ type MovementRecord = {
   is_active: boolean
 }
 
+type CountableMovementRecord = MovementRecord & {
+  from_location_name: string
+  from_room_name: string
+  quantity: number
+}
+
 type AttachmentRecord = {
   created_at: string
   user_name: string | null
@@ -27,7 +33,7 @@ type AttachmentRecord = {
   is_active: boolean
 }
 
-type HistoryRecord = MovementRecord | AttachmentRecord
+type HistoryRecord = MovementRecord | CountableMovementRecord | AttachmentRecord
 
 type HistoryPanelProps = {
   messages: Messages
@@ -63,12 +69,7 @@ export default function HistoryPanel({ messages, itemTypeLabels, attachmentTypes
 
       if (rpcError) throw rpcError
 
-      // FIX ME! Temporarily disable countable categories.
-      // Remove countable item types from the data
-      const filtered_data = (data ?? []).filter((item: HistoryItem) => itemTypeLabels[item.item_type] !== undefined)
-      setItems((filtered_data ?? []) as HistoryItem[])
-      // setItems((data ?? []) as HistoryItem[])
-      // END FIX ME!
+      setItems((data ?? []) as HistoryItem[])
     } catch (e) {
       setError(e instanceof Error ? e.message : messages.history.noItems)
     } finally {
@@ -260,7 +261,8 @@ export default function HistoryPanel({ messages, itemTypeLabels, attachmentTypes
             .select(`
                 created_at,
                 user,
-                room!inner(name, location!inner(name)),
+                from_room!inner(name, location!inner(name)),
+                to_room!inner(name, location!inner(name)),
                 return_date,
                 quantity
             `)
@@ -286,10 +288,13 @@ export default function HistoryPanel({ messages, itemTypeLabels, attachmentTypes
           records: (rows ?? []).map((r) => ({
             created_at: r.created_at,
             user_name: userNames[r.user] ?? null,
-            location_name: (r.room as unknown as { location: { name: string } }).location.name,
-            room_name: (r.room as unknown as { name: string }).name + " (" + r.quantity + ")",
+            from_location_name: (r.from_room as unknown as { location: { name: string } }).location.name,
+            from_room_name: (r.from_room as unknown as { name: string }).name,
+            location_name: (r.to_room as unknown as { location: { name: string } }).location.name,
+            room_name: (r.to_room as unknown as { name: string }).name,
             return_date: (r.return_date as string | null) ?? null,
             is_active: false, // Not applicable for countable movements
+            quantity: r.quantity,
           })),
           nextWindowEnd: olderRecords && olderRecords.length > 0 ? windowStartIso : null,
         }
@@ -597,6 +602,22 @@ export default function HistoryPanel({ messages, itemTypeLabels, attachmentTypes
                         >
                           {messages.history.table.date}
                         </th>
+                        {
+                            isCountable(item.item_type) && (
+                              <>
+                                <th
+                                  style={{
+                                    textAlign: 'left',
+                                    borderBottom: '1px solid var(--border)',
+                                    padding: '6px 8px',
+                                    background: 'var(--table-header-bg)',
+                                  }}
+                                >
+                                  {messages.history.table.from}
+                                </th>
+                              </>
+                            )
+                        }
                         <th
                           style={{
                             textAlign: 'left',
@@ -607,10 +628,24 @@ export default function HistoryPanel({ messages, itemTypeLabels, attachmentTypes
                         >
                           {messages.history.table.destination}
                         </th>
+                        {
+                          isCountable(item.item_type) ? (
+                            <th
+                              style={{
+                                textAlign: 'left',
+                                borderBottom: '1px solid var(--border)',
+                                padding: '6px 8px',
+                                background: 'var(--table-header-bg)',
+                              }}
+                            >
+                              {messages.history.table.quantity}
+                            </th>
+                          ) : null
+                        }
                         {!isAttachmentType(item.item_type) ? (
                           <th
                             style={{
-                              textAlign: 'left',
+                              textAlign: 'right',
                               borderBottom: '1px solid var(--border)',
                               padding: '6px 8px',
                               whiteSpace: 'nowrap',
@@ -645,11 +680,27 @@ export default function HistoryPanel({ messages, itemTypeLabels, attachmentTypes
                               <div>{datePart}</div>
                               <div style={{ fontSize: 12, color: 'var(--muted)' }}>{timePart}</div>
                             </td>
+                            {
+                                isCountable(item.item_type) && 'from_location_name' in record && (
+                                  <>
+                                    <td style={{ borderBottom: '1px solid var(--border)', padding: '6px 8px' }}>
+                                      {`${record.from_location_name}, ${record.from_room_name}`}
+                                    </td>
+                                  </>
+                                )
+                            }
                             <td style={{ borderBottom: '1px solid var(--border)', padding: '6px 8px' }}>
                               {destination}
                             </td>
+                            {
+                              isCountable(item.item_type) && (
+                                <td style={{ borderBottom: '1px solid var(--border)', padding: '6px 8px', textAlign: 'right' }}>
+                                  {record.quantity}
+                                </td>
+                              )
+                            }
                             {!isAttachmentType(item.item_type) ? (
-                              <td style={{ borderBottom: '1px solid var(--border)', padding: '6px 8px', whiteSpace: 'nowrap' }}>
+                              <td style={{ borderBottom: '1px solid var(--border)', padding: '6px 8px', whiteSpace: 'nowrap', textAlign: 'right' }}>
                                 {formatDateOnly((record as MovementRecord).return_date)}
                               </td>
                             ) : null}
@@ -658,7 +709,7 @@ export default function HistoryPanel({ messages, itemTypeLabels, attachmentTypes
                       })}
                       {historyNextWindowEnd[key] ? (
                         <tr>
-                          <td colSpan={isAttachmentType(item.item_type) ? 3 : 4} style={{ padding: 0 }}>
+                          <td colSpan={isCountable(item.item_type) ? 5 : isAttachmentType(item.item_type) ? 2 : 3} style={{ padding: 0 }}>
                             <button
                               type="button"
                               onClick={() => void loadMoreHistory(item)}

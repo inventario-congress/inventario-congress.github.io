@@ -781,8 +781,10 @@ const es = {
     table: {
       date: 'Fecha',
       user: 'Usuario',
+      from: 'Desde',
       destination: 'Destino',
       returnDate: 'Fecha de Vuelta',
+      quantity: 'Cantidad',
       empty: 'No se encontraron registros de historial para este elemento.',
     },
     loadingHistory: 'Cargando historial...',
