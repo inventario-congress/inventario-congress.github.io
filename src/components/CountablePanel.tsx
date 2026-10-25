@@ -12,7 +12,8 @@ type CountableRow = {
 }
 
 type AllocationRow = {
-  location_room: string
+  location: string
+  room: string
   quantity: number
 }
 
@@ -52,11 +53,7 @@ export default function CountablePanel({ messages, canWrite, categoryId, categor
     setError(null)
 
     try {
-      const { data, error: countablesError } = await supabase
-        .from('countable')
-        .select('id, name, quantity')
-        .eq('category', categoryId)
-        .order('name', { ascending: true })
+      const { data, error: countablesError } = await supabase.rpc('get_category_countables', { p_category: categoryId })
 
       if (countablesError) throw countablesError
 
@@ -240,7 +237,7 @@ export default function CountablePanel({ messages, canWrite, categoryId, categor
                                   allocations[item.id].map((allocation, index) => (
                                     <tr key={index}>
                                       <td style={cellStyle}>
-                                        {allocation.location_room}
+                                        {allocation.location}, {allocation.room}
                                       </td>
                                       <td style={{ ...cellStyle, textAlign: 'right' }}>{allocation.quantity}</td>
                                     </tr>

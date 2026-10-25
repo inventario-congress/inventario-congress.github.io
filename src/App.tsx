@@ -516,8 +516,8 @@ function App() {
                 messages={messages}
                 canWrite={isWriter}
                 activePanel={activePanel}
-                countableCategories={[]} // FIX ME! Temporarily disabled countables. Set this {[countableCategories]} when available
-                activeCategoryId={null}  // FIX ME! Temporarily disabled countables. Set this {activeCategoryId} when available
+                countableCategories={countableCategories}
+                activeCategoryId={activeCategoryId}
                 onSelectPanel={handleSelectPanel}
                 onSelectCategory={handleSelectCategory}
                 onSignOut={handleSignOut}
