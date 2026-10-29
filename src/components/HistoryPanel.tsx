@@ -298,7 +298,8 @@ export default function HistoryPanel({ messages, itemTypeLabels, attachmentTypes
             room_name: firstRelation(r.to_room)?.name ?? '',
             return_date: (r.return_date as string | null) ?? null,
             is_active: false, // Not applicable for countable movements
-            quantity: r.quantity,
+            // If room_name is empty, quantity is made negative
+            quantity: firstRelation(r.to_room)?.name ? r.quantity : -r.quantity,
           })),
           nextWindowEnd: olderRecords && olderRecords.length > 0 ? windowStartIso : null,
         }
