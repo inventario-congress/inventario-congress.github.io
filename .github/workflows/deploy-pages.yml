@@ -57,6 +57,32 @@ jobs:
             exit 1
           fi
 
+          if ! grep -q '<link rel="manifest" href="/manifest.json"' dist/index.html; then
+            echo "dist/index.html is missing the web app manifest link."
+            exit 1
+          fi
+
+          node --input-type=module <<'NODE'
+          import { existsSync, readFileSync } from 'node:fs'
+
+          const manifest = JSON.parse(readFileSync('dist/manifest.json', 'utf8'))
+          if (manifest.display !== 'standalone') {
+            throw new Error('dist/manifest.json must set display to standalone.')
+          }
+
+          for (const [src, sizes] of [
+            ['/icons/icon-192.png', '192x192'],
+            ['/icons/icon-512.png', '512x512'],
+          ]) {
+            if (!manifest.icons?.some((icon) => icon.src === src && icon.sizes === sizes && icon.type === 'image/png')) {
+              throw new Error(`dist/manifest.json is missing the ${sizes} PNG icon entry.`)
+            }
+            if (!existsSync(`dist${src}`)) {
+              throw new Error(`Build output is missing ${src}.`)
+            }
+          }
+          NODE
+
       - name: Upload Pages artifact
         uses: actions/upload-pages-artifact@v5
         with:
