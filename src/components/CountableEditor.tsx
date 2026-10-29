@@ -17,10 +17,8 @@ type CountableEditorProps = {
   onSaved?: () => void
   onCategoriesChanged?: () => void
   initialCategoryId?: number | null
+  centralWarehouseRoomId: number
 }
-
-// Ugly hard-coding of the specific room id in which countables are spawned when created
-const CENTRAL_WAREHOUSE_ROOM_ID = 110
 
 const fieldStyle = {
   width: '100%',
@@ -30,7 +28,7 @@ const fieldStyle = {
   border: '1px solid var(--border)',
 } as const
 
-export default function CountableEditor({ messages, canWrite, isOpen, onClose, onSaved, onCategoriesChanged, countableId, initialCategoryId }: CountableEditorProps) {
+export default function CountableEditor({ messages, canWrite, isOpen, onClose, onSaved, onCategoriesChanged, countableId, initialCategoryId, centralWarehouseRoomId }: CountableEditorProps) {
   const isEditMode = typeof countableId === 'number' && countableId > 0
 
   const editorStrings = messages.countables.dialogs.editor
@@ -307,8 +305,7 @@ export default function CountableEditor({ messages, canWrite, isOpen, onClose, o
           p_name: trimmedName,
           p_category: categoryId,
           p_quantity: parsedQuantity,
-          // Hard-coded room id 110: the central warehouse, where new countables are initially stored.
-          p_room: CENTRAL_WAREHOUSE_ROOM_ID,
+          p_room: centralWarehouseRoomId,
         })
 
         if (rpcError) throw rpcError
@@ -332,6 +329,7 @@ export default function CountableEditor({ messages, canWrite, isOpen, onClose, o
   }, [
     canWrite,
     categoryId,
+    centralWarehouseRoomId,
     close,
     countableId,
     editorStrings.feedback.createFailed,

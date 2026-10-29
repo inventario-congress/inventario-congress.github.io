@@ -144,6 +144,8 @@ const es = {
       actions: {
         create: 'Agregar insumo',
         move: 'Mover',
+        remove: 'Eliminar',
+        add: 'Agregar',
       },
       table: {
         name: 'Nombre',
@@ -157,6 +159,45 @@ const es = {
       },
     },
     dialogs: {
+      remover: {
+        title: 'Eliminar',
+        fields: {
+          room: 'Venue y sala',
+          quantity: 'Cantidad a reducir',
+        },
+        placeholders: {
+          room: 'Selecciona una sala...',
+        },
+        actions: {
+          cancel: 'Cancelar',
+          remove: 'Eliminar',
+          confirmDelete: 'Eliminar definitivamente',
+        },
+        confirm: {
+          title: 'Confirmar eliminación',
+          message: 'La cantidad total llegará a 0. Este insumo y su historial se eliminarán permanentemente.',
+        },
+        feedback: {
+          loadFailed: 'No se pudieron cargar las salas',
+          removeFailed: 'No se pudo reducir la cantidad del insumo',
+          noSourceRooms: 'No hay cantidades disponibles en ninguna sala.',
+        },
+      },
+      adder: {
+        title: 'Agregar',
+        fields: {
+          quantity: 'Cantidad a agregar',
+        },
+        addedTo: 'La cantidad se agregará a',
+        actions: {
+          cancel: 'Cancelar',
+          add: 'Agregar',
+        },
+        feedback: {
+          loadFailed: 'No se pudo cargar la sala de destino',
+          addFailed: 'No se pudo agregar la cantidad al insumo',
+        },
+      },
       mover: {
         title: 'Mover',
         fields: {
