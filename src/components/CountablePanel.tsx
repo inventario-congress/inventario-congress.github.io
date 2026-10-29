@@ -4,6 +4,11 @@ import type { Messages } from '../i18n'
 import { supabase } from '../supabaseClient'
 import CountableEditor from './CountableEditor'
 import CountableMover from './CountableMover'
+import CountableRemover from './CountableRemover'
+import CountableAdder from './CountableAdder'
+
+// Hard-coded id of the central warehouse room, where new and added countable quantities are stored.
+const CENTRAL_WAREHOUSE_ROOM_ID = 110
 
 type CountableRow = {
   id: number
@@ -40,6 +45,8 @@ export default function CountablePanel({ messages, canWrite, categoryId, categor
 
   const [editorOpen, setEditorOpen] = useState(false)
   const [movingCountableId, setMovingCountableId] = useState<number | null>(null)
+  const [removingCountableId, setRemovingCountableId] = useState<number | null>(null)
+  const [addingCountableId, setAddingCountableId] = useState<number | null>(null)
   const [loading, setLoading] = useState(false)
   const [error, setError] = useState<string | null>(null)
   const [countables, setCountables] = useState<CountableRow[]>([])
@@ -117,6 +124,7 @@ export default function CountablePanel({ messages, canWrite, categoryId, categor
         canWrite={canWrite}
         isOpen={editorOpen}
         initialCategoryId={categoryId}
+        centralWarehouseRoomId={CENTRAL_WAREHOUSE_ROOM_ID}
         onClose={() => {
           setEditorOpen(false)
           void load()
@@ -138,6 +146,43 @@ export default function CountablePanel({ messages, canWrite, categoryId, categor
           onClose={() => setMovingCountableId(null)}
           onMoved={async () => {
             await loadAllocations(movingCountableId)
+            await load()
+          }}
+        />
+      ) : null}
+
+      {removingCountableId !== null ? (
+        <CountableRemover
+          key={`remove-${removingCountableId}`}
+          messages={messages}
+          canWrite={canWrite}
+          countableId={removingCountableId}
+          countableName={countables.find(c => c.id === removingCountableId)?.name ?? ''}
+          onClose={() => setRemovingCountableId(null)}
+          onRemoved={async (countableDeleted) => {
+            const id = removingCountableId
+            await load()
+            if (countableDeleted) {
+              // The category may have been deleted along with its last countable.
+              onCategoriesChanged?.()
+            } else {
+              await loadAllocations(id)
+            }
+          }}
+        />
+      ) : null}
+
+      {addingCountableId !== null ? (
+        <CountableAdder
+          key={`add-${addingCountableId}`}
+          messages={messages}
+          canWrite={canWrite}
+          countableId={addingCountableId}
+          countableName={countables.find(c => c.id === addingCountableId)?.name ?? ''}
+          targetRoomId={CENTRAL_WAREHOUSE_ROOM_ID}
+          onClose={() => setAddingCountableId(null)}
+          onAdded={async () => {
+            await loadAllocations(addingCountableId)
             await load()
           }}
         />
@@ -225,6 +270,26 @@ export default function CountablePanel({ messages, canWrite, categoryId, categor
                                     style={{ padding: '6px 10px', borderRadius: 6, cursor: 'pointer' }}
                                 >
                                     {messages.countables.panel.actions.move}
+                                </button>
+                                <button
+                                    type="button"
+                                    onClick={(e) => {
+                                      e.stopPropagation()
+                                      setRemovingCountableId(item.id)
+                                    }}
+                                    style={{ padding: '6px 10px', borderRadius: 6, cursor: 'pointer' }}
+                                >
+                                    {messages.countables.panel.actions.remove}
+                                </button>
+                                <button
+                                    type="button"
+                                    onClick={(e) => {
+                                      e.stopPropagation()
+                                      setAddingCountableId(item.id)
+                                    }}
+                                    style={{ padding: '6px 10px', borderRadius: 6, cursor: 'pointer' }}
+                                >
+                                    {messages.countables.panel.actions.add}
                                 </button>
                                 </div>
                             ) : null}
