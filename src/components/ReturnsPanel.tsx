@@ -3,6 +3,7 @@ import { useCallback, useEffect, useMemo, useState } from 'react'
 import type { Messages } from '../i18n'
 import { supabase } from '../supabaseClient'
 import EntityMover from './EntityMover'
+import type { BulkItem } from './EntityMover'
 import type { BulkSelectionAction } from './bulkMove/types'
 
 type ReturnRow = {
@@ -13,6 +14,7 @@ type ReturnRow = {
   return_date: string | null
   location_name: string | null
   room_name: string | null
+  room_id: number | null
 }
 
 type ReturnsPanelProps = {
@@ -29,6 +31,11 @@ type SortDirection = 'asc' | 'desc'
 type SortState = {
   column: SortColumn
   direction: SortDirection
+}
+
+// Countables are allocated per room, so the room is part of the row identity
+function keyForRow(row: ReturnRow): string {
+  return `${row.item_type}-${row.item_id}-${row.room_id ?? ''}`
 }
 
 const NO_ACTIONS: BulkSelectionAction[] = []
@@ -153,9 +160,14 @@ export default function ReturnsPanel({
     return result * (sortState.direction === 'asc' ? 1 : -1)
   }
 
-  const columns: { key: SortColumn; label: string }[] = [
+  const standardColumns: { key: SortColumn; label: string }[] = [
     { key: 'identifier', label: messages.returns.table.identifier },
     { key: 'name', label: messages.returns.table.name },
+    { key: 'room_name', label: messages.returns.table.room },
+  ]
+  const countableColumns: { key: SortColumn; label: string }[] = [
+    { key: 'name', label: messages.countables.dialogs.editor.fields.name },
+    { key: 'identifier', label: messages.countables.dialogs.editor.fields.quantity },
     { key: 'room_name', label: messages.returns.table.room },
   ]
 
@@ -177,24 +189,21 @@ export default function ReturnsPanel({
   const selectionCount = useMemo(() => Object.values(selection).filter(Boolean).length, [selection])
 
   const selectedItems = useMemo(() => {
-    return Object.entries(selection)
-      .filter(([, isSelected]) => isSelected)
-      .map(([key]) => {
-        const [entityType, entityId] = key.split('-')
-        return { entityType, entityId: Number.parseInt(entityId, 10) }
+    return rows
+      .filter((row) => selection[keyForRow(row)])
+      .flatMap((row): BulkItem[] => {
+        if (itemTypeLabels[row.item_type]) return [{ entityType: row.item_type, entityId: row.item_id }]
+        if (row.room_id === null || !row.item_identifier) return []
+        return [{ kind: 'countable', countableId: row.item_id, fromRoomId: row.room_id, quantity: row.item_identifier, name: row.item_name ?? '', roomName: row.room_name ?? '' }]
       })
-  }, [selection])
+  }, [itemTypeLabels, rows, selection])
 
   const detachAction = useMemo(() => {
     if (!canWrite || selectedItems.length === 0) return null
     return (
-      selectionActions.find((action) => selectedItems.some((item) => item.entityType === action.itemType)) ?? null
+      selectionActions.find((action) => selectedItems.some((item) => item.kind !== 'countable' && item.entityType === action.itemType)) ?? null
     )
   }, [canWrite, selectedItems, selectionActions])
-
-  function keyForRow(row: ReturnRow): string {
-    return `${row.item_type}-${row.item_id}`
-  }
 
   function toggleRow(key: string) {
     setSelection((previous) => ({ ...previous, [key]: !previous[key] }))
@@ -238,7 +247,10 @@ export default function ReturnsPanel({
             const groupTitle = `${group.locationName} — ${formatDateOnly(group.returnDate)}`
             const groupKey = JSON.stringify([group.locationName, group.returnDate])
             const sortState: SortState = sortStates[groupKey] ?? { column: 'room_name', direction: 'asc' }
-            const displayRows = [...group.rows].sort((a, b) => compareRows(a, b, sortState))
+            const tableGroups = [
+              { key: 'standard', isCountable: false, columns: standardColumns, rows: group.rows.filter((row) => itemTypeLabels[row.item_type]) },
+              { key: 'countable', isCountable: true, columns: countableColumns, rows: group.rows.filter((row) => !itemTypeLabels[row.item_type]) },
+            ].filter((tableGroup) => tableGroup.rows.length > 0)
 
             return (
               <div
@@ -266,55 +278,76 @@ export default function ReturnsPanel({
                   />
                   <strong>{groupTitle}</strong>
                 </div>
-                <div style={{ overflowX: 'auto' }}>
-                  <table style={{ width: '100%', borderCollapse: 'collapse' }}>
-                    <thead>
-                      <tr>
-                        <th style={{ ...thStyle, width: 40, cursor: 'default' }} />
-                        {columns.map((col) => (
-                          <th key={col.key} onClick={() => toggleSort(groupKey, col.key)} style={thStyle}>
-                            {col.label}
-                            <SortIcon
-                              active={sortState.column === col.key}
-                              sortDirection={sortState.direction}
-                            />
-                          </th>
-                        ))}
-                        <th style={{ ...thStyle, cursor: 'default' }}>{messages.returns.table.returnDate}</th>
-                      </tr>
-                    </thead>
-                    <tbody>
-                      {displayRows.map((row) => {
-                        const key = keyForRow(row)
-                        const cellStyle = { borderBottom: '1px solid var(--border)', padding: '8px 6px' }
-                        return (
-                          <tr
-                            key={key}
-                            onClick={() => toggleRow(key)}
-                            style={{ cursor: 'pointer', ...(isDueOrOverdue(row.return_date) ? { color: 'red' } : {}) }}
-                          >
-                            <td style={{ ...cellStyle, textAlign: 'center' }}>
-                              <input
-                                type="checkbox"
-                                checked={!!selection[key]}
-                                onChange={() => toggleRow(key)}
-                                onClick={(event) => event.stopPropagation()}
-                                aria-label={`${messages.returns.table.identifier}: ${row.item_identifier ?? ''}`}
-                              />
-                            </td>
-                            <td style={cellStyle}>{row.item_identifier ?? ''}</td>
-                            <td style={cellStyle}>
-                              <div style={{ fontSize: 12, color: 'var(--muted)' }}>{itemTypeLabels[row.item_type] ?? row.item_type}</div>
-                              <div>{row.item_name ?? ''}</div>
-                            </td>
-                            <td style={cellStyle}>{row.room_name ?? ''}</td>
-                            <td style={cellStyle}>{formatDateOnly(row.return_date)}</td>
+                {tableGroups.map((tableGroup) => {
+                  const displayRows = [...tableGroup.rows].sort((a, b) => compareRows(a, b, sortState))
+                  return (
+                    <div key={tableGroup.key} style={{ overflowX: 'auto' }}>
+                      <table style={{ width: '100%', borderCollapse: 'collapse' }}>
+                        <thead>
+                          <tr>
+                            <th style={{ ...thStyle, width: 40, cursor: 'default' }} />
+                            {tableGroup.columns.map((col) => (
+                              <th key={col.key} onClick={() => toggleSort(groupKey, col.key)} style={thStyle}>
+                                {col.label}
+                                <SortIcon
+                                  active={sortState.column === col.key}
+                                  sortDirection={sortState.direction}
+                                />
+                              </th>
+                            ))}
+                            <th style={{ ...thStyle, cursor: 'default' }}>{messages.returns.table.returnDate}</th>
                           </tr>
-                        )
-                      })}
-                    </tbody>
-                  </table>
-                </div>
+                        </thead>
+                        <tbody>
+                          {displayRows.map((row) => {
+                            const key = keyForRow(row)
+                            const cellStyle = { borderBottom: '1px solid var(--border)', padding: '8px 6px' }
+                            const typeLabel = itemTypeLabels[row.item_type]
+                              ?? (tableGroup.isCountable
+                                ? row.item_type.charAt(0).toUpperCase() + row.item_type.slice(1)
+                                : row.item_type)
+                            return (
+                              <tr
+                                key={key}
+                                onClick={() => toggleRow(key)}
+                                style={{ cursor: 'pointer', ...(isDueOrOverdue(row.return_date) ? { color: 'red' } : {}) }}
+                              >
+                                <td style={{ ...cellStyle, textAlign: 'center' }}>
+                                  <input
+                                    type="checkbox"
+                                    checked={!!selection[key]}
+                                    onChange={() => toggleRow(key)}
+                                    onClick={(event) => event.stopPropagation()}
+                                    aria-label={`${messages.returns.table.identifier}: ${row.item_identifier ?? ''}`}
+                                  />
+                                </td>
+                                {tableGroup.isCountable ? (
+                                  <>
+                                    <td style={cellStyle}>
+                                      <div style={{ fontSize: 12, color: 'var(--muted)' }}>{typeLabel}</div>
+                                      <div>{row.item_name ?? ''}</div>
+                                    </td>
+                                    <td style={cellStyle}>{row.item_identifier ?? ''}</td>
+                                  </>
+                                ) : (
+                                  <>
+                                    <td style={cellStyle}>{row.item_identifier ?? ''}</td>
+                                    <td style={cellStyle}>
+                                      <div style={{ fontSize: 12, color: 'var(--muted)' }}>{typeLabel}</div>
+                                      <div>{row.item_name ?? ''}</div>
+                                    </td>
+                                  </>
+                                )}
+                                <td style={cellStyle}>{row.room_name ?? ''}</td>
+                                <td style={cellStyle}>{formatDateOnly(row.return_date)}</td>
+                              </tr>
+                            )
+                          })}
+                        </tbody>
+                      </table>
+                    </div>
+                  )
+                })}
               </div>
             )
           })

@@ -749,6 +749,7 @@ const es = {
     moveButtonDisabled: 'Selecciona elementos para mover',
     noItems: 'Selecciona un venue para ver los elementos disponibles.',
     loadingItems: 'Cargando elementos...',
+    countablesHeading: 'Se moverá la cantidad completa de:',
     dialogs: {
       moveSelection: {
         title: 'Mover elementos',
@@ -776,6 +777,8 @@ const es = {
       detachFailed: 'No se pudieron separar los micrófonos.',
       noMicrophonesToDetach: 'No hay micrófonos actualmente conectados a las bases seleccionadas.',
       detachFailedNotMoved: 'No se pudieron separar los micrófonos. No se movió nada.',
+      countableSameRoom: 'La sala de destino no puede ser la sala de origen de un contable.',
+      partialMove: 'Movimiento parcial: se movieron {entities} elementos y {countables} contables, pero falló "{name}" ({error}). Los siguientes no se movieron.',
       detachedButMoveFailed: 'Los micrófonos se separaron, pero el movimiento falló y los elementos NO se movieron. Puedes reintentar el movimiento.',
     },
   },
