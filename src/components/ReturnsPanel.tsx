@@ -3,6 +3,7 @@ import { useCallback, useEffect, useMemo, useState } from 'react'
 import type { Messages } from '../i18n'
 import { supabase } from '../supabaseClient'
 import EntityMover from './EntityMover'
+import type { BulkItem } from './EntityMover'
 import type { BulkSelectionAction } from './bulkMove/types'
 
 type ReturnRow = {
@@ -13,6 +14,7 @@ type ReturnRow = {
   return_date: string | null
   location_name: string | null
   room_name: string | null
+  room_id: number | null
 }
 
 type ReturnsPanelProps = {
@@ -29,6 +31,11 @@ type SortDirection = 'asc' | 'desc'
 type SortState = {
   column: SortColumn
   direction: SortDirection
+}
+
+// Countables are allocated per room, so the room is part of the row identity
+function keyForRow(row: ReturnRow): string {
+  return `${row.item_type}-${row.item_id}-${row.room_id ?? ''}`
 }
 
 const NO_ACTIONS: BulkSelectionAction[] = []
@@ -182,26 +189,21 @@ export default function ReturnsPanel({
   const selectionCount = useMemo(() => Object.values(selection).filter(Boolean).length, [selection])
 
   const selectedItems = useMemo(() => {
-    return Object.entries(selection)
-      .filter(([, isSelected]) => isSelected)
-      .map(([key]) => {
-        const [entityType, entityId] = key.split('-')
-        return { entityType, entityId: Number.parseInt(entityId, 10) }
+    return rows
+      .filter((row) => selection[keyForRow(row)])
+      .flatMap((row): BulkItem[] => {
+        if (itemTypeLabels[row.item_type]) return [{ entityType: row.item_type, entityId: row.item_id }]
+        if (row.room_id === null || !row.item_identifier) return []
+        return [{ kind: 'countable', countableId: row.item_id, fromRoomId: row.room_id, quantity: row.item_identifier, name: row.item_name ?? '', roomName: row.room_name ?? '' }]
       })
-  }, [selection])
-
-  const hasSelectedCountables = selectedItems.some((item) => !itemTypeLabels[item.entityType])
+  }, [itemTypeLabels, rows, selection])
 
   const detachAction = useMemo(() => {
     if (!canWrite || selectedItems.length === 0) return null
     return (
-      selectionActions.find((action) => selectedItems.some((item) => item.entityType === action.itemType)) ?? null
+      selectionActions.find((action) => selectedItems.some((item) => item.kind !== 'countable' && item.entityType === action.itemType)) ?? null
     )
   }, [canWrite, selectedItems, selectionActions])
-
-  function keyForRow(row: ReturnRow): string {
-    return `${row.item_type}-${row.item_id}`
-  }
 
   function toggleRow(key: string) {
     setSelection((previous) => ({ ...previous, [key]: !previous[key] }))

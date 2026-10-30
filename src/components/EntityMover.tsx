@@ -35,10 +35,27 @@ type MoveDialogStrings = {
   returnDateMustChange: string
 }
 
-type BulkItem = {
+type EntityItem = {
+  kind?: 'entity'
   entityId: number
   // 'base' or the name of a movement column (e.g. 'combo', 'console', 'case')
   entityType: string
+}
+
+// A countable is moved in full from one source room
+type CountableItem = {
+  kind: 'countable'
+  countableId: number
+  fromRoomId: number
+  quantity: number
+  name: string
+  roomName: string
+}
+
+export type BulkItem = EntityItem | CountableItem
+
+function isCountableItem(item: BulkItem): item is CountableItem {
+  return item.kind === 'countable'
 }
 
 type EntityMoverProps = {
@@ -64,6 +81,8 @@ export default function EntityMover({ messages, canWrite, open, entityId, entity
   const [detachHasWork, setDetachHasWork] = useState(false)
   const [detachMicrophones, setDetachMicrophones] = useState(false)
   const [detachDone, setDetachDone] = useState(false)
+  // Set after a partial move; retrying is disallowed until the dialog is closed and data reloaded
+  const [partiallyMoved, setPartiallyMoved] = useState(false)
 
   const [locationsLoading, setLocationsLoading] = useState(false)
   const [locations, setLocations] = useState<LocationChoice[]>([])
@@ -89,8 +108,10 @@ export default function EntityMover({ messages, canWrite, open, entityId, entity
     setDetachHasWork(false)
     setDetachMicrophones(false)
     setDetachDone(false)
+    setPartiallyMoved(false)
     onClose()
-  }, [loading, onClose])
+    if (partiallyMoved) void onMoved()
+  }, [loading, onClose, onMoved, partiallyMoved])
 
   const loadLocations = useCallback(
     async (isActive: () => boolean) => {
@@ -223,17 +244,19 @@ export default function EntityMover({ messages, canWrite, open, entityId, entity
     }
   }, [canWrite, loadRoomsForLocation, open, selectedLocationId])
 
-  const activeItems = useMemo(() => {
+  const activeItems = useMemo<BulkItem[]>(() => {
     // If `items` is provided (bulk mode), use it; otherwise fall back to single entity.
     if (items && items.length > 0) return items
     if (entityId && entityType) return [{ entityId, entityType }]
     return []
   }, [items, entityId, entityType])
   const isBulkMove = Boolean(items && items.length > 0)
+  const entityItems = useMemo(() => activeItems.filter((item): item is EntityItem => !isCountableItem(item)), [activeItems])
+  const countableItems = useMemo(() => activeItems.filter(isCountableItem), [activeItems])
 
   const detachIds = useMemo(
-    () => (detachAction ? activeItems.filter((item) => item.entityType === detachAction.itemType).map((item) => item.entityId) : []),
-    [activeItems, detachAction]
+    () => (detachAction ? entityItems.filter((item) => item.entityType === detachAction.itemType).map((item) => item.entityId) : []),
+    [entityItems, detachAction]
   )
 
   useEffect(() => {
@@ -265,7 +288,7 @@ export default function EntityMover({ messages, canWrite, open, entityId, entity
   const [latestMovementsLoading, setLatestMovementsLoading] = useState(false)
   const [latestMovementsError, setLatestMovementsError] = useState(false)
 
-  const loadLatestMovements = useCallback(async (requestedItems: BulkItem[]) => {
+  const loadLatestMovements = useCallback(async (requestedItems: EntityItem[]) => {
     if (!supabase) return new Map<string, LatestMovement>()
 
     const movements = new Map<string, LatestMovement>()
@@ -352,7 +375,7 @@ export default function EntityMover({ messages, canWrite, open, entityId, entity
       setLatestMovementsLoading(true)
       setLatestMovementsError(false)
 
-      void loadLatestMovements(activeItems)
+      void loadLatestMovements(entityItems)
         .then((movements) => {
           if (active) setLatestMovements(movements)
         })
@@ -370,18 +393,18 @@ export default function EntityMover({ messages, canWrite, open, entityId, entity
     return () => {
       active = false
     }
-  }, [activeItems, canWrite, loadLatestMovements, messages.bases.feedback.loadFailed, open])
+  }, [activeItems.length, canWrite, entityItems, loadLatestMovements, messages.bases.feedback.loadFailed, open])
 
   const matchesLatestMovement = useCallback(
     (movements: Map<string, LatestMovement>) =>
-      activeItems.some((item) => {
+      entityItems.some((item) => {
         const movement = movements.get(`${item.entityType}:${item.entityId}`)
         return movement !== undefined &&
           movement.location === selectedLocationId &&
           movement.room === selectedRoomId &&
           movement.return_date === (returnDate || null)
       }),
-    [activeItems, returnDate, selectedLocationId, selectedRoomId]
+    [entityItems, returnDate, selectedLocationId, selectedRoomId]
   )
 
   const isDuplicateMovement = matchesLatestMovement(latestMovements)
@@ -390,22 +413,27 @@ export default function EntityMover({ messages, canWrite, open, entityId, entity
     selectedRoomId !== (typeof locationId === 'number' && typeof roomId === 'number' ? roomId : '') ||
     returnDate !== (isBulkMove ? '' : latestReturnDate ?? '')
 
+  const countableSameRoom = countableItems.some((item) => item.fromRoomId === selectedRoomId)
+
   const submitDisabled = useMemo(() => {
     if (!canWrite) return true
     if (!supabase) return true
     if (activeItems.length === 0) return true
     if (loading) return true
+    if (partiallyMoved) return true
     if (locationsLoading || roomsLoading) return true
     if (latestMovementsLoading) return true
     if (latestMovementsError) return true
     if (selectedLocationId === '' || selectedRoomId === '') return true
     if (isDuplicateMovement) return true
+    if (countableSameRoom) return true
     if (!hasChanges) return true
     return false
-  }, [activeItems, canWrite, hasChanges, isDuplicateMovement, latestMovementsError, latestMovementsLoading, locationsLoading, loading, roomsLoading, selectedLocationId, selectedRoomId])
+  }, [activeItems, canWrite, countableSameRoom, hasChanges, isDuplicateMovement, latestMovementsError, latestMovementsLoading, locationsLoading, loading, partiallyMoved, roomsLoading, selectedLocationId, selectedRoomId])
 
   const handleSubmit = useCallback(async () => {
     if (!supabase) return
+    if (partiallyMoved) return
     if (!canWrite) return
     if (activeItems.length === 0) return
     if (selectedLocationId === '' || selectedRoomId === '') return
@@ -429,12 +457,12 @@ export default function EntityMover({ messages, canWrite, open, entityId, entity
         throw new Error(dialogStrings.returnDateMustBeFuture)
       }
 
-      const latestMovementsAtSubmit = await loadLatestMovements(activeItems)
+      const latestMovementsAtSubmit = await loadLatestMovements(entityItems)
       if (matchesLatestMovement(latestMovementsAtSubmit)) {
         throw new Error(dialogStrings.returnDateMustChange)
       }
 
-      const payloads: Record<string, number | string | null>[] = activeItems.map((item) => {
+      const payloads: Record<string, number | string | null>[] = entityItems.map((item) => {
         const payload: Record<string, number | string> = {
           room: selectedRoomId,
           user: userId,
@@ -459,12 +487,41 @@ export default function EntityMover({ messages, canWrite, open, entityId, entity
         setDetachDone(true)
       }
 
-      const { error: createError } = await supabase.from('movement').insert(payloads)
-      if (createError) {
-        if (detached) {
-          throw new Error(`${messages.bulkMove.feedback.detachedButMoveFailed} (${createError.message})`)
+      if (payloads.length > 0) {
+        const { error: createError } = await supabase.from('movement').insert(payloads)
+        if (createError) {
+          if (detached) {
+            throw new Error(`${messages.bulkMove.feedback.detachedButMoveFailed} (${createError.message})`)
+          }
+          throw createError
         }
-        throw createError
+      }
+
+      // Stop at the first failure; already-recorded movements are not rolled back.
+      let movedCountables = 0
+      for (const item of countableItems) {
+        const { error: countableError } = await supabase.from('countable_movement').insert({
+          countable: item.countableId,
+          from_room: item.fromRoomId,
+          to_room: selectedRoomId,
+          quantity: item.quantity,
+          return_date: returnDate || null,
+        })
+        if (countableError) {
+          const movedEntities = payloads.length
+          if (movedEntities > 0 || movedCountables > 0) {
+            setPartiallyMoved(true)
+            throw new Error(
+              messages.bulkMove.feedback.partialMove
+                .replace('{entities}', String(movedEntities))
+                .replace('{countables}', String(movedCountables))
+                .replace('{name}', item.name)
+                .replace('{error}', countableError.message)
+            )
+          }
+          throw countableError
+        }
+        movedCountables += 1
       }
 
       await onMoved()
@@ -475,7 +532,7 @@ export default function EntityMover({ messages, canWrite, open, entityId, entity
     } finally {
       setLoading(false)
     }
-  }, [activeItems, canWrite, close, detachAction, detachDone, detachIds, detachMicrophones, dialogStrings.returnDateMustBeFuture, dialogStrings.returnDateMustChange, loadLatestMovements, matchesLatestMovement, messages.microphones.feedback.authRequired, messages.bulkMove.feedback.detachFailedNotMoved, messages.bulkMove.feedback.detachedButMoveFailed, onMoved, returnDate, selectedLocationId, selectedRoomId, showDetachOption, messages.bases.feedback.loadFailed])
+  }, [activeItems.length, canWrite, partiallyMoved, close, countableItems, detachAction, detachDone, detachIds, detachMicrophones, entityItems, dialogStrings.returnDateMustBeFuture, dialogStrings.returnDateMustChange, loadLatestMovements, matchesLatestMovement, messages.microphones.feedback.authRequired, messages.bulkMove.feedback.detachFailedNotMoved, messages.bulkMove.feedback.detachedButMoveFailed, messages.bulkMove.feedback.partialMove, onMoved, returnDate, selectedLocationId, selectedRoomId, showDetachOption, messages.bases.feedback.loadFailed])
 
   if (!open) return null
 
@@ -671,6 +728,20 @@ export default function EntityMover({ messages, canWrite, open, entityId, entity
                 </button>
               </div>
           </>
+
+          {countableItems.length > 0 ? (
+            <div style={{ textAlign: 'left' }}>
+              <div>{messages.bulkMove.countablesHeading}</div>
+              <ul style={{ margin: '6px 0 0 0', paddingLeft: 20 }}>
+                {countableItems.map((item) => (
+                  <li key={`${item.countableId}-${item.fromRoomId}`}>
+                    {item.name} × {item.quantity} ({item.roomName})
+                  </li>
+                ))}
+              </ul>
+              {countableSameRoom ? <div style={{ color: 'crimson', marginTop: 6 }}>{messages.bulkMove.feedback.countableSameRoom}</div> : null}
+            </div>
+          ) : null}
 
           {showDetachOption ? (
             <label style={{ display: 'flex', alignItems: 'center', gap: 8, textAlign: 'left' }}>
