@@ -421,6 +421,7 @@ export default function BulkMovePanel({ messages, canWrite, itemTypeOrder, itemT
                   <tbody>
                     {group.items.map((item) => {
                       const k = keyForItem(item)
+                      const isCountable = itemTypeLabels[item.item_type] === undefined
                       return (
                         <tr
                           key={k}
@@ -442,13 +443,21 @@ export default function BulkMovePanel({ messages, canWrite, itemTypeOrder, itemT
                             />
                           </td>
                           <td style={{ borderBottom: '1px solid var(--border)', padding: '6px 4px' }}>
-                            {item.item_identifier}
+                            {isCountable ? null : item.item_identifier}
                           </td>
                           <td style={{ borderBottom: '1px solid var(--border)', padding: '6px 4px' }}>
-                            {item.item_model}
+                            {
+                              isCountable ?
+                                `${item.item_model} (${item.item_identifier} ${item.item_identifier > 1 ? messages.roomInventory.units : messages.roomInventory.unit})` :
+                                item.item_model
+                            }
                           </td>
                           <td style={{ borderBottom: '1px solid var(--border)', padding: '6px 4px' }}>
-                            {itemTypeLabels[item.item_type] ?? item.item_type}
+                            {
+                              isCountable ?
+                                item.item_type.charAt(0).toUpperCase() + item.item_type.slice(1) :
+                                itemTypeLabels[item.item_type]
+                            }
                           </td>
                         </tr>
                       )
