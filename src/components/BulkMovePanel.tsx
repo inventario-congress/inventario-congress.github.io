@@ -184,7 +184,7 @@ export default function BulkMovePanel({ messages, canWrite, itemTypeOrder, itemT
     }
 
     // Now process the selected items
-    const items: BulkItem[] = []
+    const items = []
 
     for (const [key, isSelected] of Object.entries(selection)) {
         if (!isSelected) continue
