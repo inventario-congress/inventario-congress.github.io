@@ -733,8 +733,8 @@ export default function EntityMover({ messages, canWrite, open, entityId, entity
             <div style={{ textAlign: 'left' }}>
               <div>{messages.bulkMove.countablesHeading}</div>
               <ul style={{ margin: '6px 0 0 0', paddingLeft: 20 }}>
-                {countableItems.map((item) => (
-                  <li key={`${item.countableId}-${item.fromRoomId}`}>
+                {countableItems.map((item, index) => (
+                  <li key={`${item.countableId}-${item.fromRoomId}-${index}`}>
                     {item.name} × {item.quantity} ({item.roomName})
                   </li>
                 ))}
