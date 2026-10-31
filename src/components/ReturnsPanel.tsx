@@ -35,7 +35,7 @@ type SortState = {
 
 // Countables are allocated per room, so the room is part of the row identity
 function keyForRow(row: ReturnRow): string {
-  return `${row.item_type}-${row.item_id}-${row.room_id ?? ''}`
+  return `${row.item_type}-${row.item_id}-${row.item_identifier ?? ''}-${row.room_id ?? ''}`
 }
 
 const NO_ACTIONS: BulkSelectionAction[] = []
