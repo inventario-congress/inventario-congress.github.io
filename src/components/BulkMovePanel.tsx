@@ -173,16 +173,44 @@ export default function BulkMovePanel({ messages, canWrite, itemTypeOrder, itemT
   const selectionCount = useMemo(() => Object.keys(selection).filter((k) => selection[k]).length, [selection])
 
   const selectedItems = useMemo(() => {
-    return Object.entries(selection)
-      .filter(([, v]) => v)
-      .map(([key]) => {
-        const [itemType, itemIdStr] = key.split('-')
-        return {
-          entityType: itemType,
-          entityId: Number.parseInt(itemIdStr, 10),
+    // Build a map of all items for quick lookup by key
+    const itemKeysToItems = new Map<string, RoomItem>()
+
+    for (const group of roomGroups) {
+        for (const item of group.items) {
+          const key = `${item.item_type}-${item.item_id}`
+          itemKeysToItems.set(key, item)
         }
-      })
-  }, [selection])
+    }
+
+    // Now process the selected items
+    const items: BulkItem[] = []
+
+    for (const [key, isSelected] of Object.entries(selection)) {
+        if (!isSelected) continue
+
+        const item = itemKeysToItems.get(key)
+        if (!item) continue
+
+        if (!itemTypeLabels[item.item_type]) {
+            items.push({
+                kind: 'countable' as const,
+                countableId: item.item_id,
+                fromRoomId: item.room_id,
+                quantity: item.item_identifier,
+                name: item.item_model,
+                roomName: item.room_name,
+            })
+        } else {
+            items.push({
+                entityType: item.item_type,
+                entityId: item.item_id,
+            })
+        }
+    }
+
+    return items
+  }, [selection, itemTypeLabels, roomGroups])
 
   const detachAction = useMemo(() => {
     if (!canWrite || selectedItems.length === 0) return null
