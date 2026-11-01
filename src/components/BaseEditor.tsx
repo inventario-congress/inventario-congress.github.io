@@ -167,8 +167,14 @@ export default function BaseEditor({ messages, canWrite, isOpen, onClose, onSave
     const parsedIdentifier = Number.parseInt(identifier, 10)
     const parsedMaxMicCount = Number.parseInt(maxMicCount, 10)
 
-    return Number.isNaN(parsedIdentifier) || Number.isNaN(parsedMaxMicCount)
-  }, [canWrite, identifier, maxMicCount, loading, modelsLoading])
+    // Check if maxMicCount is empty or less than 1
+    if (!maxMicCount || parsedMaxMicCount < 1) return true
+
+    // Check if no models are selected
+    if (selectedModelIds.size === 0) return true
+
+    return Number.isNaN(parsedIdentifier)
+  }, [canWrite, identifier, maxMicCount, loading, modelsLoading, selectedModelIds])
 
   // baseId is used for edit mode
   void baseId
@@ -362,6 +368,7 @@ export default function BaseEditor({ messages, canWrite, isOpen, onClose, onSave
               value={maxMicCount}
               onChange={(e) => setMaxMicCount(e.target.value)}
               type="number"
+              min={1}
               required
               placeholder={strings.fields.maxMicCount}
 
@@ -480,4 +487,3 @@ export default function BaseEditor({ messages, canWrite, isOpen, onClose, onSave
 
   return modal
 }
-
