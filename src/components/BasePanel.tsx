@@ -533,6 +533,10 @@ export default function BasePanel({ messages, canWrite }: BasePanelProps) {
     return copy
   }
 
+  function disableDelete(row: BaseRow): boolean {
+    return loading || getBaseMics(row).length > 0
+  }
+
   function getBaseMics(row: BaseRow): MicAttachment[] {
     const raw = micsByBaseId[row.base_id]
     if (!raw) return []
@@ -750,7 +754,7 @@ export default function BasePanel({ messages, canWrite }: BasePanelProps) {
                                       setEditingBaseId(row.base_id)
                                       setBaseEditorOpen(true)
                                   }}
-                                  disabled={loading}
+                                  disabled={disableDelete(row)}
                                   style={{ padding: '6px 10px', borderRadius: 6, cursor: 'pointer' }}
                                   >
                                   {messages.bases.actions.edit}
@@ -761,7 +765,10 @@ export default function BasePanel({ messages, canWrite }: BasePanelProps) {
                                       setDeleteTarget({ id: row.base_id, name: row.base_identifier.toString() })
                                       setDeleteDialogOpen(true)
                                   }}
-                                  disabled={loading}
+                                  disabled={
+                                    // Disable the delete button while loading and when mics are attached
+                                    disableDelete(row)
+                                  }
                                   style={{ padding: '6px 10px', borderRadius: 6, cursor: 'pointer' }}
                                   >
                                   {messages.bases.actions.delete}
@@ -808,7 +815,7 @@ export default function BasePanel({ messages, canWrite }: BasePanelProps) {
                                           setEditingBaseId(row.base_id)
                                           setBaseEditorOpen(true)
                                         }}
-                                        disabled={loading}
+                                        disabled={disableDelete(row)}
                                         style={{ padding: '6px 10px', borderRadius: 6, cursor: 'pointer' }}
                                       >
                                         {messages.bases.actions.edit}
@@ -819,7 +826,7 @@ export default function BasePanel({ messages, canWrite }: BasePanelProps) {
                                           setDeleteTarget({ id: row.base_id, name: row.base_identifier.toString() })
                                           setDeleteDialogOpen(true)
                                         }}
-                                        disabled={loading}
+                                        disabled={disableDelete(row)}
                                         style={{ padding: '6px 10px', borderRadius: 6, cursor: 'pointer' }}
                                       >
                                         {messages.bases.actions.delete}
