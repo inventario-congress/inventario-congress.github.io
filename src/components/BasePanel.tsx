@@ -3,12 +3,14 @@ import { useEffect, useMemo, useState, useCallback, Fragment } from 'react'
 import type { Messages } from '../i18n'
 import { supabase } from '../supabaseClient'
 import BaseEditor from './BaseEditor'
+import BaseActionBar from './BaseActionBar'
 import BaseMicAttacher from './BaseMicAttacher'
 import DeleteConfirmation, { type DeleteEntityDescriptor } from './DeleteConfirmation'
 import EntityMover from './EntityMover'
+import MicrophoneTable from './MicrophoneTable'
+import { sortMicrophones, type MicAttachment, type MicSortColumn } from './microphoneSorting'
+import SortIcon from './SortIcon'
 import { createDetachMicrophonesAction } from './bulkMove/detachMicrophonesAction'
-
-
 
 type BaseRow = {
   base_id: number
@@ -40,40 +42,12 @@ function compareNullableDates(a: string | null, b: string | null, dirMul: number
   return (at - bt) * dirMul
 }
 
-
 type BasePanelProps = {
   messages: Messages
   canWrite: boolean
 }
 
-
-type MicAttachment = {
-  mic_id: number
-  mic_identifier: number
-  mic_model_name: string
-  mic_type_name: string
-  mic_attachment_date: string | null
-  mic_attachment_user_name: string | null
-}
-
-function SortIcon({ active, sortDirection }: { active: boolean; sortDirection: 'asc' | 'desc' }) {
-  return (
-    <span
-      aria-hidden="true"
-      style={{
-        display: 'inline-block',
-        width: 14,
-        textAlign: 'center',
-        marginLeft: 6,
-        transform: active && sortDirection === 'asc' ? 'rotate(180deg)' : 'rotate(0deg)',
-        transition: 'transform 120ms ease',
-        visibility: active ? 'visible' : 'hidden',
-      }}
-    >
-      ▼
-    </span>
-  )
-}
+type SortColumn = 'base_identifier' | 'latest_location_name' | 'latest_return_date' | 'model_names'
 
 function TriangleIcon({
   isOpen,
@@ -99,8 +73,63 @@ function TriangleIcon({
   )
 }
 
+// Helper for sorting logic
+function useSortableState<T>(
+  storageKey: string,
+  allowedColumns: readonly T[],
+  defaultColumn: T,
+  defaultDirection: 'asc' | 'desc',
+  storageFields: { sortColumn: string; sortDirection: string } = {
+    sortColumn: 'sortColumn',
+    sortDirection: 'sortDirection',
+  }
+) {
+  const [sortColumn, setSortColumn] = useState<T>(() => {
+    try {
+      const raw = window.localStorage.getItem(storageKey)
+      if (!raw) return defaultColumn
+      const parsed = JSON.parse(raw) as Record<string, unknown>
+      const candidate = parsed[storageFields.sortColumn] ?? parsed.sortColumn
+      return allowedColumns.find((column) => column === candidate) ?? defaultColumn
+    } catch {
+      return defaultColumn
+    }
+  })
 
+  const [sortDirection, setSortDirection] = useState<'asc' | 'desc'>(() => {
+    try {
+      const raw = window.localStorage.getItem(storageKey)
+      if (!raw) return defaultDirection
+      const parsed = JSON.parse(raw) as Record<string, unknown>
+      const candidate = parsed[storageFields.sortDirection] ?? parsed.sortDirection
+      if (candidate === 'asc' || candidate === 'desc') return candidate
+    } catch {
+      return defaultDirection
+    }
+    return defaultDirection
+  })
 
+  const toggleSort = useCallback((column: T) => {
+    if (sortColumn === column) {
+      const next: 'asc' | 'desc' = sortDirection === 'asc' ? 'desc' : 'asc'
+      setSortDirection(next)
+      window.localStorage.setItem(storageKey, JSON.stringify({
+        [storageFields.sortColumn]: column,
+        [storageFields.sortDirection]: next,
+      }))
+    } else {
+      const next: 'asc' | 'desc' = 'asc'
+      setSortColumn(column)
+      setSortDirection(next)
+      window.localStorage.setItem(storageKey, JSON.stringify({
+        [storageFields.sortColumn]: column,
+        [storageFields.sortDirection]: next,
+      }))
+    }
+  }, [sortColumn, sortDirection, storageFields, storageKey])
+
+  return { sortColumn, sortDirection, toggleSort }
+}
 
 export default function BasePanel({ messages, canWrite }: BasePanelProps) {
   const detachAction = useMemo(() => createDetachMicrophonesAction(messages), [messages])
@@ -131,83 +160,26 @@ export default function BasePanel({ messages, canWrite }: BasePanelProps) {
   const [attachDialogOpen, setAttachDialogOpen] = useState(false)
   const [attachBaseRow, setAttachBaseRow] = useState<BaseRow | null>(null)
 
-
-
-  type SortColumn = 'base_identifier' | 'latest_location_name' | 'latest_return_date' | 'model_names'
-  type SortDirection = 'asc' | 'desc'
-
-  type MicSortColumn = 'mic_identifier' | 'mic_type_name' | 'mic_attachment_date' | 'mic_attachment_user_name'
-
-
   const SORT_STORAGE_KEY = 'inventario_congress:bases:sort'
   const MIC_SORT_STORAGE_KEY = 'inventario_congress:base_mics:sort'
 
-
-  const [sortColumn, setSortColumn] = useState<SortColumn>(() => {
-    try {
-      const raw = window.localStorage.getItem(SORT_STORAGE_KEY)
-      if (!raw) return 'base_identifier'
-      const parsed = JSON.parse(raw) as { sortColumn?: unknown; sortDirection?: unknown }
-      const candidate = parsed.sortColumn
-      if (
-        candidate === 'base_identifier' ||
-        candidate === 'latest_location_name' ||
-        candidate === 'latest_return_date' ||
-        candidate === 'model_names'
-      ) return candidate
-
-    } catch {
-      // ignore
-    }
-    return 'base_identifier'
-  })
-
-  const [sortDirection, setSortDirection] = useState<SortDirection>(() => {
-    try {
-      const raw = window.localStorage.getItem(SORT_STORAGE_KEY)
-      if (!raw) return 'asc'
-      const parsed = JSON.parse(raw) as { sortColumn?: unknown; sortDirection?: unknown }
-      const candidate = parsed.sortDirection
-      if (candidate === 'asc' || candidate === 'desc') return candidate
-    } catch {
-      // ignore
-    }
-    return 'asc'
-  })
-
-  const [micSortColumn, setMicSortColumn] = useState<MicSortColumn>(() => {
-    try {
-      const raw = window.localStorage.getItem(MIC_SORT_STORAGE_KEY)
-      if (!raw) return 'mic_identifier'
-      const parsed = JSON.parse(raw) as { micSortColumn?: unknown; micSortDirection?: unknown; sortColumn?: unknown; sortDirection?: unknown }
-      const candidate = parsed.micSortColumn ?? parsed.sortColumn
-      if (
-        candidate === 'mic_identifier' ||
-        candidate === 'mic_type_name' ||
-        candidate === 'mic_attachment_date' ||
-        candidate === 'mic_attachment_user_name'
-      ) {
-        return candidate
-      }
-    } catch {
-      // ignore
-    }
-    return 'mic_identifier'
-  })
-
-  const [micSortDirection, setMicSortDirection] = useState<SortDirection>(() => {
-    try {
-      const raw = window.localStorage.getItem(MIC_SORT_STORAGE_KEY)
-      if (!raw) return 'asc'
-      const parsed = JSON.parse(raw) as { micSortColumn?: unknown; micSortDirection?: unknown; sortColumn?: unknown; sortDirection?: unknown }
-      const candidate = parsed.micSortDirection ?? parsed.sortDirection
-      if (candidate === 'asc' || candidate === 'desc') return candidate
-    } catch {
-      // ignore
-    }
-    return 'asc'
-  })
-
+  const { sortColumn, sortDirection, toggleSort } = useSortableState<SortColumn>(
+    SORT_STORAGE_KEY,
+    ['base_identifier', 'latest_location_name', 'latest_return_date', 'model_names'],
+    'base_identifier',
+    'asc'
+  )
+  const {
+    sortColumn: micSortColumn,
+    sortDirection: micSortDirection,
+    toggleSort: toggleMicSort
+  } = useSortableState<MicSortColumn>(
+    MIC_SORT_STORAGE_KEY,
+    ['mic_identifier', 'mic_type_name', 'mic_attachment_date', 'mic_attachment_user_name'],
+    'mic_identifier',
+    'asc',
+    { sortColumn: 'micSortColumn', sortDirection: 'micSortDirection' }
+  )
 
   const resetMoveDialog = useCallback(() => {
     setMoveDialogOpen(false)
@@ -216,8 +188,6 @@ export default function BasePanel({ messages, canWrite }: BasePanelProps) {
     setMoveRoomId(null)
     setMoveReturnDate(null)
   }, [])
-
-
 
   const loadBases = useCallback(async () => {
     if (!supabase) {
@@ -228,8 +198,6 @@ export default function BasePanel({ messages, canWrite }: BasePanelProps) {
     setLoading(true)
 
     try {
-      // Load the rows by calling db function get_bases_with_models() to get the base data along with associated mic
-      // model names and latest location name. This avoids multiple queries and simplifies the logic.
       await supabase.rpc('get_bases_with_models').then(({ data: rpcData, error: rpcError }) => {
         if (rpcError) {
           throw rpcError
@@ -247,7 +215,6 @@ export default function BasePanel({ messages, canWrite }: BasePanelProps) {
     } finally {
       setLoading(false)
     }
-  // 'messages.bases.feedback.loaded' isn't used inside this callback; remove it to satisfy exhaustive-deps.
   }, [messages.bases.feedback.loadFailed])
 
   useEffect(() => {
@@ -272,8 +239,6 @@ export default function BasePanel({ messages, canWrite }: BasePanelProps) {
     }
   }, [loadBases])
 
-
-
   function openMoveDialog(row: BaseRow) {
     if (!canWrite) {
       return
@@ -287,18 +252,14 @@ export default function BasePanel({ messages, canWrite }: BasePanelProps) {
     setMoveReturnDate(row.latest_return_date)
   }
 
-
   function cancelMoveDialog() {
     resetMoveDialog()
   }
-
-
 
   async function deleteBase(id: number) {
     if (!supabase) {
       return
     }
-
 
     if (!canWrite) {
       return
@@ -310,8 +271,6 @@ export default function BasePanel({ messages, canWrite }: BasePanelProps) {
     try {
       const { error: deleteError } = await supabase.from('base').delete().eq('id', id)
       if (deleteError) throw deleteError
-
-
 
       await loadBases()
     } catch (e) {
@@ -365,7 +324,6 @@ export default function BasePanel({ messages, canWrite }: BasePanelProps) {
     setLoading(true)
 
     try {
-      // Find the active attachment for this microphone and base
       const { data: attachment, error: findError } = await supabase
         .from('attachment')
         .select('id')
@@ -377,7 +335,6 @@ export default function BasePanel({ messages, canWrite }: BasePanelProps) {
       if (findError) throw findError
       if (!attachment) throw new Error('No active attachment found')
 
-      // Deactivate it
       const { error: updateError } = await supabase
         .from('attachment')
         .update({ is_active: false })
@@ -387,7 +344,6 @@ export default function BasePanel({ messages, canWrite }: BasePanelProps) {
 
       setDetachDialogOpen(false)
       setDetachTarget(null)
-      // Reload mics for the expanded base
       if (expandedBaseRowId !== null) {
         await loadMicsForBase(expandedBaseRowId)
       }
@@ -419,7 +375,6 @@ export default function BasePanel({ messages, canWrite }: BasePanelProps) {
         }
         default:
           return 0
-
       }
     })
 
@@ -437,10 +392,7 @@ export default function BasePanel({ messages, canWrite }: BasePanelProps) {
       const { data, error: rpcError } = await supabase.rpc('get_mics_for_base', { base_id: baseId })
       if (rpcError) throw rpcError
 
-      // RPC returns an array of microphone attachment objects.
       setMicsByBaseId((prev) => ({ ...prev, [baseId]: (data ?? []) as MicAttachment[] }))
-      // Update the mic_count for the base row in the parent table so the
-      // 4th column (e.g. "2/8") reflects the new count after attach/detach.
       const newCount = (data ?? []).length
       setRows((prev) => prev.map((row) =>
         row.base_id === baseId ? { ...row, mic_count: newCount } : row
@@ -453,37 +405,10 @@ export default function BasePanel({ messages, canWrite }: BasePanelProps) {
     }
   }
 
-  function toggleSort(column: SortColumn) {
-    if (sortColumn === column) {
-      const next: SortDirection = sortDirection === 'asc' ? 'desc' : 'asc'
-      setSortDirection(next)
-      window.localStorage.setItem(SORT_STORAGE_KEY, JSON.stringify({ sortColumn: column, sortDirection: next }))
-    } else {
-      const next: SortDirection = 'asc'
-      setSortColumn(column)
-      setSortDirection(next)
-      window.localStorage.setItem(SORT_STORAGE_KEY, JSON.stringify({ sortColumn: column, sortDirection: next }))
-    }
-  }
-
-  function toggleMicSort(column: MicSortColumn) {
-    if (micSortColumn === column) {
-      const next: SortDirection = micSortDirection === 'asc' ? 'desc' : 'asc'
-      setMicSortDirection(next)
-      window.localStorage.setItem(MIC_SORT_STORAGE_KEY, JSON.stringify({ micSortColumn: column, micSortDirection: next }))
-    } else {
-      const next: SortDirection = 'asc'
-      setMicSortColumn(column)
-      setMicSortDirection(next)
-      window.localStorage.setItem(MIC_SORT_STORAGE_KEY, JSON.stringify({ micSortColumn: column, micSortDirection: next }))
-    }
-  }
-
   function formatDateTime(value: string | null): [string, string] {
     if (!value) return ['', '']
     const d = new Date(value)
     if (Number.isNaN(d.getTime())) return ['', '']
-    // Return date on one line and time on its own line, using the user's locale and 24-hour format if applicable.
     const datePart = d.toLocaleDateString([], {
       year: 'numeric',
       month: 'numeric',
@@ -504,37 +429,8 @@ export default function BasePanel({ messages, canWrite }: BasePanelProps) {
     return date.toLocaleDateString([], { year: 'numeric', month: 'numeric', day: 'numeric' })
   }
 
-  function compareNullableStrings(a: string | null, b: string | null, dirMul: number): number {
-    const av = a ?? ''
-    const bv = b ?? ''
-    return av.localeCompare(bv) * dirMul
-  }
-
-  function getSortedMics(mics: MicAttachment[]): MicAttachment[] {
-    const copy = [...mics]
-
-    const dirMul = micSortDirection === 'asc' ? 1 : -1
-
-    copy.sort((a, b) => {
-      switch (micSortColumn) {
-        case 'mic_identifier':
-          return (a.mic_identifier - b.mic_identifier) * dirMul
-        case 'mic_type_name':
-          return compareNullableStrings(a.mic_type_name ?? null, b.mic_type_name ?? null, dirMul)
-        case 'mic_attachment_date':
-          return compareNullableDates(a.mic_attachment_date, b.mic_attachment_date, dirMul)
-        case 'mic_attachment_user_name':
-          return compareNullableStrings(a.mic_attachment_user_name, b.mic_attachment_user_name, dirMul)
-        default:
-          return 0
-      }
-    })
-
-    return copy
-  }
-
   function disableDelete(row: BaseRow): boolean {
-    return loading || getBaseMics(row).length > 0
+    return loading || loadingMicsByBaseId[row.base_id] || getBaseMics(row).length > 0
   }
 
   function getBaseMics(row: BaseRow): MicAttachment[] {
@@ -543,6 +439,26 @@ export default function BasePanel({ messages, canWrite }: BasePanelProps) {
     if (!Array.isArray(raw)) return []
 
     return raw
+  }
+
+  function renderTableHeader(label: string, column: SortColumn) {
+    return (
+      <th
+        onClick={() => toggleSort(column)}
+        style={{
+          cursor: 'pointer',
+          userSelect: 'none',
+          textAlign: 'left',
+          borderBottom: '1px solid var(--border)',
+          background: 'var(--table-header-bg)',
+          padding: '8px 6px',
+          whiteSpace: 'nowrap',
+        }}
+      >
+        {label}
+        <SortIcon active={sortColumn === column} sortDirection={sortDirection} />
+      </th>
+    )
   }
 
   return (
@@ -574,10 +490,8 @@ export default function BasePanel({ messages, canWrite }: BasePanelProps) {
               setEditingBaseId(null)
               setBaseEditorOpen(true)
             }}
-
             aria-label={messages.bases.actions.create}
             title={messages.bases.actions.create}
-
             style={{
               width: 44,
               height: 44,
@@ -606,7 +520,6 @@ export default function BasePanel({ messages, canWrite }: BasePanelProps) {
       ) : null}
 
       <div style={{ marginTop: 2, textAlign: 'left' }}>
-
         {rows.length === 0 ? (
           <div>{messages.bases.table.empty}</div>
         ) : (
@@ -614,70 +527,10 @@ export default function BasePanel({ messages, canWrite }: BasePanelProps) {
             <table style={{ width: '100%', borderCollapse: 'collapse' }}>
               <thead>
                 <tr>
-                  <th
-                    onClick={() => toggleSort('base_identifier')}
-                    style={{
-                      cursor: 'pointer',
-                      userSelect: 'none',
-                      textAlign: 'left',
-                      borderBottom: '1px solid var(--border)',
-                      background: 'var(--table-header-bg)',
-                      padding: '8px 6px',
-                      whiteSpace: 'nowrap',
-                    }}
-                  >
-                    {messages.bases.table.identifier}
-                    <SortIcon active={sortColumn === 'base_identifier'} sortDirection={sortDirection} />
-                  </th>
-                  <th
-                    onClick={() => toggleSort('model_names')}
-                    style={{
-                      cursor: 'pointer',
-                      userSelect: 'none',
-                      textAlign: 'left',
-                      borderBottom: '1px solid var(--border)',
-                      background: 'var(--table-header-bg)',
-                      padding: '8px 6px',
-                      whiteSpace: 'nowrap',
-                    }}
-                  >
-                    {messages.bases.table.micModelNames}
-                    <SortIcon active={sortColumn === 'model_names'} sortDirection={sortDirection} />
-                  </th>
-
-
-                  <th
-                    onClick={() => toggleSort('latest_location_name')}
-                    style={{
-                      cursor: 'pointer',
-                      userSelect: 'none',
-                      textAlign: 'left',
-                      borderBottom: '1px solid var(--border)',
-                      background: 'var(--table-header-bg)',
-                      padding: '8px 6px',
-                      whiteSpace: 'nowrap',
-                    }}
-                  >
-                    {messages.bases.table.latestLocation}
-                    <SortIcon active={sortColumn === 'latest_location_name'} sortDirection={sortDirection} />
-                  </th>
-
-                  <th
-                    onClick={() => toggleSort('latest_return_date')}
-                    style={{
-                      cursor: 'pointer',
-                      userSelect: 'none',
-                      textAlign: 'left',
-                      borderBottom: '1px solid var(--border)',
-                      background: 'var(--table-header-bg)',
-                      padding: '8px 6px',
-                      whiteSpace: 'nowrap',
-                    }}
-                  >
-                    {messages.bases.table.latestReturnDate}
-                    <SortIcon active={sortColumn === 'latest_return_date'} sortDirection={sortDirection} />
-                  </th>
-
+                  {renderTableHeader(messages.bases.table.identifier, 'base_identifier')}
+                  {renderTableHeader(messages.bases.table.micModelNames, 'model_names')}
+                  {renderTableHeader(messages.bases.table.latestLocation, 'latest_location_name')}
+                  {renderTableHeader(messages.bases.table.latestReturnDate, 'latest_return_date')}
                 </tr>
               </thead>
               <tbody>
@@ -690,13 +543,10 @@ export default function BasePanel({ messages, canWrite }: BasePanelProps) {
                         fontWeight: expandedBaseRowId === row.base_id ? 'bold' : undefined,
                       }}
                       onClick={() => {
-
                         const nextExpanded = expandedBaseRowId === row.base_id ? null : row.base_id
 
-                        // Clicking on the row toggles the expandable panel below it.
                         setExpandedBaseRowId(nextExpanded)
 
-                        // Lazy-load microphones only for the expanded base.
                         if (nextExpanded !== null && row.mic_count > 0) {
                           void loadMicsForBase(row.base_id)
                         }
@@ -731,49 +581,28 @@ export default function BasePanel({ messages, canWrite }: BasePanelProps) {
                           {loadingMicsByBaseId[row.base_id] ? (
                             <div style={{ padding: '10px 6px 14px 6px' }}>
                               {canWrite ? (
-                              <div style={{ display: 'flex', gap: 8, flexWrap: 'wrap', marginBottom: 12 }}>
-                                  <button
-                                  type="button"
-                                  onClick={() => openMoveDialog(row)}
-                                  disabled={loading}
-                                  style={{ padding: '6px 10px', borderRadius: 6, cursor: 'pointer' }}
-                                  >
-                                  {messages.bases.actions.move}
-                                  </button>
-                                  <button
-                                  type="button"
-                                  onClick={() => void openDetachAll(row.base_id)}
-                                  disabled={loading}
-                                  style={{ padding: '6px 10px', borderRadius: 6, cursor: 'pointer' }}
-                                  >
-                                  {messages.microphones.actions.detach}
-                                  </button>
-                                  <button
-                                  type="button"
-                                  onClick={() => {
-                                      setEditingBaseId(row.base_id)
-                                      setBaseEditorOpen(true)
+                                <BaseActionBar
+                                  labels={{
+                                    move: messages.bases.actions.move,
+                                    detach: messages.microphones.actions.detach,
+                                    edit: messages.bases.actions.edit,
+                                    delete: messages.bases.actions.delete,
                                   }}
-                                  disabled={disableDelete(row)}
-                                  style={{ padding: '6px 10px', borderRadius: 6, cursor: 'pointer' }}
-                                  >
-                                  {messages.bases.actions.edit}
-                                  </button>
-                                  <button
-                                  type="button"
-                                  onClick={() => {
-                                      setDeleteTarget({ id: row.base_id, name: row.base_identifier.toString() })
-                                      setDeleteDialogOpen(true)
+                                  onMove={() => openMoveDialog(row)}
+                                  onDetach={() => void openDetachAll(row.base_id)}
+                                  onEdit={() => {
+                                    setEditingBaseId(row.base_id)
+                                    setBaseEditorOpen(true)
                                   }}
-                                  disabled={
-                                    // Disable the delete button while loading and when mics are attached
-                                    disableDelete(row)
-                                  }
-                                  style={{ padding: '6px 10px', borderRadius: 6, cursor: 'pointer' }}
-                                  >
-                                  {messages.bases.actions.delete}
-                                  </button>
-                              </div>
+                                  onDelete={() => {
+                                    setDeleteTarget({ id: row.base_id, name: row.base_identifier.toString() })
+                                    setDeleteDialogOpen(true)
+                                  }}
+                                  moveDisabled={loading}
+                                  detachDisabled={loading}
+                                  editDisabled={disableDelete(row)}
+                                  deleteDisabled={disableDelete(row)}
+                                />
                               ) : null}
                               <div style={{ fontSize: 18, color: 'var(--muted)', fontWeight: 'bold' }}>{messages.bases.table.mics}</div>
                               <div style={{ marginTop: 10, fontSize: 12, color: 'var(--muted)' }}>{messages.bases.feedback.loading_mics}</div>
@@ -784,7 +613,6 @@ export default function BasePanel({ messages, canWrite }: BasePanelProps) {
                               const maxMicCount = row.max_mic_count ?? 0
                               const availableSlots = Math.max(0, maxMicCount - mics.length)
 
-                              // Always render the table so we can show max_mic_count rows (including Available/Disponible rows).
                               if (maxMicCount <= 0) {
                                 return <div style={{ height: 18 }} />
                               }
@@ -792,170 +620,59 @@ export default function BasePanel({ messages, canWrite }: BasePanelProps) {
                               return (
                                 <div style={{ padding: '10px 6px 14px 6px' }}>
                                   {canWrite ? (
-                                    <div style={{ display: 'flex', gap: 8, flexWrap: 'wrap', marginBottom: 12 }}>
-                                      <button
-                                        type="button"
-                                        onClick={() => openMoveDialog(row)}
-                                        disabled={loading}
-                                        style={{ padding: '6px 10px', borderRadius: 6, cursor: 'pointer' }}
-                                      >
-                                        {messages.bases.actions.move}
-                                      </button>
-                                      <button
-                                        type="button"
-                                        onClick={() => void openDetachAll(row.base_id)}
-                                        disabled={loading || mics.length === 0}
-                                        style={{ padding: '6px 10px', borderRadius: 6, cursor: 'pointer' }}
-                                      >
-                                        {messages.microphones.actions.detach}
-                                      </button>
-                                      <button
-                                        type="button"
-                                        onClick={() => {
-                                          setEditingBaseId(row.base_id)
-                                          setBaseEditorOpen(true)
-                                        }}
-                                        disabled={disableDelete(row)}
-                                        style={{ padding: '6px 10px', borderRadius: 6, cursor: 'pointer' }}
-                                      >
-                                        {messages.bases.actions.edit}
-                                      </button>
-                                      <button
-                                        type="button"
-                                        onClick={() => {
-                                          setDeleteTarget({ id: row.base_id, name: row.base_identifier.toString() })
-                                          setDeleteDialogOpen(true)
-                                        }}
-                                        disabled={disableDelete(row)}
-                                        style={{ padding: '6px 10px', borderRadius: 6, cursor: 'pointer' }}
-                                      >
-                                        {messages.bases.actions.delete}
-                                      </button>
-                                    </div>
+                                    <BaseActionBar
+                                      labels={{
+                                        move: messages.bases.actions.move,
+                                        detach: messages.microphones.actions.detach,
+                                        edit: messages.bases.actions.edit,
+                                        delete: messages.bases.actions.delete,
+                                      }}
+                                      onMove={() => openMoveDialog(row)}
+                                      onDetach={() => void openDetachAll(row.base_id)}
+                                      onEdit={() => {
+                                        setEditingBaseId(row.base_id)
+                                        setBaseEditorOpen(true)
+                                      }}
+                                      onDelete={() => {
+                                        setDeleteTarget({ id: row.base_id, name: row.base_identifier.toString() })
+                                        setDeleteDialogOpen(true)
+                                      }}
+                                      moveDisabled={loading}
+                                      detachDisabled={loading || mics.length === 0}
+                                      editDisabled={disableDelete(row)}
+                                      deleteDisabled={disableDelete(row)}
+                                    />
                                   ) : null}
                                   <div style={{ fontSize: 18, color: 'var(--muted)', fontWeight: 'bold' }}>{messages.bases.table.mics}</div>
-                                  <table style={{ width: '100%', borderCollapse: 'collapse', marginTop: 8 }}>
-                                    <thead>
-                                      <tr>
-                                        <th
-                                          onClick={() => toggleMicSort('mic_identifier')}
-                                          style={{
-                                            cursor: 'pointer',
-                                            userSelect: 'none',
-                                            textAlign: 'left',
-                                            borderBottom: '1px solid var(--border)',
-                                            padding: '6px 4px',
-                                            whiteSpace: 'nowrap',
-                                            background: 'var(--table-header-bg)',
-                                          }}
-                                        >
-                                          {messages.bases.table.identifier}
-                                          <SortIcon active={micSortColumn === 'mic_identifier'} sortDirection={micSortDirection} />
-                                        </th>
-                                        <th
-                                          onClick={() => toggleMicSort('mic_type_name')}
-                                          style={{
-                                            cursor: 'pointer',
-                                            userSelect: 'none',
-                                            textAlign: 'left',
-                                            borderBottom: '1px solid var(--border)',
-                                            padding: '6px 4px',
-                                            background: 'var(--table-header-bg)',
-                                          }}
-                                        >
-                                          {messages.bases.table.type}
-                                          <SortIcon active={micSortColumn === 'mic_type_name'} sortDirection={micSortDirection} />
-                                        </th>
-                                        <th
-                                          onClick={() => toggleMicSort('mic_attachment_date')}
-                                          style={{
-                                            cursor: 'pointer',
-                                            userSelect: 'none',
-                                            textAlign: 'left',
-                                            borderBottom: '1px solid var(--border)',
-                                            padding: '6px 4px',
-                                            whiteSpace: 'nowrap',
-                                            background: 'var(--table-header-bg)',
-                                          }}
-                                        >
-                                          {messages.bases.table.date}
-                                          <SortIcon active={micSortColumn === 'mic_attachment_date'} sortDirection={micSortDirection} />
-                                        </th>
-                                        <th
-                                          onClick={() => toggleMicSort('mic_attachment_user_name')}
-                                          style={{
-                                            cursor: 'pointer',
-                                            userSelect: 'none',
-                                            textAlign: 'left',
-                                            borderBottom: '1px solid var(--border)',
-                                            padding: '6px 4px',
-                                            background: 'var(--table-header-bg)',
-                                          }}
-                                        >
-                                          {messages.bases.table.user}
-                                          <SortIcon
-                                            active={micSortColumn === 'mic_attachment_user_name'}
-                                            sortDirection={micSortDirection}
-                                          />
-                                        </th>
-                                      </tr>
-                                    </thead>
-                                    <tbody>
-                                      {getSortedMics(mics).map((m) => (
-                                        <tr
-                                          key={m.mic_id}
-                                          onClick={() => {
-                                            if (!canWrite) return
-                                            setDetachTarget({
-                                              micId: m.mic_id,
-                                              micIdentifier: m.mic_identifier,
-                                              baseId: row.base_id,
-                                              baseIdentifier: row.base_identifier,
-                                            })
-                                            setDetachDialogOpen(true)
-                                          }}
-                                          style={{ cursor: canWrite ? 'pointer' : undefined }}
-                                        >
-                                          <td style={{ borderBottom: '1px solid var(--border)', padding: '6px 4px', whiteSpace: 'nowrap' }}>
-                                            {m.mic_identifier}
-                                          </td>
-                                          <td style={{ borderBottom: '1px solid var(--border)', padding: '6px 4px' }}>
-                                            {m.mic_type_name}
-                                          </td>
-                                          <td style={{ borderBottom: '1px solid var(--border)', padding: '6px 4px', whiteSpace: 'nowrap' }}>
-                                            {(() => {
-                                              const [datePart, timePart] = formatDateTime(m.mic_attachment_date)
-                                              return (
-                                                <>
-                                                  <div>{datePart}</div>
-                                                  <div>{timePart}</div>
-                                                </>
-                                              )
-                                            })()}
-                                          </td>
-                                          <td style={{ borderBottom: '1px solid var(--border)', padding: '6px 4px' }}>
-                                            {m.mic_attachment_user_name ?? ''}
-                                          </td>
-                                        </tr>
-                                      ))}
-
-                                      {Array.from({ length: availableSlots }).map((_, i) => (
-                                        <tr
-                                          key={`available-${i}`}
-                                          onClick={() => {
-                                            if (!canWrite) return
-                                            setAttachBaseRow(row)
-                                            setAttachDialogOpen(true)
-                                          }}
-                                          style={{ cursor: canWrite ? 'pointer' : undefined }}
-                                        >
-                                          <td colSpan={4} style={{ fontSize: 14, borderBottom: '1px solid var(--border)', padding: '6px 4px', fontStyle: 'italic', color: 'var(--muted)' }}>
-                                            {'<' + messages.bases.table.available + '>'}
-                                          </td>
-                                        </tr>
-                                      ))}
-                                    </tbody>
-                                  </table>
+                                  <MicrophoneTable
+                                    mics={sortMicrophones(mics, micSortColumn, micSortDirection)}
+                                    availableSlots={availableSlots}
+                                    canWrite={canWrite}
+                                    sortColumn={micSortColumn}
+                                    sortDirection={micSortDirection}
+                                    labels={{
+                                      identifier: messages.bases.table.identifier,
+                                      type: messages.bases.table.type,
+                                      date: messages.bases.table.date,
+                                      user: messages.bases.table.user,
+                                      available: messages.bases.table.available,
+                                    }}
+                                    onSort={toggleMicSort}
+                                    onDetach={(mic) => {
+                                      setDetachTarget({
+                                        micId: mic.mic_id,
+                                        micIdentifier: mic.mic_identifier,
+                                        baseId: row.base_id,
+                                        baseIdentifier: row.base_identifier,
+                                      })
+                                      setDetachDialogOpen(true)
+                                    }}
+                                    onAttach={() => {
+                                      setAttachBaseRow(row)
+                                      setAttachDialogOpen(true)
+                                    }}
+                                    formatDateTime={formatDateTime}
+                                  />
                                 </div>
                               )
                             })()
@@ -963,7 +680,6 @@ export default function BasePanel({ messages, canWrite }: BasePanelProps) {
                         </div>
                       </td>
                     </tr>
-
                   </Fragment>
                 ))}
               </tbody>
@@ -1051,7 +767,6 @@ export default function BasePanel({ messages, canWrite }: BasePanelProps) {
           setAttachBaseRow(null)
         }}
         onAttached={async () => {
-          // Reload mics for the expanded base
           if (expandedBaseRowId !== null) {
             await loadMicsForBase(expandedBaseRowId)
           }
